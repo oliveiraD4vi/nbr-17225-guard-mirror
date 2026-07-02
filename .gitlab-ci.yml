@@ -1,0 +1,27 @@
+image: node:24
+
+stages:
+  - validate
+
+variables:
+  PNPM_HOME: .pnpm-store
+
+before_script:
+  - corepack enable
+  - corepack prepare pnpm@11.7.0 --activate
+  - pnpm install --frozen-lockfile
+
+commitlint:
+  stage: validate
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+  script:
+    - |
+      if [ -n "$CI_MERGE_REQUEST_DIFF_BASE_SHA" ]; then
+        FROM_SHA="$CI_MERGE_REQUEST_DIFF_BASE_SHA"
+      else
+        FROM_SHA="$CI_COMMIT_BEFORE_SHA"
+      fi
+
+      pnpm commitlint:range -- --from "$FROM_SHA" --to "$CI_COMMIT_SHA"

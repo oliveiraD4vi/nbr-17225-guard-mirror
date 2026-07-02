@@ -1,4 +1,5 @@
 #!/usr/bin/env sh
 
+node scripts/check-commits.mjs --pre-push "$1"
 pnpm test
 pnpm build

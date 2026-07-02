@@ -1,0 +1,42 @@
+name: Commitlint
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  commitlint:
+    name: Validar mensagens de commit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Configurar pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.7.0
+
+      - name: Instalar dependências
+        run: pnpm install --frozen-lockfile
+
+      - name: Validar commits
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            FROM_SHA="${{ github.event.pull_request.base.sha }}"
+          else
+            FROM_SHA="${{ github.event.before }}"
+          fi
+
+          pnpm commitlint:range -- --from "$FROM_SHA" --to "${{ github.sha }}"

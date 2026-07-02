@@ -6,6 +6,9 @@
   "type": "module",
   "scripts": {
     "prepare": "husky",
+    "commitlint:edit": "node scripts/check-commits.mjs --edit",
+    "commitlint:push": "node scripts/check-commits.mjs --pre-push",
+    "commitlint:range": "node scripts/check-commits.mjs",
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
@@ -36,6 +39,8 @@
   },
   "devDependencies": {
     "@ant-design/icons": "^6.1.1",
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
     "@eslint/js": "^9.39.4",
     "@types/chrome": "^0.1.38",
     "@types/node": "^24.12.0",
