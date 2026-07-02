@@ -9,16 +9,18 @@ async function loadAuditEngineModule() {
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'audit-import-'))
   const engineSourcePath = path.resolve('src/utils/audit-engine.ts')
   const historySourcePath = path.resolve('src/utils/audit-history.ts')
+  const triageSourcePath = path.resolve('src/utils/audit-triage.ts')
   const normativeSourcePath = path.resolve('src/normative.ts')
 
   const engineSource = (await fs.readFile(engineSourcePath, 'utf8'))
     .replace("from '@/i18n'", "from './i18n.mjs'")
     .replace("from '@/normative'", "from './normative.mjs'")
     .replace("from '@/utils/audit-history'", "from './audit-history.mjs'")
-  const historySource = (await fs.readFile(historySourcePath, 'utf8')).replace(
-    "from '@/normative'",
-    "from './normative.mjs'",
-  )
+    .replace("from '@/utils/audit-triage'", "from './audit-triage.mjs'")
+  const historySource = (await fs.readFile(historySourcePath, 'utf8'))
+    .replace("from '@/normative'", "from './normative.mjs'")
+    .replace("from '@/utils/audit-triage'", "from './audit-triage.mjs'")
+  const triageSource = await fs.readFile(triageSourcePath, 'utf8')
   const normativeSource = await fs.readFile(normativeSourcePath, 'utf8')
   const i18nSource = `
 export function t(key) {
@@ -46,6 +48,10 @@ export function t(key) {
     ...transpileOptions,
     fileName: historySourcePath,
   }).outputText
+  const transpiledTriage = ts.transpileModule(triageSource, {
+    ...transpileOptions,
+    fileName: triageSourcePath,
+  }).outputText
   const transpiledNormative = ts.transpileModule(normativeSource, {
     ...transpileOptions,
     fileName: normativeSourcePath,
@@ -53,11 +59,13 @@ export function t(key) {
 
   const engineFile = path.join(tempDir, 'audit-engine.mjs')
   const historyFile = path.join(tempDir, 'audit-history.mjs')
+  const triageFile = path.join(tempDir, 'audit-triage.mjs')
   const normativeFile = path.join(tempDir, 'normative.mjs')
   const i18nFile = path.join(tempDir, 'i18n.mjs')
 
   await fs.writeFile(engineFile, transpiledEngine, 'utf8')
   await fs.writeFile(historyFile, transpiledHistory, 'utf8')
+  await fs.writeFile(triageFile, transpiledTriage, 'utf8')
   await fs.writeFile(normativeFile, transpiledNormative, 'utf8')
   await fs.writeFile(i18nFile, i18nSource, 'utf8')
 
@@ -221,10 +229,7 @@ globalThis.chrome = {
   },
 }
 
-assert.equal(
-  (await getAuditResult(7, 'https://example.com/a?source=current#new'))?.id,
-  'cached-a',
-)
+assert.equal((await getAuditResult(7, 'https://example.com/a?source=current#new'))?.id, 'cached-a')
 assert.equal(await getAuditResult(7, 'https://example.com/b'), null)
 
 const siteHistory = await getAuditHistoryForSite('https://example.com/a?utm=1#hero')

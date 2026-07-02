@@ -1,35 +1,78 @@
 import assert from 'node:assert/strict'
-import { pathToFileURL } from 'node:url'
+import fs from 'node:fs/promises'
+import os from 'node:os'
 import path from 'node:path'
+import { pathToFileURL } from 'node:url'
+import ts from 'typescript'
 
-const auditComparisonModule = await import(
-  pathToFileURL(path.resolve('dist/audit-comparison.js')).href
-)
+async function loadAuditComparisonModule() {
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'audit-comparison-'))
+  const comparisonSourcePath = path.resolve('src/utils/audit-comparison.ts')
+  const historySourcePath = path.resolve('src/utils/audit-history.ts')
+  const triageSourcePath = path.resolve('src/utils/audit-triage.ts')
+  const normativeSourcePath = path.resolve('src/normative.ts')
 
-const compareAuditResults = auditComparisonModule.t
-const getConfirmedHumanReviewCount = auditComparisonModule.n
-const getDismissedHumanReviewCount = auditComparisonModule.r
-const getPendingHumanReviewCount = auditComparisonModule.i
+  const comparisonSource = (await fs.readFile(comparisonSourcePath, 'utf8'))
+    .replace("from '@/utils/audit-history'", "from './audit-history.mjs'")
+    .replace("from '@/utils/audit-triage'", "from './audit-triage.mjs'")
+  const historySource = (await fs.readFile(historySourcePath, 'utf8'))
+    .replace("from '@/normative'", "from './normative.mjs'")
+    .replace("from '@/utils/audit-triage'", "from './audit-triage.mjs'")
+  const triageSource = await fs.readFile(triageSourcePath, 'utf8')
+  const normativeSource = await fs.readFile(normativeSourcePath, 'utf8')
+  const transpileOptions = {
+    compilerOptions: {
+      module: ts.ModuleKind.ESNext,
+      target: ts.ScriptTarget.ES2022,
+    },
+  }
 
+  const files = [
+    ['audit-comparison.mjs', comparisonSource, comparisonSourcePath],
+    ['audit-history.mjs', historySource, historySourcePath],
+    ['audit-triage.mjs', triageSource, triageSourcePath],
+    ['normative.mjs', normativeSource, normativeSourcePath],
+  ]
+
+  await Promise.all(
+    files.map(([fileName, source, sourcePath]) =>
+      fs.writeFile(
+        path.join(tempDir, fileName),
+        ts.transpileModule(source, {
+          ...transpileOptions,
+          fileName: sourcePath,
+        }).outputText,
+        'utf8',
+      ),
+    ),
+  )
+
+  try {
+    return await import(pathToFileURL(path.join(tempDir, 'audit-comparison.mjs')).href)
+  } finally {
+    await fs.rm(tempDir, { recursive: true, force: true }).catch(() => {})
+  }
+}
+
+const {
+  compareAuditResults,
+  getConfirmedFindingCount,
+  getDismissedHumanReviewCount,
+  getIgnoredFindingCount,
+  getPendingHumanReviewCount,
+} = await loadAuditComparisonModule()
+
+assert.equal(typeof compareAuditResults, 'function', 'compareAuditResults não foi exportada')
 assert.equal(
-  typeof compareAuditResults,
+  typeof getConfirmedFindingCount,
   'function',
-  'compareAuditResults não foi exportada pelo build',
+  'getConfirmedFindingCount não foi exportada',
 )
-assert.equal(
-  typeof getConfirmedHumanReviewCount,
-  'function',
-  'getConfirmedHumanReviewCount não foi exportada pelo build',
-)
-assert.equal(
-  typeof getDismissedHumanReviewCount,
-  'function',
-  'getDismissedHumanReviewCount não foi exportada pelo build',
-)
+assert.equal(typeof getIgnoredFindingCount, 'function', 'getIgnoredFindingCount não foi exportada')
 assert.equal(
   typeof getPendingHumanReviewCount,
   'function',
-  'getPendingHumanReviewCount não foi exportada pelo build',
+  'getPendingHumanReviewCount não foi exportada',
 )
 
 function createViolation(overrides = {}) {
@@ -83,13 +126,12 @@ const baseline = createAuditResult({
       ruleId: 'rule-persistent',
       message: 'Persistente',
       suggestion: 'Corrigir persistente',
-      humanReviewStatus: 'not_applicable',
     }),
     createViolation({
-      id: 'review-dismissed',
-      ruleId: 'rule-dismissed',
-      message: 'Descartado',
-      suggestion: 'Não deve aparecer',
+      id: 'review-ignored',
+      ruleId: 'rule-ignored',
+      message: 'Ignorado',
+      suggestion: 'Não deve aparecer nos acionáveis',
       requiresHumanReview: true,
       humanReviewStatus: 'dismissed',
     }),
@@ -114,14 +156,12 @@ const target = createAuditResult({
       ruleId: 'rule-persistent',
       message: 'Persistente',
       suggestion: 'Corrigir persistente',
-      humanReviewStatus: 'not_applicable',
     }),
     createViolation({
       id: 'new-open',
       ruleId: 'rule-new',
       message: 'Novo problema',
       suggestion: 'Corrigir novo',
-      humanReviewStatus: 'not_applicable',
     }),
     createViolation({
       id: 'review-pending',
@@ -141,6 +181,7 @@ assert.equal(summary.targetId, 'target')
 assert.equal(summary.persistentViolations.length, 1)
 assert.equal(summary.newViolations.length, 2)
 assert.equal(summary.resolvedViolations.length, 1)
+assert.equal(summary.stateChangedViolations.length, 0)
 assert.equal(summary.baselineOpenCount, 2)
 assert.equal(summary.targetOpenCount, 3)
 assert.equal(summary.baselineConfirmedReviews, 1)
@@ -152,8 +193,45 @@ assert.equal(summary.targetPendingReviews, 1)
 assert.equal(summary.baselineNoteCount, 1)
 assert.equal(summary.targetNoteCount, 0)
 
-assert.equal(getConfirmedHumanReviewCount(baseline), 1)
+assert.equal(getConfirmedFindingCount(baseline), 1)
+assert.equal(getIgnoredFindingCount(baseline), 1)
 assert.equal(getDismissedHumanReviewCount(baseline), 1)
 assert.equal(getPendingHumanReviewCount(target), 1)
+
+const openToIgnoredBaseline = createAuditResult({
+  id: 'open-baseline',
+  timestamp: 3000,
+  violations: [
+    createViolation({
+      id: 'same-finding',
+      ruleId: 'rule-state',
+      message: 'Mesmo achado',
+      suggestion: 'Corrigir',
+    }),
+  ],
+})
+
+const openToIgnoredTarget = createAuditResult({
+  id: 'ignored-target',
+  timestamp: 4000,
+  violations: [
+    createViolation({
+      id: 'same-finding',
+      ruleId: 'rule-state',
+      message: 'Mesmo achado',
+      suggestion: 'Corrigir',
+      findingStatus: 'ignored',
+      ignoreReason: 'false_positive',
+      humanReviewStatus: 'dismissed',
+    }),
+  ],
+})
+
+const stateChangeSummary = compareAuditResults(openToIgnoredBaseline, openToIgnoredTarget)
+
+assert.equal(stateChangeSummary.resolvedViolations.length, 0)
+assert.equal(stateChangeSummary.stateChangedViolations.length, 1)
+assert.equal(stateChangeSummary.targetOpenCount, 0)
+assert.equal(stateChangeSummary.targetDismissedReviews, 1)
 
 console.log('Audit history comparison checks passed.')

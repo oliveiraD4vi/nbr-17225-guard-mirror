@@ -8,11 +8,12 @@ import ts from 'typescript'
 async function loadAuditHistoryModule() {
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'audit-history-'))
   const sourcePath = path.resolve('src/utils/audit-history.ts')
+  const triageSourcePath = path.resolve('src/utils/audit-triage.ts')
   const normativeSourcePath = path.resolve('src/normative.ts')
-  const source = (await fs.readFile(sourcePath, 'utf8')).replace(
-    "from '@/normative'",
-    "from './normative.mjs'",
-  )
+  const source = (await fs.readFile(sourcePath, 'utf8'))
+    .replace("from '@/normative'", "from './normative.mjs'")
+    .replace("from '@/utils/audit-triage'", "from './audit-triage.mjs'")
+  const triageSource = await fs.readFile(triageSourcePath, 'utf8')
   const normativeSource = await fs.readFile(normativeSourcePath, 'utf8')
   const transpileOptions = {
     compilerOptions: {
@@ -24,14 +25,20 @@ async function loadAuditHistoryModule() {
     ...transpileOptions,
     fileName: sourcePath,
   }).outputText
+  const transpiledTriage = ts.transpileModule(triageSource, {
+    ...transpileOptions,
+    fileName: triageSourcePath,
+  }).outputText
   const transpiledNormative = ts.transpileModule(normativeSource, {
     ...transpileOptions,
     fileName: normativeSourcePath,
   }).outputText
 
   const tempFile = path.join(tempDir, 'audit-history.mjs')
+  const tempTriageFile = path.join(tempDir, 'audit-triage.mjs')
   const tempNormativeFile = path.join(tempDir, 'normative.mjs')
   await fs.writeFile(tempFile, transpiled, 'utf8')
+  await fs.writeFile(tempTriageFile, transpiledTriage, 'utf8')
   await fs.writeFile(tempNormativeFile, transpiledNormative, 'utf8')
 
   try {
