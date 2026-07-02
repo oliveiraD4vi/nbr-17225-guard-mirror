@@ -11,8 +11,8 @@ import { t } from '@/i18n'
 import type { AuditHistoryEntry } from '@/types'
 import {
   type AuditComparisonSummary,
-  getConfirmedHumanReviewCount,
-  getDismissedHumanReviewCount,
+  getConfirmedFindingCount,
+  getIgnoredFindingCount,
   getPendingHumanReviewCount,
 } from '@/utils/audit-comparison'
 
@@ -104,12 +104,13 @@ function HistoryListSection({
         <List
           dataSource={entries}
           renderItem={(entry) => {
-            const isCurrent = showCurrentMarkers && !selectedHistoryId
-              ? entry.id === auditHistory[0]?.id
-              : entry.id === selectedHistoryId
+            const isCurrent =
+              showCurrentMarkers && !selectedHistoryId
+                ? entry.id === auditHistory[0]?.id
+                : entry.id === selectedHistoryId
             const pendingReviews = getPendingHumanReviewCount(entry)
-            const confirmedReviews = getConfirmedHumanReviewCount(entry)
-            const dismissedReviews = getDismissedHumanReviewCount(entry)
+            const confirmedFindings = getConfirmedFindingCount(entry)
+            const ignoredFindings = getIgnoredFindingCount(entry)
 
             return (
               <List.Item
@@ -208,9 +209,9 @@ function HistoryListSection({
                       {showEntryUrl && <span className="history-item-url">{entry.url}</span>}
                       <div className="history-item-tag-row">
                         <Tag color="red">
-                          {t('shared.counts.confirmed', { count: confirmedReviews })}
+                          {t('shared.counts.confirmed', { count: confirmedFindings })}
                         </Tag>
-                        <Tag>{t('shared.counts.dismissed', { count: dismissedReviews })}</Tag>
+                        <Tag>{t('shared.counts.ignored', { count: ignoredFindings })}</Tag>
                         <Tag color="gold">
                           {t('shared.counts.pending', { count: pendingReviews })}
                         </Tag>
@@ -359,6 +360,10 @@ export const HistoryTabPanel: React.FC<HistoryTabPanelProps> = React.memo(
                     title={t('popup.history.persistentProblems')}
                     value={comparisonSummary.persistentViolations.length}
                   />
+                  <Statistic
+                    title={t('popup.history.stateChangedFindings')}
+                    value={comparisonSummary.stateChangedViolations.length}
+                  />
                 </div>
 
                 <div className="history-comparison-meta">
@@ -375,7 +380,7 @@ export const HistoryTabPanel: React.FC<HistoryTabPanelProps> = React.memo(
                     })}
                   </span>
                   <span>
-                    {t('popup.history.metadataDismissed', {
+                    {t('popup.history.metadataIgnored', {
                       from: comparisonSummary.baselineDismissedReviews,
                       to: comparisonSummary.targetDismissedReviews,
                     })}

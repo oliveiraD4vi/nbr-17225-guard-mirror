@@ -13,11 +13,11 @@ import { t } from './i18n'
 import type { AuditResult } from './types'
 import { buildExportableAuditResult } from './utils/audit-export'
 import {
-  getConfirmedHumanReviewCount,
-  getDismissedHumanReviewCount,
+  getConfirmedFindingCount,
+  getIgnoredFindingCount,
   getPendingHumanReviewCount,
 } from './utils/audit-comparison'
-import { getActiveTab, getAuditResult } from './utils/audit-engine'
+import { getActiveTab, getAuditResult, getDisplayResultForScope } from './utils/audit-engine'
 import './styles/theme.css'
 import './styles/popup.css'
 
@@ -116,9 +116,16 @@ export const ReportApp: React.FC = () => {
     URL.revokeObjectURL(url)
   }, [auditResult])
 
-  const confirmedReviews = auditResult ? getConfirmedHumanReviewCount(auditResult) : 0
-  const dismissedReviews = auditResult ? getDismissedHumanReviewCount(auditResult) : 0
+  const confirmedFindings = auditResult ? getConfirmedFindingCount(auditResult) : 0
+  const ignoredFindings = auditResult ? getIgnoredFindingCount(auditResult) : 0
   const pendingReviews = auditResult ? getPendingHumanReviewCount(auditResult) : 0
+  const displayedAuditResult = auditResult
+    ? getDisplayResultForScope(
+        auditResult,
+        auditResult.includeRecommendations ?? true,
+        auditResult.includeHumanReview ?? true,
+      )
+    : null
 
   return (
     <Layout style={{ minHeight: '100vh', background: 'var(--guard-color-page-bg)' }}>
@@ -153,14 +160,16 @@ export const ReportApp: React.FC = () => {
                     {t('shared.states.humanConfirmation')}
                   </Tag>
                   <span>{t('report.introDescription')}</span>
-                  <Tag color="red">{t('shared.counts.confirmed', { count: confirmedReviews })}</Tag>
-                  <Tag>{t('shared.counts.dismissed', { count: dismissedReviews })}</Tag>
+                  <Tag color="red">
+                    {t('shared.counts.confirmed', { count: confirmedFindings })}
+                  </Tag>
+                  <Tag>{t('shared.counts.ignored', { count: ignoredFindings })}</Tag>
                   <Tag color="gold">{t('shared.counts.pending', { count: pendingReviews })}</Tag>
                 </Space>
               }
             />
             <Suspense fallback={<ReportSkeleton />}>
-              <ViolationsSummary result={auditResult} />
+              <ViolationsSummary result={displayedAuditResult} reviewSourceResult={auditResult} />
               <div style={{ marginTop: '24px' }}>
                 <h2>{t('report.violationsTitle')}</h2>
                 <ViolationsList violations={auditResult.violations} />

@@ -223,6 +223,10 @@ function buildAuditCsv(result: AuditResult): string {
     t('shared.exports.csvHeaders.rule'),
     t('shared.exports.csvHeaders.nbrReference'),
     t('shared.exports.csvHeaders.severity'),
+    t('shared.exports.csvHeaders.findingOrigin'),
+    t('shared.exports.csvHeaders.findingStatus'),
+    t('shared.exports.csvHeaders.ignoreReason'),
+    t('shared.exports.csvHeaders.ignoreNote'),
     t('shared.exports.csvHeaders.message'),
     t('shared.exports.csvHeaders.suggestion'),
   ]
@@ -233,6 +237,10 @@ function buildAuditCsv(result: AuditResult): string {
     violation.ruleName,
     violation.nbrReference,
     violation.severity,
+    violation.findingOrigin,
+    violation.findingStatus,
+    violation.ignoreReason || '',
+    violation.ignoreNote || '',
     violation.message,
     violation.suggestion,
   ])
@@ -805,46 +813,46 @@ export const PopupApp: React.FC = () => {
   )
 
   const handleExportJSON = useCallback(() => {
-    if (!displayedAuditResult) {
+    if (!reviewSourceResult) {
       message.warning(t('popup.messages.noAuditToExport'))
       return
     }
 
     downloadTextFile(
-      JSON.stringify(buildExportableAuditResult(displayedAuditResult), null, 2),
+      JSON.stringify(buildExportableAuditResult(reviewSourceResult), null, 2),
       'application/json;charset=utf-8',
-      `${t('shared.exports.auditFilePrefix')}-${getExportTimestampSegment(displayedAuditResult.timestamp)}.json`,
+      `${t('shared.exports.auditFilePrefix')}-${getExportTimestampSegment(reviewSourceResult.timestamp)}.json`,
     )
     message.success(t('popup.messages.exportJsonSuccess'))
-  }, [displayedAuditResult])
+  }, [reviewSourceResult])
 
   const handleExportCSV = useCallback(() => {
-    if (!displayedAuditResult || displayedAuditResult.violations.length === 0) {
+    if (!reviewSourceResult || reviewSourceResult.violations.length === 0) {
       message.warning(t('popup.messages.noViolationsToExport'))
       return
     }
 
     downloadTextFile(
-      buildAuditCsv(displayedAuditResult),
+      buildAuditCsv(reviewSourceResult),
       'text/csv;charset=utf-8',
-      `${t('shared.exports.auditFilePrefix')}-${getExportTimestampSegment(displayedAuditResult.timestamp)}.csv`,
+      `${t('shared.exports.auditFilePrefix')}-${getExportTimestampSegment(reviewSourceResult.timestamp)}.csv`,
     )
     message.success(t('popup.messages.exportCsvSuccess'))
-  }, [displayedAuditResult])
+  }, [reviewSourceResult])
 
   const handleExportSummary = useCallback(() => {
-    if (!displayedAuditResult) {
+    if (!reviewSourceResult) {
       message.warning(t('popup.messages.noAuditToExport'))
       return
     }
 
     downloadTextFile(
-      JSON.stringify(buildAuditSummaryJson(displayedAuditResult), null, 2),
+      JSON.stringify(buildAuditSummaryJson(reviewSourceResult), null, 2),
       'application/json;charset=utf-8',
-      `${t('shared.exports.summaryFilePrefix')}-${getExportTimestampSegment(displayedAuditResult.timestamp)}.json`,
+      `${t('shared.exports.summaryFilePrefix')}-${getExportTimestampSegment(reviewSourceResult.timestamp)}.json`,
     )
     message.success(t('popup.messages.exportSummarySuccess'))
-  }, [displayedAuditResult])
+  }, [reviewSourceResult])
 
   const handleExportHistoryJSON = useCallback((entry: AuditHistoryEntry) => {
     downloadTextFile(
@@ -1079,15 +1087,16 @@ export const PopupApp: React.FC = () => {
       `- ${t('popup.history.exportNewProblems')}: ${comparisonSummary.newViolations.length}`,
       `- ${t('popup.history.exportResolvedProblems')}: ${comparisonSummary.resolvedViolations.length}`,
       `- ${t('popup.history.exportPersistentProblems')}: ${comparisonSummary.persistentViolations.length}`,
+      `- ${t('popup.history.exportStateChangedFindings')}: ${comparisonSummary.stateChangedViolations.length}`,
       `- ${t('popup.history.exportNotes')}: ${comparisonSummary.baselineNoteCount} -> ${comparisonSummary.targetNoteCount} (${comparisonSummary.notesDeltaPercentage}%)`,
-      `- Confirmações humanas: ${comparisonSummary.baselineConfirmedReviews} -> ${comparisonSummary.targetConfirmedReviews} (${comparisonSummary.confirmedReviewsDeltaPercentage}%)`,
+      `- ${t('popup.history.exportConfirmedFindings')}: ${comparisonSummary.baselineConfirmedReviews} -> ${comparisonSummary.targetConfirmedReviews} (${comparisonSummary.confirmedReviewsDeltaPercentage}%)`,
       `- ${t('popup.history.exportCompletedReview')}: ${comparisonSummary.baselineConfirmedReviews + comparisonSummary.baselineDismissedReviews} -> ${comparisonSummary.targetConfirmedReviews + comparisonSummary.targetDismissedReviews}`,
       `- ${t('popup.history.exportPendingReview')}: ${comparisonSummary.baselinePendingReviews} -> ${comparisonSummary.targetPendingReviews}`,
       '',
       `## ${t('popup.history.exportHumanReviewTitle')}`,
       '',
       `- ${t('popup.history.exportConfirmedReview')}: ${comparisonSummary.baselineConfirmedReviews} -> ${comparisonSummary.targetConfirmedReviews}`,
-      `- ${t('popup.history.exportDismissedReview')}: ${comparisonSummary.baselineDismissedReviews} -> ${comparisonSummary.targetDismissedReviews}`,
+      `- ${t('popup.history.exportIgnoredFindings')}: ${comparisonSummary.baselineDismissedReviews} -> ${comparisonSummary.targetDismissedReviews}`,
       `- ${t('popup.history.exportPendingReviewItems')}: ${comparisonSummary.baselinePendingReviews} -> ${comparisonSummary.targetPendingReviews}`,
       '',
       `## ${t('popup.history.exportQuickReadingTitle')}`,
@@ -1161,7 +1170,7 @@ export const PopupApp: React.FC = () => {
         comparisonSummary.confirmedReviewsDeltaPercentage,
       ],
       [
-        t('popup.history.comparisonCsv.dismissedHumanReview'),
+        t('popup.history.comparisonCsv.ignoredFindings'),
         comparisonSummary.baselineDismissedReviews,
         comparisonSummary.targetDismissedReviews,
         '',
@@ -1194,6 +1203,12 @@ export const PopupApp: React.FC = () => {
         t('popup.history.comparisonCsv.persistentProblems'),
         '',
         comparisonSummary.persistentViolations.length,
+        '',
+      ],
+      [
+        t('popup.history.comparisonCsv.stateChangedFindings'),
+        '',
+        comparisonSummary.stateChangedViolations.length,
         '',
       ],
     ]

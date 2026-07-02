@@ -16,8 +16,8 @@ import { PROJECT_SCORE_URL } from '@/config/links'
 import { t } from '@/i18n'
 import type { AuditResult } from '@/types'
 import {
-  getConfirmedHumanReviewCount,
-  getDismissedHumanReviewCount,
+  getConfirmedFindingCount,
+  getIgnoredFindingCount,
   getPendingHumanReviewCount,
 } from '@/utils/audit-comparison'
 import { getAuditScoreData } from '@/utils/audit-score'
@@ -57,8 +57,9 @@ export const ViolationsSummary: React.FC<ViolationsSummaryProps> = React.memo(
     const hasViolations = result.totalViolations > 0
     const auditScore = getAuditScoreData(result)
     const reviewBase = reviewSourceResult ?? result
-    const confirmedReviews = showHumanReview ? getConfirmedHumanReviewCount(reviewBase) : 0
-    const dismissedReviews = showHumanReview ? getDismissedHumanReviewCount(reviewBase) : 0
+    const auditScopeNumbers = getAuditScoreData(reviewBase)
+    const confirmedFindings = getConfirmedFindingCount(reviewBase)
+    const ignoredFindings = getIgnoredFindingCount(reviewBase)
     const pendingReviews = showHumanReview ? getPendingHumanReviewCount(reviewBase) : 0
     const scoreTone =
       auditScore.score >= 90 ? 'good' : auditScore.score >= 70 ? 'medium' : 'critical'
@@ -134,17 +135,32 @@ export const ViolationsSummary: React.FC<ViolationsSummaryProps> = React.memo(
       {
         key: 'occurrences',
         label: t('summary.scorePanelOccurrences'),
-        value: auditScore.totalOccurrenceCount,
+        value: auditScopeNumbers.totalOccurrenceCount,
+      },
+      {
+        key: 'active-occurrences',
+        label: t('summary.scorePanelActionableOccurrences'),
+        value: auditScopeNumbers.activeOccurrenceCount,
       },
       {
         key: 'automatic-findings',
         label: t('summary.scorePanelAutomaticFindings'),
-        value: auditScore.automaticFindingCount,
+        value: auditScopeNumbers.automaticFindingCount,
+      },
+      {
+        key: 'confirmed-findings',
+        label: t('summary.scorePanelConfirmedFindings'),
+        value: confirmedFindings,
+      },
+      {
+        key: 'ignored-findings',
+        label: t('summary.scorePanelIgnoredFindings'),
+        value: ignoredFindings,
       },
       {
         key: 'human-review',
         label: t('summary.scorePanelHumanReview'),
-        value: `${auditScore.completedHumanReviewItems}/${auditScore.totalHumanReviewItems}`,
+        value: `${auditScopeNumbers.completedHumanReviewItems}/${auditScopeNumbers.totalHumanReviewItems}`,
       },
     ]
     const scoreFormula = auditScore.includesRecommendations
@@ -317,13 +333,13 @@ export const ViolationsSummary: React.FC<ViolationsSummaryProps> = React.memo(
               <div className="summary-review-progress-grid">
                 <div className="summary-review-card is-confirmed">
                   <span className="summary-stat-label">{t('summary.confirmed')}</span>
-                  <strong>{confirmedReviews}</strong>
+                  <strong>{confirmedFindings}</strong>
                   <small>{t('summary.confirmedDescription')}</small>
                 </div>
                 <div className="summary-review-card is-dismissed">
-                  <span className="summary-stat-label">{t('summary.dismissed')}</span>
-                  <strong>{dismissedReviews}</strong>
-                  <small>{t('summary.dismissedDescription')}</small>
+                  <span className="summary-stat-label">{t('summary.ignored')}</span>
+                  <strong>{ignoredFindings}</strong>
+                  <small>{t('summary.ignoredDescription')}</small>
                 </div>
                 <div className="summary-review-card is-pending">
                   <span className="summary-stat-label">{t('summary.pending')}</span>

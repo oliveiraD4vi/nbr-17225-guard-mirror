@@ -1,15 +1,16 @@
 import { t } from '@/i18n'
 import type { AuditResult } from '@/types'
 import {
-  getConfirmedHumanReviewCount,
-  getDismissedHumanReviewCount,
+  getConfirmedFindingCount,
+  getIgnoredFindingCount,
   getPendingHumanReviewCount,
 } from '@/utils/audit-comparison'
 import { getAuditScoreData, getRequirementScoreData } from '@/utils/audit-score'
+import { isIgnoredFinding, normalizeViolationFindingState } from '@/utils/audit-triage'
 
 export function buildExportableAuditResult(result: AuditResult) {
-  const confirmedReviews = getConfirmedHumanReviewCount(result)
-  const dismissedReviews = getDismissedHumanReviewCount(result)
+  const confirmedFindings = getConfirmedFindingCount(result)
+  const ignoredFindings = getIgnoredFindingCount(result)
   const pendingReviews = getPendingHumanReviewCount(result)
   const auditScore = getAuditScoreData(result)
   const requirementScore = getRequirementScoreData(result)
@@ -28,17 +29,23 @@ export function buildExportableAuditResult(result: AuditResult) {
   Reflect.deleteProperty(compactAudit, 'summary')
 
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     exportedAt: Date.now(),
     audit: compactAudit,
     summary: {
       auditScore,
       requirementScore,
+      findings: {
+        actionable: auditScore.activeOccurrenceCount,
+        confirmed: confirmedFindings,
+        ignored: ignoredFindings,
+        total: auditScore.totalOccurrenceCount,
+      },
       humanReview: {
-        confirmed: confirmedReviews,
-        dismissed: dismissedReviews,
+        confirmed: confirmedFindings,
+        ignored: ignoredFindings,
         pending: pendingReviews,
-        completed: confirmedReviews + dismissedReviews,
+        completed: confirmedFindings + ignoredFindings,
       },
     },
   }
@@ -50,10 +57,19 @@ function formatDate(timestamp: number): string {
 
 export function buildAuditSummaryJson(result: AuditResult) {
   const auditScore = getAuditScoreData(result)
-  const confirmedReviews = getConfirmedHumanReviewCount(result)
-  const dismissedReviews = getDismissedHumanReviewCount(result)
+  const confirmedFindings = getConfirmedFindingCount(result)
+  const ignoredFindings = getIgnoredFindingCount(result)
   const pendingReviews = getPendingHumanReviewCount(result)
-  const topViolations = [...result.violations]
+  const normalizedViolations = result.violations.map(normalizeViolationFindingState)
+  const actionableViolations = normalizedViolations.filter(
+    (violation) => !isIgnoredFinding(violation),
+  )
+  const actionableRequirementCount = actionableViolations.filter(
+    (violation) => violation.normativeType === 'Requisito',
+  ).length
+  const actionableRecommendationCount = actionableViolations.length - actionableRequirementCount
+  const topViolations = normalizedViolations
+    .filter((violation) => !isIgnoredFinding(violation))
     .sort((a, b) => {
       if (a.severity !== b.severity) return a.severity === 'error' ? -1 : 1
       if (a.requiresHumanReview !== b.requiresHumanReview) return a.requiresHumanReview ? -1 : 1
@@ -90,12 +106,13 @@ export function buildAuditSummaryJson(result: AuditResult) {
         : null,
     },
     counts: {
-      total: result.totalViolations,
-      requirements: result.errors,
-      recommendations: result.warnings,
+      total: auditScore.totalOccurrenceCount,
+      actionable: auditScore.activeOccurrenceCount,
+      requirements: actionableRequirementCount,
+      recommendations: actionableRecommendationCount,
       humanReview: result.humanReviewItems,
-      confirmed: confirmedReviews,
-      dismissed: dismissedReviews,
+      confirmed: confirmedFindings,
+      ignored: ignoredFindings,
       pending: pendingReviews,
     },
     mainFindings: topViolations.map((violation) => ({
@@ -105,6 +122,10 @@ export function buildAuditSummaryJson(result: AuditResult) {
       normativeType: violation.normativeType,
       requiresHumanReview: violation.requiresHumanReview,
       humanReviewStatus: violation.humanReviewStatus,
+      findingOrigin: violation.findingOrigin,
+      findingStatus: violation.findingStatus,
+      ignoreReason: violation.ignoreReason,
+      ignoreNote: violation.ignoreNote,
     })),
   }
 }
