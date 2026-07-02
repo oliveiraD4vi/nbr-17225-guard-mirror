@@ -21,13 +21,7 @@ import type { ViolationsListState } from './ViolationsList'
 import { t } from '@/i18n'
 import { isNormativeRequirement } from '@/normative'
 import { APP_VERSION } from '@/version'
-import type {
-  AuditHistoryEntry,
-  AuditResult,
-  HumanReviewStatus,
-  Violation,
-  VisionSimulationFilter,
-} from '@/types'
+import type { AuditHistoryEntry, AuditResult, Violation, VisionSimulationFilter } from '@/types'
 import { compareAuditResults } from '@/utils/audit-comparison'
 import { buildAuditSummaryJson, buildExportableAuditResult } from '@/utils/audit-export'
 import {
@@ -51,6 +45,7 @@ import {
   updateStoredAuditResult,
 } from '@/utils/audit-engine'
 import { getAuditUrlStorageKey } from '@/utils/audit-history'
+import { applyFindingStatusUpdate, type FindingStatusUpdate } from '@/utils/audit-triage'
 import '../styles/popup.css'
 
 const { Header, Content, Footer } = Layout
@@ -119,9 +114,7 @@ function getStoredPopupState(rawStateByUrl: unknown, url?: string): PopupStoredS
 
   return {
     ...storedState,
-    activeTabKey: isPopupTabKey(storedState.activeTabKey)
-      ? storedState.activeTabKey
-      : undefined,
+    activeTabKey: isPopupTabKey(storedState.activeTabKey) ? storedState.activeTabKey : undefined,
     selectedHistoryId:
       typeof storedState.selectedHistoryId === 'string' || storedState.selectedHistoryId === null
         ? storedState.selectedHistoryId
@@ -204,7 +197,10 @@ function getComparisonQuickReadingLabel(label: string): string {
 }
 
 function getExportTimestampSegment(timestamp = Date.now()): string {
-  return new Date(timestamp).toISOString().replace(/\.\d{3}Z$/, 'Z').replace(/[:.]/g, '-')
+  return new Date(timestamp)
+    .toISOString()
+    .replace(/\.\d{3}Z$/, 'Z')
+    .replace(/[:.]/g, '-')
 }
 
 function downloadTextFile(content: string, type: string, filename: string): void {
@@ -362,7 +358,8 @@ export const PopupApp: React.FC = () => {
         savedState?.selectedHistoryId && availableAuditIds.has(savedState.selectedHistoryId)
           ? savedState.selectedHistoryId
           : null
-      const restoredHistoryId = savedHistoryId ?? (!result && history.length > 0 ? history[0].id : null)
+      const restoredHistoryId =
+        savedHistoryId ?? (!result && history.length > 0 ? history[0].id : null)
       setAuditResult(result)
       setAuditHistory(history)
       setSiteAuditHistory(siteHistory)
@@ -646,11 +643,8 @@ export const PopupApp: React.FC = () => {
         message.success(
           t('popup.messages.auditCompleted', {
             count:
-              getDisplayResultForScope(
-                persistedResult,
-                includeRecommendations,
-                includeHumanReview,
-              )?.totalViolations ?? result.totalViolations,
+              getDisplayResultForScope(persistedResult, includeRecommendations, includeHumanReview)
+                ?.totalViolations ?? result.totalViolations,
           }),
         )
         return persistedResult
@@ -755,7 +749,12 @@ export const PopupApp: React.FC = () => {
       setIncludeHumanReview(checked)
       await chrome.storage.local.set({ includeHumanReviewPreference: checked })
 
-      if (!checked || isHistoricalView || !auditResult || auditResult.includeHumanReview !== false) {
+      if (
+        !checked ||
+        isHistoricalView ||
+        !auditResult ||
+        auditResult.includeHumanReview !== false
+      ) {
         return
       }
 
@@ -1221,15 +1220,15 @@ export const PopupApp: React.FC = () => {
     [displayedAuditResult, isHistoricalView],
   )
 
-  const handleHumanReviewStatusChange = useCallback(
-    async (violation: Violation, status: HumanReviewStatus) => {
+  const handleFindingStatusChange = useCallback(
+    async (violation: Violation, update: FindingStatusUpdate) => {
       if (!viewedAuditResult) return
 
       const updatedResult: AuditResult = {
         ...viewedAuditResult,
         violations: viewedAuditResult.violations.map((currentViolation) =>
           currentViolation.id === violation.id
-            ? { ...currentViolation, humanReviewStatus: status }
+            ? applyFindingStatusUpdate(currentViolation, update)
             : currentViolation,
         ),
       }
@@ -1464,7 +1463,7 @@ export const PopupApp: React.FC = () => {
             state={popupStoredState?.violationsListState}
             showHumanReview={includeHumanReview}
             onSelectViolation={isHistoricalView ? undefined : handleHighlightViolation}
-            onHumanReviewStatusChange={handleHumanReviewStatusChange}
+            onFindingStatusChange={handleFindingStatusChange}
             onStateChange={handleViolationsListStateChange}
             onViolationNoteChange={handleViolationNoteChange}
             onViolationContrastOverrideChange={handleViolationContrastOverrideChange}
@@ -1514,7 +1513,7 @@ export const PopupApp: React.FC = () => {
     popupStoredState?.violationsListState,
     isHistoricalView,
     handleHighlightViolation,
-    handleHumanReviewStatusChange,
+    handleFindingStatusChange,
     handleViolationsListStateChange,
     handleViolationNoteChange,
     handleViolationContrastOverrideChange,

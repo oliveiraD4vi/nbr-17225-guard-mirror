@@ -219,8 +219,20 @@
   transform: translateX(-14px) scale(0.98);
 }
 
+.violation-item-card.is-review-transitioning-to-ignored {
+  transform: translateX(-14px) scale(0.98);
+}
+
 .violation-item-card.is-review-transitioning-to-pending {
   transform: translateX(14px) scale(0.985);
+}
+
+.violation-item-card.is-review-transitioning-to-open {
+  transform: translateX(14px) scale(0.985);
+}
+
+.violation-item-card.finding-state-ignored {
+  background: var(--guard-color-surface-muted);
 }
 
 .violation-item-card.is-pinned {
@@ -349,6 +361,31 @@
 
 .violation-human-review-card .ant-tag + .ant-tag {
   margin-left: 8px;
+}
+
+.violation-ignore-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid var(--guard-color-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.violation-ignore-summary strong {
+  color: #92400e;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.violation-ignore-summary span,
+.violation-ignore-summary p {
+  margin: 0;
+  color: #9a3412;
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .violation-human-review-controls {
@@ -646,6 +683,38 @@
 .violation-notes-meta {
   display: block;
   margin-top: 8px;
+}
+
+.violation-ignore-modal,
+.violation-ignore-field {
+  display: flex;
+  flex-direction: column;
+}
+
+.violation-ignore-modal {
+  gap: 14px;
+}
+
+.violation-ignore-modal p {
+  margin: 0;
+  color: var(--guard-color-text-secondary);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.violation-ignore-field {
+  gap: 6px;
+}
+
+.violation-ignore-field > span {
+  color: var(--guard-color-text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.violation-ignore-field-error {
+  color: var(--guard-color-danger-text);
+  font-size: 12px;
 }
 
 .contrast-board {

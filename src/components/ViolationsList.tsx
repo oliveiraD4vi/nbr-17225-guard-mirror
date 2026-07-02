@@ -36,11 +36,17 @@ import { PROJECT_RULES_URL } from '@/config/links'
 import { t } from '@/i18n'
 import { isNormativeRequirement } from '@/normative'
 import { getRuleTopicCategory, type RuleTopicCategory } from '@/rules'
-import type { HumanReviewStatus, Violation } from '@/types'
+import type { FindingStatus, IgnoreReason, Violation } from '@/types'
 import { getContrastRatio } from '@/utils'
+import {
+  type FindingStatusUpdate,
+  isConfirmedFinding,
+  isIgnoredFinding,
+  isPendingHumanReviewFinding,
+} from '@/utils/audit-triage'
 import '../styles/violations-list.css'
 
-export type ViolationsListMode = 'requirements' | 'recommendations' | 'review'
+export type ViolationsListMode = 'requirements' | 'recommendations' | 'review' | 'ignored'
 
 export interface ViolationsListState {
   openGroupKey?: string
@@ -55,7 +61,7 @@ interface ViolationsListProps {
   state?: ViolationsListState
   showHumanReview?: boolean
   onSelectViolation?: (violation: Violation) => void
-  onHumanReviewStatusChange?: (violation: Violation, status: HumanReviewStatus) => void
+  onFindingStatusChange?: (violation: Violation, update: FindingStatusUpdate) => void
   onStateChange?: (state: ViolationsListState) => void
   onViolationNoteChange?: (violation: Violation, note: string) => void
   onViolationContrastOverrideChange?: (
@@ -119,47 +125,48 @@ function getNormativeTypeLabel(violation: Violation): string {
   return violation.normativeType
 }
 
-function getReviewLabel(violation: Violation): string {
-  if (!violation.requiresHumanReview) return t('shared.states.automaticDetection')
-  if (violation.humanReviewStatus === 'confirmed') return t('shared.review.confirmedNeedsFix')
-  if (violation.humanReviewStatus === 'dismissed') return t('shared.review.dismissed')
-  return t('shared.review.needsConfirmation')
+function getFindingLabel(violation: Violation): string {
+  if (isIgnoredFinding(violation)) return t('shared.findings.ignored')
+  if (isConfirmedFinding(violation)) return t('shared.findings.confirmed')
+  if (violation.findingOrigin === 'manual') return t('shared.findings.manualOpen')
+  if (violation.requiresHumanReview) return t('shared.findings.needsConfirmation')
+  return t('shared.findings.automaticOpen')
 }
 
-function getReviewStatusTagColor(status: HumanReviewStatus): string {
+function getFindingStatusTagColor(status: FindingStatus): string {
   if (status === 'confirmed') return 'red'
-  if (status === 'dismissed') return 'default'
+  if (status === 'ignored') return 'default'
   return 'gold'
 }
 
-function getHumanReviewActionOptions(
-  currentStatus: HumanReviewStatus,
-): Array<{ icon: React.ReactNode; label: string; targetStatus: HumanReviewStatus }> {
+function getFindingActionOptions(
+  currentStatus: FindingStatus,
+): Array<{ icon: React.ReactNode; label: string; targetStatus: FindingStatus }> {
   if (currentStatus === 'confirmed') {
     return [
       {
         icon: <UndoOutlined />,
-        label: t('violations.reviewActionReturnToPending'),
-        targetStatus: 'pending',
+        label: t('violations.findingActionReopen'),
+        targetStatus: 'open',
       },
       {
         icon: <CloseCircleOutlined />,
-        label: t('violations.reviewActionDismiss'),
-        targetStatus: 'dismissed',
+        label: t('violations.findingActionIgnore'),
+        targetStatus: 'ignored',
       },
     ]
   }
 
-  if (currentStatus === 'dismissed') {
+  if (currentStatus === 'ignored') {
     return [
       {
         icon: <UndoOutlined />,
-        label: t('violations.reviewActionReturnToPending'),
-        targetStatus: 'pending',
+        label: t('violations.findingActionReopen'),
+        targetStatus: 'open',
       },
       {
         icon: <CheckCircleOutlined />,
-        label: t('violations.reviewActionConfirm'),
+        label: t('violations.findingActionConfirm'),
         targetStatus: 'confirmed',
       },
     ]
@@ -168,27 +175,37 @@ function getHumanReviewActionOptions(
   return [
     {
       icon: <CheckCircleOutlined />,
-      label: t('violations.reviewActionConfirm'),
+      label: t('violations.findingActionConfirm'),
       targetStatus: 'confirmed',
     },
     {
       icon: <CloseCircleOutlined />,
-      label: t('violations.reviewActionDismiss'),
-      targetStatus: 'dismissed',
+      label: t('violations.findingActionIgnore'),
+      targetStatus: 'ignored',
     },
   ]
 }
 
-function getReviewTransitionTitle(targetStatus: HumanReviewStatus): string {
-  if (targetStatus === 'confirmed') return t('violations.reviewConfirmConfirmedTitle')
-  if (targetStatus === 'dismissed') return t('violations.reviewConfirmDismissedTitle')
-  return t('violations.reviewConfirmPendingTitle')
+function getFindingTransitionTitle(targetStatus: FindingStatus): string {
+  if (targetStatus === 'confirmed') return t('violations.findingConfirmConfirmedTitle')
+  if (targetStatus === 'ignored') return t('violations.findingConfirmIgnoredTitle')
+  return t('violations.findingConfirmOpenTitle')
 }
 
-function getReviewTransitionDescription(targetStatus: HumanReviewStatus): string {
-  if (targetStatus === 'confirmed') return t('violations.reviewConfirmConfirmedDescription')
-  if (targetStatus === 'dismissed') return t('violations.reviewConfirmDismissedDescription')
-  return t('violations.reviewConfirmPendingDescription')
+function getFindingTransitionDescription(targetStatus: FindingStatus): string {
+  if (targetStatus === 'confirmed') return t('violations.findingConfirmConfirmedDescription')
+  if (targetStatus === 'ignored') return t('violations.findingConfirmIgnoredDescription')
+  return t('violations.findingConfirmOpenDescription')
+}
+
+function getIgnoreReasonOptions(): Array<{ label: string; value: IgnoreReason }> {
+  return [
+    { label: t('violations.ignoreReasons.falsePositive'), value: 'false_positive' },
+    { label: t('violations.ignoreReasons.outOfScope'), value: 'out_of_scope' },
+    { label: t('violations.ignoreReasons.acceptedRisk'), value: 'accepted_risk' },
+    { label: t('violations.ignoreReasons.duplicate'), value: 'duplicate' },
+    { label: t('violations.ignoreReasons.other'), value: 'other' },
+  ]
 }
 
 function getRuleExplanationFamily(topicCategory: RuleTopicCategory): RuleExplanationFamily {
@@ -250,7 +267,7 @@ function getReadableFindingCopy(
 }
 
 function isVisibleInMainLists(violation: Violation): boolean {
-  return !(violation.requiresHumanReview && violation.humanReviewStatus === 'dismissed')
+  return !isIgnoredFinding(violation)
 }
 
 function getViolationSignature(violation: Violation): string {
@@ -406,7 +423,7 @@ function renderViolationGroups(
   onStateChange: ((state: ViolationsListState) => void) | undefined,
   groupScope: string,
   onSelectViolation?: (violation: Violation) => void,
-  onHumanReviewStatusChange?: (violation: Violation, status: HumanReviewStatus) => void,
+  onFindingStatusChange?: (violation: Violation, update: FindingStatusUpdate) => void,
   onViolationNoteChange?: (violation: Violation, note: string) => void,
   onViolationContrastOverrideChange?: (
     violation: Violation,
@@ -502,7 +519,7 @@ function renderViolationGroups(
                     })
                   }}
                   onSelectViolation={onSelectViolation}
-                  onHumanReviewStatusChange={onHumanReviewStatusChange}
+                  onFindingStatusChange={onFindingStatusChange}
                   onViolationNoteChange={onViolationNoteChange}
                   onViolationContrastOverrideChange={onViolationContrastOverrideChange}
                   pinned
@@ -552,7 +569,7 @@ function renderReviewSections(
   state: ViolationsListState | undefined,
   onStateChange: ((state: ViolationsListState) => void) | undefined,
   onSelectViolation?: (violation: Violation) => void,
-  onHumanReviewStatusChange?: (violation: Violation, status: HumanReviewStatus) => void,
+  onFindingStatusChange?: (violation: Violation, update: FindingStatusUpdate) => void,
   onViolationNoteChange?: (violation: Violation, note: string) => void,
   onViolationContrastOverrideChange?: (
     violation: Violation,
@@ -563,15 +580,8 @@ function renderReviewSections(
     return <Empty description={t('violations.emptyCategory')} />
   }
 
-  const pendingViolations = violations.filter(
-    (violation) => violation.humanReviewStatus === 'pending',
-  )
-  const confirmedViolations = violations.filter(
-    (violation) => violation.humanReviewStatus === 'confirmed',
-  )
-  const dismissedViolations = violations.filter(
-    (violation) => violation.humanReviewStatus === 'dismissed',
-  )
+  const pendingViolations = violations.filter(isPendingHumanReviewFinding)
+  const confirmedViolations = violations.filter(isConfirmedFinding)
 
   const sections = [
     {
@@ -589,14 +599,6 @@ function renderReviewSections(
       count: confirmedViolations.length,
       colorClassName: 'is-confirmed',
       violations: confirmedViolations,
-    },
-    {
-      key: 'dismissed',
-      title: t('violations.reviewSections.dismissed'),
-      description: t('violations.reviewSections.dismissedDescription'),
-      count: dismissedViolations.length,
-      colorClassName: 'is-dismissed',
-      violations: dismissedViolations,
     },
   ]
 
@@ -618,7 +620,7 @@ function renderReviewSections(
               onStateChange,
               `review-${section.key}`,
               onSelectViolation,
-              onHumanReviewStatusChange,
+              onFindingStatusChange,
               onViolationNoteChange,
               onViolationContrastOverrideChange,
             )
@@ -640,7 +642,7 @@ interface ViolationCardProps {
   isOpen: boolean
   onToggle: () => void
   onSelectViolation?: (violation: Violation) => void
-  onHumanReviewStatusChange?: (violation: Violation, status: HumanReviewStatus) => void
+  onFindingStatusChange?: (violation: Violation, update: FindingStatusUpdate) => void
   onViolationNoteChange?: (violation: Violation, note: string) => void
   onViolationContrastOverrideChange?: (
     violation: Violation,
@@ -656,17 +658,23 @@ const ViolationCard: React.FC<ViolationCardProps> = React.memo(
     isOpen,
     onToggle,
     onSelectViolation,
-    onHumanReviewStatusChange,
+    onFindingStatusChange,
     onViolationNoteChange,
     onViolationContrastOverrideChange,
     pinned = false,
   }) => {
     const [isNotesOpen, setIsNotesOpen] = React.useState(false)
     const [isContrastModalOpen, setIsContrastModalOpen] = React.useState(false)
-    const [pendingReviewStatus, setPendingReviewStatus] = React.useState<HumanReviewStatus | null>(
+    const [pendingFindingStatus, setPendingFindingStatus] = React.useState<FindingStatus | null>(
       null,
     )
-    const [isApplyingReviewDecision, setIsApplyingReviewDecision] = React.useState(false)
+    const [isIgnoreModalOpen, setIsIgnoreModalOpen] = React.useState(false)
+    const [ignoreReason, setIgnoreReason] = React.useState<IgnoreReason | undefined>(
+      violation.ignoreReason,
+    )
+    const [ignoreNote, setIgnoreNote] = React.useState(violation.ignoreNote || '')
+    const [ignoreReasonError, setIgnoreReasonError] = React.useState(false)
+    const [isApplyingFindingDecision, setIsApplyingFindingDecision] = React.useState(false)
     const [noteDraft, setNoteDraft] = React.useState(violation.userNote || '')
     const [foregroundHex, setForegroundHex] = React.useState(
       violation.userContrastOverride?.foregroundHex ||
@@ -697,9 +705,13 @@ const ViolationCard: React.FC<ViolationCardProps> = React.memo(
     }, [violation.contrastDetails, violation.id, violation.userContrastOverride])
 
     React.useEffect(() => {
-      setPendingReviewStatus(null)
-      setIsApplyingReviewDecision(false)
-    }, [violation.humanReviewStatus, violation.id])
+      setPendingFindingStatus(null)
+      setIsApplyingFindingDecision(false)
+      setIsIgnoreModalOpen(false)
+      setIgnoreReason(violation.ignoreReason)
+      setIgnoreNote(violation.ignoreNote || '')
+      setIgnoreReasonError(false)
+    }, [violation.findingStatus, violation.id, violation.ignoreNote, violation.ignoreReason])
 
     const insertAtEnd = React.useCallback((value: string) => {
       setNoteDraft((current) => `${current}${current ? '\n' : ''}${value}`)
@@ -718,14 +730,17 @@ const ViolationCard: React.FC<ViolationCardProps> = React.memo(
       onSelectViolation?.(violation)
     }, [isContrastModalOpen, onSelectViolation, violation])
 
-    const handleHeaderToggle = React.useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
-      event.stopPropagation()
-      if (isContrastModalOpen) return
-      onToggle()
-      if (!isOpen) {
-        onSelectViolation?.(violation)
-      }
-    }, [isContrastModalOpen, isOpen, onSelectViolation, onToggle, violation])
+    const handleHeaderToggle = React.useCallback(
+      (event: React.MouseEvent<HTMLButtonElement>) => {
+        event.stopPropagation()
+        if (isContrastModalOpen) return
+        onToggle()
+        if (!isOpen) {
+          onSelectViolation?.(violation)
+        }
+      },
+      [isContrastModalOpen, isOpen, onSelectViolation, onToggle, violation],
+    )
 
     const contrastRatio = React.useMemo(() => {
       if (!violation.contrastDetails) return null
@@ -784,51 +799,191 @@ const ViolationCard: React.FC<ViolationCardProps> = React.memo(
       () => getReadableFindingCopy(violation, topicCategory),
       [topicCategory, violation],
     )
-    const reviewActions = React.useMemo(
-      () => getHumanReviewActionOptions(violation.humanReviewStatus),
-      [violation.humanReviewStatus],
+    const findingActions = React.useMemo(
+      () => getFindingActionOptions(violation.findingStatus),
+      [violation.findingStatus],
     )
-    const reviewTransitionTargetStatus = pendingReviewStatus ?? violation.humanReviewStatus
-    const isReviewDecisionPending =
-      pendingReviewStatus !== null && pendingReviewStatus !== violation.humanReviewStatus
+    const findingTransitionTargetStatus = pendingFindingStatus ?? violation.findingStatus
+    const isFindingDecisionPending =
+      pendingFindingStatus !== null && pendingFindingStatus !== violation.findingStatus
 
-    const handleRequestReviewStatusChange = React.useCallback(
-      (event: React.MouseEvent<HTMLElement>, nextStatus: HumanReviewStatus) => {
+    const handleRequestFindingStatusChange = React.useCallback(
+      (event: React.MouseEvent<HTMLElement>, nextStatus: FindingStatus) => {
         event.stopPropagation()
-        if (isApplyingReviewDecision || nextStatus === violation.humanReviewStatus) return
-        setPendingReviewStatus(nextStatus)
+        if (isApplyingFindingDecision || nextStatus === violation.findingStatus) return
+
+        if (nextStatus === 'ignored') {
+          setIgnoreReason(violation.ignoreReason)
+          setIgnoreNote(violation.ignoreNote || '')
+          setIgnoreReasonError(false)
+          setIsIgnoreModalOpen(true)
+          return
+        }
+
+        setPendingFindingStatus(nextStatus)
       },
-      [isApplyingReviewDecision, violation.humanReviewStatus],
+      [
+        isApplyingFindingDecision,
+        violation.findingStatus,
+        violation.ignoreNote,
+        violation.ignoreReason,
+      ],
     )
 
-    const handleCancelReviewStatusChange = React.useCallback(
+    const handleCancelFindingStatusChange = React.useCallback(
       (event: React.MouseEvent<HTMLElement>) => {
         event.stopPropagation()
-        if (isApplyingReviewDecision) return
-        setPendingReviewStatus(null)
+        if (isApplyingFindingDecision) return
+        setPendingFindingStatus(null)
       },
-      [isApplyingReviewDecision],
+      [isApplyingFindingDecision],
     )
 
-    const handleConfirmReviewStatusChange = React.useCallback(
+    const handleConfirmFindingStatusChange = React.useCallback(
       async (event: React.MouseEvent<HTMLElement>) => {
         event.stopPropagation()
-        if (!pendingReviewStatus || pendingReviewStatus === violation.humanReviewStatus) return
+        if (!pendingFindingStatus || pendingFindingStatus === violation.findingStatus) return
 
-        setIsApplyingReviewDecision(true)
+        setIsApplyingFindingDecision(true)
         window.setTimeout(() => {
-          void onHumanReviewStatusChange?.(violation, pendingReviewStatus)
+          void onFindingStatusChange?.(violation, { status: pendingFindingStatus })
         }, REVIEW_STATUS_TRANSITION_MS)
       },
-      [onHumanReviewStatusChange, pendingReviewStatus, violation],
+      [onFindingStatusChange, pendingFindingStatus, violation],
     )
 
-    return (
-      <Card
-        size="small"
-        className={`violation-item-card${pinned ? ' is-pinned' : ''} review-state-${violation.humanReviewStatus}${isApplyingReviewDecision ? ' is-review-transitioning' : ''}${isApplyingReviewDecision ? ` is-review-transitioning-to-${reviewTransitionTargetStatus}` : ''}`}
-        onClick={handleCardClick}
+    const handleConfirmIgnore = React.useCallback(() => {
+      if (!ignoreReason) {
+        setIgnoreReasonError(true)
+        return
+      }
+
+      setIsApplyingFindingDecision(true)
+      window.setTimeout(() => {
+        void onFindingStatusChange?.(violation, {
+          status: 'ignored',
+          ignoreReason,
+          ignoreNote,
+        })
+      }, REVIEW_STATUS_TRANSITION_MS)
+    }, [ignoreNote, ignoreReason, onFindingStatusChange, violation])
+
+    const handleCancelIgnore = React.useCallback(() => {
+      if (isApplyingFindingDecision) return
+      setIsIgnoreModalOpen(false)
+      setIgnoreReasonError(false)
+    }, [isApplyingFindingDecision])
+
+    const ignoreReasonOptions = React.useMemo(() => getIgnoreReasonOptions(), [])
+
+    const statusUpdatedAtLabel = violation.findingStatusUpdatedAt
+      ? new Date(violation.findingStatusUpdatedAt).toLocaleString('pt-BR')
+      : null
+
+    const triageIsEditable = Boolean(onFindingStatusChange)
+    const showTriageCard =
+      triageIsEditable || isIgnoredFinding(violation) || isConfirmedFinding(violation)
+
+    const findingOriginLabel =
+      violation.findingOrigin === 'manual'
+        ? t('shared.findings.manualOrigin')
+        : t('shared.findings.automaticOrigin')
+
+    const ignoreReasonLabel = violation.ignoreReason
+      ? (ignoreReasonOptions.find((option) => option.value === violation.ignoreReason)?.label ??
+        violation.ignoreReason)
+      : null
+
+    const cardClassName = [
+      'violation-item-card',
+      pinned ? 'is-pinned' : '',
+      `finding-state-${violation.findingStatus}`,
+      isApplyingFindingDecision ? 'is-review-transitioning' : '',
+      isApplyingFindingDecision
+        ? `is-review-transitioning-to-${findingTransitionTargetStatus}`
+        : '',
+    ]
+      .filter(Boolean)
+      .join(' ')
+
+    const triageControls = triageIsEditable ? (
+      <div
+        className="violation-human-review-controls"
+        onClick={(event) => event.stopPropagation()}
+        onMouseDown={(event) => event.stopPropagation()}
       >
+        <Space wrap size={8}>
+          {findingActions.map((action) => (
+            <Button
+              key={action.targetStatus}
+              icon={action.icon}
+              loading={
+                isApplyingFindingDecision && findingTransitionTargetStatus === action.targetStatus
+              }
+              size="small"
+              type={
+                pendingFindingStatus === action.targetStatus ||
+                violation.findingStatus === action.targetStatus
+                  ? 'primary'
+                  : 'default'
+              }
+              onClick={(event) => handleRequestFindingStatusChange(event, action.targetStatus)}
+            >
+              {action.label}
+            </Button>
+          ))}
+        </Space>
+        {isFindingDecisionPending && (
+          <div className="violation-human-review-confirmation" aria-live="polite">
+            <div className="violation-human-review-confirmation-copy">
+              <strong>{getFindingTransitionTitle(pendingFindingStatus)}</strong>
+              <p>{getFindingTransitionDescription(pendingFindingStatus)}</p>
+            </div>
+            <Space wrap size={8}>
+              <Button size="small" onClick={handleCancelFindingStatusChange}>
+                {t('violations.reviewConfirmCancel')}
+              </Button>
+              <Button size="small" type="primary" onClick={handleConfirmFindingStatusChange}>
+                {t('violations.reviewConfirmApply')}
+              </Button>
+            </Space>
+          </div>
+        )}
+        {isApplyingFindingDecision && (
+          <span className="violation-human-review-transition-note" aria-live="polite">
+            {t('violations.findingTransitionApplying')}
+          </span>
+        )}
+      </div>
+    ) : null
+
+    const triageCard = showTriageCard ? (
+      <div className="violation-human-review-card">
+        <strong>{t('violations.findingTriageTitle')}</strong>
+        <p>{t('violations.findingTriageDescription')}</p>
+        <Space wrap size={8}>
+          {violation.inheritedFromHistory && <Tag color="blue">{t('shared.states.inherited')}</Tag>}
+          <Tag color="blue">{findingOriginLabel}</Tag>
+          <Tag color={getFindingStatusTagColor(violation.findingStatus)}>
+            {getFindingLabel(violation)}
+          </Tag>
+          {statusUpdatedAtLabel && (
+            <Tag>{t('violations.findingStatusUpdatedAt', { date: statusUpdatedAtLabel })}</Tag>
+          )}
+        </Space>
+        {isIgnoredFinding(violation) && (
+          <div className="violation-ignore-summary">
+            <strong>{t('violations.ignoreSummaryTitle')}</strong>
+            {ignoreReasonLabel && <span>{ignoreReasonLabel}</span>}
+            {violation.ignoreNote && <p>{violation.ignoreNote}</p>}
+          </div>
+        )}
+        {triageControls}
+      </div>
+    ) : null
+
+    return (
+      <Card size="small" className={cardClassName} onClick={handleCardClick}>
         <button
           className="violation-item-header"
           type="button"
@@ -859,472 +1014,466 @@ const ViolationCard: React.FC<ViolationCardProps> = React.memo(
           />
         </button>
 
-        {isOpen && <div className="violation-item-content">
-          {violation.requiresHumanReview && (
-            <div className="violation-human-review-card">
-              <strong>{t('violations.requiresHumanReviewTitle')}</strong>
-              <p>{t('violations.requiresHumanReviewDescription')}</p>
-              {violation.inheritedFromHistory && (
-                <Tag color="blue">{t('shared.states.inherited')}</Tag>
-              )}
-              <Tag color={getReviewStatusTagColor(violation.humanReviewStatus)}>
-                {getReviewLabel(violation)}
-              </Tag>
-              <div
-                className="violation-human-review-controls"
-                onClick={(event) => event.stopPropagation()}
-                onMouseDown={(event) => event.stopPropagation()}
-              >
-                <Space wrap size={8}>
-                  {reviewActions.map((action) => (
-                    <Button
-                      key={action.targetStatus}
-                      icon={action.icon}
-                      loading={
-                        isApplyingReviewDecision &&
-                        reviewTransitionTargetStatus === action.targetStatus
-                      }
-                      size="small"
-                      type={
-                        pendingReviewStatus === action.targetStatus ||
-                        violation.humanReviewStatus === action.targetStatus
-                          ? 'primary'
-                          : 'default'
-                      }
-                      onClick={(event) =>
-                        handleRequestReviewStatusChange(event, action.targetStatus)
-                      }
-                    >
-                      {action.label}
-                    </Button>
-                  ))}
-                </Space>
-                {isReviewDecisionPending && (
-                  <div className="violation-human-review-confirmation" aria-live="polite">
-                    <div className="violation-human-review-confirmation-copy">
-                      <strong>{getReviewTransitionTitle(pendingReviewStatus)}</strong>
-                      <p>{getReviewTransitionDescription(pendingReviewStatus)}</p>
-                    </div>
-                    <Space wrap size={8}>
-                      <Button size="small" onClick={handleCancelReviewStatusChange}>
-                        {t('violations.reviewConfirmCancel')}
-                      </Button>
-                      <Button size="small" type="primary" onClick={handleConfirmReviewStatusChange}>
-                        {t('violations.reviewConfirmApply')}
-                      </Button>
-                    </Space>
+        {isOpen && (
+          <div className="violation-item-content">
+            {triageCard}
+
+            <div className="violation-element-card">
+              <strong>{t('shared.labels.affectedElement')}</strong>
+              <CopyableCodeBlock
+                value={getAffectedElementSnippet(violation)}
+                copyLabel={t('violations.copyElementHtml')}
+                successLabel={t('violations.copyElementHtmlSuccess')}
+              />
+
+              <div className="violation-element-fields">
+                {violation.elementAccessibleName && (
+                  <div className="violation-element-field">
+                    <span className="violation-element-field-label">
+                      {t('shared.labels.accessibleName')}
+                    </span>
+                    <TruncatedText
+                      className="violation-element-field-value"
+                      lines={2}
+                      text={violation.elementAccessibleName}
+                      tooltipThreshold={100}
+                    />
                   </div>
                 )}
-                {isApplyingReviewDecision && (
-                  <span className="violation-human-review-transition-note" aria-live="polite">
-                    {t('violations.reviewTransitionApplying')}
-                  </span>
+
+                {violation.elementVisibleText && (
+                  <div className="violation-element-field">
+                    <span className="violation-element-field-label">
+                      {t('shared.labels.visibleText')}
+                    </span>
+                    <TruncatedText
+                      className="violation-element-field-value"
+                      lines={2}
+                      text={violation.elementVisibleText}
+                      tooltipThreshold={100}
+                    />
+                  </div>
+                )}
+
+                {violation.elementSelector && (
+                  <div className="violation-element-field">
+                    <span className="violation-element-field-label">
+                      {t('shared.labels.selector')}
+                    </span>
+                    <CopyableCodeBlock
+                      value={violation.elementSelector}
+                      copyLabel={t('violations.copySelector')}
+                      successLabel={t('violations.copySelectorSuccess')}
+                    />
+                  </div>
                 )}
               </div>
             </div>
-          )}
 
-          <div className="violation-element-card">
-            <strong>{t('shared.labels.affectedElement')}</strong>
-            <CopyableCodeBlock
-              value={getAffectedElementSnippet(violation)}
-              copyLabel={t('violations.copyElementHtml')}
-              successLabel={t('violations.copyElementHtmlSuccess')}
-            />
-
-            <div className="violation-element-fields">
-              {violation.elementAccessibleName && (
-                <div className="violation-element-field">
-                  <span className="violation-element-field-label">
-                    {t('shared.labels.accessibleName')}
-                  </span>
-                  <TruncatedText
-                    className="violation-element-field-value"
-                    lines={2}
-                    text={violation.elementAccessibleName}
-                    tooltipThreshold={100}
-                  />
-                </div>
-              )}
-
-              {violation.elementVisibleText && (
-                <div className="violation-element-field">
-                  <span className="violation-element-field-label">
-                    {t('shared.labels.visibleText')}
-                  </span>
-                  <TruncatedText
-                    className="violation-element-field-value"
-                    lines={2}
-                    text={violation.elementVisibleText}
-                    tooltipThreshold={100}
-                  />
-                </div>
-              )}
-
-              {violation.elementSelector && (
-                <div className="violation-element-field">
-                  <span className="violation-element-field-label">
-                    {t('shared.labels.selector')}
-                  </span>
-                  <CopyableCodeBlock
-                    value={violation.elementSelector}
-                    copyLabel={t('violations.copySelector')}
-                    successLabel={t('violations.copySelectorSuccess')}
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="violation-detected-signal">
-            <strong>{t('violations.detectedSignal')}</strong>
-            <TruncatedText
-              as="p"
-              className="violation-detected-signal-copy"
-              lines={3}
-              text={violation.message}
-              tooltipThreshold={160}
-            />
-          </div>
-
-          <div className="violation-suggestion">
-            <strong>{t('shared.labels.suggestion')}</strong>
-            <TruncatedText
-              as="p"
-              className="violation-suggestion-copy"
-              lines={3}
-              text={violation.suggestion}
-              tooltipThreshold={150}
-            />
-          </div>
-
-          <div className="violation-remediation">
-            <strong>{t('shared.labels.howToFix')}</strong>
-            <pre>
+            <div className="violation-detected-signal">
+              <strong>{t('violations.detectedSignal')}</strong>
               <TruncatedText
-                as="code"
-                className="violation-remediation-code"
-                lines={4}
-                monospace
-                preserveWhitespace
-                text={violation.remediationAdvice}
-                tooltipThreshold={180}
+                as="p"
+                className="violation-detected-signal-copy"
+                lines={3}
+                text={violation.message}
+                tooltipThreshold={160}
               />
-            </pre>
-          </div>
-
-          {violation.contrastDetails && (
-            <div className="violation-contrast-helper">
-              <div className="violation-contrast-helper-copy">
-                <strong>{t('violations.contrastBoardTitle')}</strong>
-                <p>{t('violations.contrastBoardDescription')}</p>
-                <span>
-                  {t('violations.contrastRatio')}:{' '}
-                  {(persistedContrastRatio ?? violation.contrastDetails.measuredRatio).toFixed(2)}:1
-                  {' · '}
-                  {t('violations.contrastMinimum')}:{' '}
-                  {violation.contrastDetails.minimumRatio.toFixed(1)}:1
-                </span>
-                {violation.userContrastOverride && (
-                  <Tag color="blue">{t('violations.contrastUserOverrideSaved')}</Tag>
-                )}
-              </div>
-              <Button
-                icon={<BgColorsOutlined />}
-                onClick={(event) => {
-                  event.stopPropagation()
-                  setIsContrastModalOpen(true)
-                }}
-              >
-                {t('violations.contrastBoard')}
-              </Button>
             </div>
-          )}
 
-          <Space className="violation-actions">
-            <Button
-              size="small"
-              icon={<InfoCircleOutlined />}
-              href={getRuleDocumentationUrl(violation.nbrReference)}
-              target="_blank"
-              rel="noreferrer"
-              onClick={(event) => {
-                event.stopPropagation()
-              }}
-            >
-              {t('shared.actions.ruleDetails')}
-            </Button>
+            <div className="violation-suggestion">
+              <strong>{t('shared.labels.suggestion')}</strong>
+              <TruncatedText
+                as="p"
+                className="violation-suggestion-copy"
+                lines={3}
+                text={violation.suggestion}
+                tooltipThreshold={150}
+              />
+            </div>
+
+            <div className="violation-remediation">
+              <strong>{t('shared.labels.howToFix')}</strong>
+              <pre>
+                <TruncatedText
+                  as="code"
+                  className="violation-remediation-code"
+                  lines={4}
+                  monospace
+                  preserveWhitespace
+                  text={violation.remediationAdvice}
+                  tooltipThreshold={180}
+                />
+              </pre>
+            </div>
+
             {violation.contrastDetails && (
-              <Tooltip title={t('violations.contrastBoard')}>
+              <div className="violation-contrast-helper">
+                <div className="violation-contrast-helper-copy">
+                  <strong>{t('violations.contrastBoardTitle')}</strong>
+                  <p>{t('violations.contrastBoardDescription')}</p>
+                  <span>
+                    {t('violations.contrastRatio')}:{' '}
+                    {(persistedContrastRatio ?? violation.contrastDetails.measuredRatio).toFixed(2)}
+                    :1
+                    {' · '}
+                    {t('violations.contrastMinimum')}:{' '}
+                    {violation.contrastDetails.minimumRatio.toFixed(1)}:1
+                  </span>
+                  {violation.userContrastOverride && (
+                    <Tag color="blue">{t('violations.contrastUserOverrideSaved')}</Tag>
+                  )}
+                </div>
                 <Button
-                  type="text"
-                  size="small"
                   icon={<BgColorsOutlined />}
                   onClick={(event) => {
                     event.stopPropagation()
                     setIsContrastModalOpen(true)
                   }}
+                >
+                  {t('violations.contrastBoard')}
+                </Button>
+              </div>
+            )}
+
+            <Space className="violation-actions">
+              <Button
+                size="small"
+                icon={<InfoCircleOutlined />}
+                href={getRuleDocumentationUrl(violation.nbrReference)}
+                target="_blank"
+                rel="noreferrer"
+                onClick={(event) => {
+                  event.stopPropagation()
+                }}
+              >
+                {t('shared.actions.ruleDetails')}
+              </Button>
+              {violation.contrastDetails && (
+                <Tooltip title={t('violations.contrastBoard')}>
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={<BgColorsOutlined />}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      setIsContrastModalOpen(true)
+                    }}
+                  />
+                </Tooltip>
+              )}
+              <Tooltip title={t('violations.notesTooltip')}>
+                <Button
+                  type={violation.userNote ? 'default' : 'text'}
+                  size="small"
+                  icon={<FileTextOutlined />}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    setIsNotesOpen((current) => !current)
+                  }}
                 />
               </Tooltip>
-            )}
-            <Tooltip title={t('violations.notesTooltip')}>
-              <Button
-                type={violation.userNote ? 'default' : 'text'}
-                size="small"
-                icon={<FileTextOutlined />}
-                onClick={(event) => {
-                  event.stopPropagation()
-                  setIsNotesOpen((current) => !current)
-                }}
-              />
-            </Tooltip>
-            <Tooltip title={t('violations.goToElement')}>
-              <Button
-                type="text"
-                size="small"
-                icon={<LinkOutlined />}
-                disabled={!onSelectViolation}
-                onClick={(event) => {
-                  event.stopPropagation()
-                  onSelectViolation?.(violation)
-                }}
-              />
-            </Tooltip>
-            <span className="violation-wcag-level">
-              <InfoCircleOutlined /> {getNormativeTypeLabel(violation)} ·{' '}
-              {getSeverityLabel(violation.severity)}
-            </span>
-            <span className="violation-review-state">
-              <SearchOutlined /> {getReviewLabel(violation)}
-            </span>
-          </Space>
+              <Tooltip title={t('violations.goToElement')}>
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<LinkOutlined />}
+                  disabled={!onSelectViolation}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    onSelectViolation?.(violation)
+                  }}
+                />
+              </Tooltip>
+              <span className="violation-wcag-level">
+                <InfoCircleOutlined /> {getNormativeTypeLabel(violation)} ·{' '}
+                {getSeverityLabel(violation.severity)}
+              </span>
+              <span className="violation-review-state">
+                <SearchOutlined /> {getFindingLabel(violation)}
+              </span>
+            </Space>
 
-          {isNotesOpen && (
-            <div className="violation-notes-card" onClick={(event) => event.stopPropagation()}>
-              <div className="violation-notes-header">
-                <strong>{t('shared.labels.annotations')}</strong>
-                <span>{t('violations.notesLength', { count: noteDraft.length })}</span>
+            {isNotesOpen && (
+              <div className="violation-notes-card" onClick={(event) => event.stopPropagation()}>
+                <div className="violation-notes-header">
+                  <strong>{t('shared.labels.annotations')}</strong>
+                  <span>{t('violations.notesLength', { count: noteDraft.length })}</span>
+                </div>
+
+                <Space className="violation-notes-toolbar" wrap>
+                  <Tooltip title={t('violations.insertBold')}>
+                    <Button
+                      type="text"
+                      size="small"
+                      icon={<BoldOutlined />}
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        insertAtEnd('**texto**')
+                      }}
+                    />
+                  </Tooltip>
+                  <Tooltip title={t('violations.insertItalic')}>
+                    <Button
+                      type="text"
+                      size="small"
+                      icon={<ItalicOutlined />}
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        insertAtEnd('*texto*')
+                      }}
+                    />
+                  </Tooltip>
+                  <Tooltip title={t('violations.insertList')}>
+                    <Button
+                      type="text"
+                      size="small"
+                      icon={<UnorderedListOutlined />}
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        insertAtEnd('- item')
+                      }}
+                    />
+                  </Tooltip>
+                  <Tooltip title={t('violations.clearDraft')}>
+                    <Button
+                      type="text"
+                      size="small"
+                      icon={<ClearOutlined />}
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        setNoteDraft('')
+                      }}
+                    />
+                  </Tooltip>
+                  <Tooltip title={t('violations.saveNote')}>
+                    <Button
+                      type="text"
+                      size="small"
+                      icon={<SaveOutlined />}
+                      onClick={handleSaveNote}
+                    />
+                  </Tooltip>
+                </Space>
+
+                <TextArea
+                  rows={4}
+                  maxLength={600}
+                  placeholder={t('violations.notePlaceholder')}
+                  value={noteDraft}
+                  onClick={(event) => event.stopPropagation()}
+                  onChange={(event) => setNoteDraft(event.target.value)}
+                />
+
+                {violation.noteUpdatedAt && (
+                  <span className="violation-notes-meta">
+                    {t('violations.noteUpdatedAt', {
+                      date: new Date(violation.noteUpdatedAt).toLocaleString('pt-BR'),
+                    })}
+                  </span>
+                )}
               </div>
+            )}
 
-              <Space className="violation-notes-toolbar" wrap>
-                <Tooltip title={t('violations.insertBold')}>
-                  <Button
-                    type="text"
-                    size="small"
-                    icon={<BoldOutlined />}
-                    onClick={(event) => {
-                      event.stopPropagation()
-                      insertAtEnd('**texto**')
-                    }}
-                  />
-                </Tooltip>
-                <Tooltip title={t('violations.insertItalic')}>
-                  <Button
-                    type="text"
-                    size="small"
-                    icon={<ItalicOutlined />}
-                    onClick={(event) => {
-                      event.stopPropagation()
-                      insertAtEnd('*texto*')
-                    }}
-                  />
-                </Tooltip>
-                <Tooltip title={t('violations.insertList')}>
-                  <Button
-                    type="text"
-                    size="small"
-                    icon={<UnorderedListOutlined />}
-                    onClick={(event) => {
-                      event.stopPropagation()
-                      insertAtEnd('- item')
-                    }}
-                  />
-                </Tooltip>
-                <Tooltip title={t('violations.clearDraft')}>
-                  <Button
-                    type="text"
-                    size="small"
-                    icon={<ClearOutlined />}
-                    onClick={(event) => {
-                      event.stopPropagation()
-                      setNoteDraft('')
-                    }}
-                  />
-                </Tooltip>
-                <Tooltip title={t('violations.saveNote')}>
-                  <Button
-                    type="text"
-                    size="small"
-                    icon={<SaveOutlined />}
-                    onClick={handleSaveNote}
-                  />
-                </Tooltip>
-              </Space>
-
-              <TextArea
-                rows={4}
-                maxLength={600}
-                placeholder={t('violations.notePlaceholder')}
-                value={noteDraft}
-                onClick={(event) => event.stopPropagation()}
-                onChange={(event) => setNoteDraft(event.target.value)}
-              />
-
-              {violation.noteUpdatedAt && (
-                <span className="violation-notes-meta">
-                  {t('violations.noteUpdatedAt', {
-                    date: new Date(violation.noteUpdatedAt).toLocaleString('pt-BR'),
-                  })}
-                </span>
-              )}
-            </div>
-          )}
-
-          {violation.contrastDetails && (
             <Modal
-              open={isContrastModalOpen}
-              title={t('violations.contrastBoardTitle')}
-              footer={null}
-              onCancel={() => setIsContrastModalOpen(false)}
-              width={400}
-              className="contrast-board-modal"
+              open={isIgnoreModalOpen}
+              title={t('violations.ignoreModalTitle')}
+              okText={t('violations.ignoreModalConfirm')}
+              cancelText={t('violations.reviewConfirmCancel')}
+              okButtonProps={{
+                disabled: isApplyingFindingDecision,
+                loading: isApplyingFindingDecision,
+              }}
+              onCancel={handleCancelIgnore}
+              onOk={handleConfirmIgnore}
               destroyOnHidden
               focusTriggerAfterClose={false}
               maskClosable={false}
               centered
             >
               <div
-                className="contrast-board"
+                className="violation-ignore-modal"
                 onClick={(event) => event.stopPropagation()}
                 onMouseDown={(event) => event.stopPropagation()}
               >
-                <p className="contrast-board-description">
-                  {t('violations.contrastBoardDescription')}
-                </p>
-
-                <div className="contrast-board-grid">
-                  <label className="contrast-board-field">
-                    <span>
-                      {violation.contrastDetails.foregroundLabel || t('contrast.foreground.text')}
-                    </span>
-                    <div className="contrast-board-picker-row">
-                      <ColorPicker
-                        value={foregroundHex}
-                        onChange={(value) => setForegroundHex(value.toHexString())}
-                      />
-                      <code>{foregroundHex}</code>
-                    </div>
-                  </label>
-
-                  <label className="contrast-board-field">
-                    <span>
-                      {violation.contrastDetails.backgroundLabel ||
-                        t('contrast.background.surface')}
-                    </span>
-                    <div className="contrast-board-picker-row">
-                      <ColorPicker
-                        value={backgroundHex}
-                        onChange={(value) => setBackgroundHex(value.toHexString())}
-                      />
-                      <code>{backgroundHex}</code>
-                    </div>
-                  </label>
-                </div>
-
-                <div className="contrast-board-metrics">
-                  <div className="contrast-board-metric">
-                    <span>{t('violations.contrastRatio')}</span>
-                    <strong>{contrastRatio?.toFixed(2)}:1</strong>
-                  </div>
-                  <div className="contrast-board-metric">
-                    <span>{t('violations.contrastMinimum')}</span>
-                    <strong>{violation.contrastDetails.minimumRatio.toFixed(1)}:1</strong>
-                  </div>
-                  <Tag color={contrastPasses ? 'green' : 'red'}>
-                    {contrastPasses
-                      ? t('violations.contrastCurrentStatusPass')
-                      : t('violations.contrastCurrentStatusFail')}
-                  </Tag>
-                </div>
-
-                <div className="contrast-board-preview-wrap">
-                  <span className="contrast-board-preview-label">
-                    {t('violations.contrastPreview')}
-                  </span>
-                  <div
-                    className={`contrast-board-preview is-${violation.contrastDetails.context}`}
-                    style={{
-                      backgroundColor: backgroundHex,
-                      color: foregroundHex,
-                      borderColor: foregroundHex,
+                <p>{t('violations.ignoreModalDescription')}</p>
+                <label className="violation-ignore-field">
+                  <span>{t('violations.ignoreReasonLabel')}</span>
+                  <Select
+                    status={ignoreReasonError ? 'error' : undefined}
+                    placeholder={t('violations.ignoreReasonPlaceholder')}
+                    value={ignoreReason}
+                    options={ignoreReasonOptions}
+                    onChange={(value) => {
+                      setIgnoreReason(value)
+                      setIgnoreReasonError(false)
                     }}
-                  >
-                    <span>{getContrastPreviewText(violation.contrastDetails.context)}</span>
-                  </div>
-                </div>
-
-                {violation.contrastDetails.comparisonHex && (
-                  <div className="contrast-board-comparison">
-                    <span>{t('violations.contrastComparison')}</span>
-                    <div className="contrast-board-comparison-row">
-                      <div
-                        className="contrast-board-comparison-swatch"
-                        style={{ backgroundColor: violation.contrastDetails.comparisonHex }}
-                      />
-                      <strong>
-                        {violation.contrastDetails.comparisonLabel ||
-                          t('contrast.background.adjacent')}
-                      </strong>
-                      <code>{violation.contrastDetails.comparisonHex}</code>
-                    </div>
-                  </div>
-                )}
-
-                <div className="contrast-board-actions">
-                  <div className="contrast-board-actions-copy">
-                    {violation.userContrastOverride ? (
-                      <span>
-                        {t('violations.contrastSavedAt', {
-                          date: new Date(violation.userContrastOverride.updatedAt).toLocaleString(
-                            'pt-BR',
-                          ),
-                        })}
-                      </span>
-                    ) : (
-                      <span>{t('violations.contrastOriginalPageValues')}</span>
-                    )}
-                  </div>
-                  <Space wrap>
-                    <Tooltip title={t('violations.contrastResetTooltip')}>
-                      <Button
-                        icon={<ClearOutlined />}
-                        onClick={(event) => {
-                          event.stopPropagation()
-                          handleClearContrastOverride()
-                        }}
-                      >
-                        {t('violations.contrastReset')}
-                      </Button>
-                    </Tooltip>
-                    <Tooltip title={t('violations.contrastSaveCorrectionTooltip')}>
-                      <Button
-                        type="primary"
-                        icon={<SaveOutlined />}
-                        disabled={!hasUnsavedContrastChanges}
-                        onClick={(event) => {
-                          event.stopPropagation()
-                          handleSaveContrastOverride()
-                        }}
-                      >
-                        {t('violations.contrastSaveCorrection')}
-                      </Button>
-                    </Tooltip>
-                  </Space>
-                </div>
+                  />
+                  {ignoreReasonError && (
+                    <span className="violation-ignore-field-error">
+                      {t('violations.ignoreReasonRequired')}
+                    </span>
+                  )}
+                </label>
+                <label className="violation-ignore-field">
+                  <span>{t('violations.ignoreNoteLabel')}</span>
+                  <TextArea
+                    rows={3}
+                    maxLength={400}
+                    placeholder={t('violations.ignoreNotePlaceholder')}
+                    value={ignoreNote}
+                    onChange={(event) => setIgnoreNote(event.target.value)}
+                  />
+                </label>
               </div>
             </Modal>
-          )}
-        </div>}
+
+            {violation.contrastDetails && (
+              <Modal
+                open={isContrastModalOpen}
+                title={t('violations.contrastBoardTitle')}
+                footer={null}
+                onCancel={() => setIsContrastModalOpen(false)}
+                width={400}
+                className="contrast-board-modal"
+                destroyOnHidden
+                focusTriggerAfterClose={false}
+                maskClosable={false}
+                centered
+              >
+                <div
+                  className="contrast-board"
+                  onClick={(event) => event.stopPropagation()}
+                  onMouseDown={(event) => event.stopPropagation()}
+                >
+                  <p className="contrast-board-description">
+                    {t('violations.contrastBoardDescription')}
+                  </p>
+
+                  <div className="contrast-board-grid">
+                    <label className="contrast-board-field">
+                      <span>
+                        {violation.contrastDetails.foregroundLabel || t('contrast.foreground.text')}
+                      </span>
+                      <div className="contrast-board-picker-row">
+                        <ColorPicker
+                          value={foregroundHex}
+                          onChange={(value) => setForegroundHex(value.toHexString())}
+                        />
+                        <code>{foregroundHex}</code>
+                      </div>
+                    </label>
+
+                    <label className="contrast-board-field">
+                      <span>
+                        {violation.contrastDetails.backgroundLabel ||
+                          t('contrast.background.surface')}
+                      </span>
+                      <div className="contrast-board-picker-row">
+                        <ColorPicker
+                          value={backgroundHex}
+                          onChange={(value) => setBackgroundHex(value.toHexString())}
+                        />
+                        <code>{backgroundHex}</code>
+                      </div>
+                    </label>
+                  </div>
+
+                  <div className="contrast-board-metrics">
+                    <div className="contrast-board-metric">
+                      <span>{t('violations.contrastRatio')}</span>
+                      <strong>{contrastRatio?.toFixed(2)}:1</strong>
+                    </div>
+                    <div className="contrast-board-metric">
+                      <span>{t('violations.contrastMinimum')}</span>
+                      <strong>{violation.contrastDetails.minimumRatio.toFixed(1)}:1</strong>
+                    </div>
+                    <Tag color={contrastPasses ? 'green' : 'red'}>
+                      {contrastPasses
+                        ? t('violations.contrastCurrentStatusPass')
+                        : t('violations.contrastCurrentStatusFail')}
+                    </Tag>
+                  </div>
+
+                  <div className="contrast-board-preview-wrap">
+                    <span className="contrast-board-preview-label">
+                      {t('violations.contrastPreview')}
+                    </span>
+                    <div
+                      className={`contrast-board-preview is-${violation.contrastDetails.context}`}
+                      style={{
+                        backgroundColor: backgroundHex,
+                        color: foregroundHex,
+                        borderColor: foregroundHex,
+                      }}
+                    >
+                      <span>{getContrastPreviewText(violation.contrastDetails.context)}</span>
+                    </div>
+                  </div>
+
+                  {violation.contrastDetails.comparisonHex && (
+                    <div className="contrast-board-comparison">
+                      <span>{t('violations.contrastComparison')}</span>
+                      <div className="contrast-board-comparison-row">
+                        <div
+                          className="contrast-board-comparison-swatch"
+                          style={{ backgroundColor: violation.contrastDetails.comparisonHex }}
+                        />
+                        <strong>
+                          {violation.contrastDetails.comparisonLabel ||
+                            t('contrast.background.adjacent')}
+                        </strong>
+                        <code>{violation.contrastDetails.comparisonHex}</code>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="contrast-board-actions">
+                    <div className="contrast-board-actions-copy">
+                      {violation.userContrastOverride ? (
+                        <span>
+                          {t('violations.contrastSavedAt', {
+                            date: new Date(violation.userContrastOverride.updatedAt).toLocaleString(
+                              'pt-BR',
+                            ),
+                          })}
+                        </span>
+                      ) : (
+                        <span>{t('violations.contrastOriginalPageValues')}</span>
+                      )}
+                    </div>
+                    <Space wrap>
+                      <Tooltip title={t('violations.contrastResetTooltip')}>
+                        <Button
+                          icon={<ClearOutlined />}
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            handleClearContrastOverride()
+                          }}
+                        >
+                          {t('violations.contrastReset')}
+                        </Button>
+                      </Tooltip>
+                      <Tooltip title={t('violations.contrastSaveCorrectionTooltip')}>
+                        <Button
+                          type="primary"
+                          icon={<SaveOutlined />}
+                          disabled={!hasUnsavedContrastChanges}
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            handleSaveContrastOverride()
+                          }}
+                        >
+                          {t('violations.contrastSaveCorrection')}
+                        </Button>
+                      </Tooltip>
+                    </Space>
+                  </div>
+                </div>
+              </Modal>
+            )}
+          </div>
+        )}
       </Card>
     )
   },
@@ -1336,7 +1485,7 @@ export const ViolationsList: React.FC<ViolationsListProps> = React.memo(
     state,
     showHumanReview = true,
     onSelectViolation,
-    onHumanReviewStatusChange,
+    onFindingStatusChange,
     onStateChange,
     onViolationNoteChange,
     onViolationContrastOverrideChange,
@@ -1362,7 +1511,14 @@ export const ViolationsList: React.FC<ViolationsListProps> = React.memo(
       [visibleViolations],
     )
     const reviewViolations = React.useMemo(
-      () => sortedViolations.filter((violation) => violation.requiresHumanReview),
+      () =>
+        sortedViolations.filter(
+          (violation) => violation.requiresHumanReview && !isIgnoredFinding(violation),
+        ),
+      [sortedViolations],
+    )
+    const ignoredViolations = React.useMemo(
+      () => sortedViolations.filter(isIgnoredFinding),
       [sortedViolations],
     )
     const availableCategories = React.useMemo(() => {
@@ -1397,6 +1553,10 @@ export const ViolationsList: React.FC<ViolationsListProps> = React.memo(
       () => filterByCategory(reviewViolations),
       [filterByCategory, reviewViolations],
     )
+    const filteredIgnoredViolations = React.useMemo(
+      () => filterByCategory(ignoredViolations),
+      [filterByCategory, ignoredViolations],
+    )
     const modeOptions = React.useMemo<Array<{ label: string; value: ViolationsListMode }>>(() => {
       const options: Array<{ label: string; value: ViolationsListMode }> = [
         {
@@ -1420,15 +1580,19 @@ export const ViolationsList: React.FC<ViolationsListProps> = React.memo(
         })
       }
 
+      options.push({
+        label: t('violations.tabIgnored', { count: filteredIgnoredViolations.length }),
+        value: 'ignored',
+      })
+
       return options
-    },
-      [
-        filteredRecommendationViolations.length,
-        filteredRequirementViolations.length,
-        filteredReviewViolations.length,
-        showHumanReview,
-      ],
-    )
+    }, [
+      filteredIgnoredViolations.length,
+      filteredRecommendationViolations.length,
+      filteredRequirementViolations.length,
+      filteredReviewViolations.length,
+      showHumanReview,
+    ])
     const effectiveSelectedListMode =
       !showHumanReview && selectedListMode === 'review' ? 'requirements' : selectedListMode
     const listState = React.useMemo<ViolationsListState>(
@@ -1474,7 +1638,20 @@ export const ViolationsList: React.FC<ViolationsListProps> = React.memo(
           updateListState,
           'recommendations',
           onSelectViolation,
-          onHumanReviewStatusChange,
+          onFindingStatusChange,
+          onViolationNoteChange,
+          onViolationContrastOverrideChange,
+        )
+      }
+
+      if (effectiveSelectedListMode === 'ignored') {
+        return renderViolationGroups(
+          filteredIgnoredViolations,
+          listState,
+          updateListState,
+          'ignored',
+          onSelectViolation,
+          onFindingStatusChange,
           onViolationNoteChange,
           onViolationContrastOverrideChange,
         )
@@ -1486,7 +1663,7 @@ export const ViolationsList: React.FC<ViolationsListProps> = React.memo(
           listState,
           updateListState,
           onSelectViolation,
-          onHumanReviewStatusChange,
+          onFindingStatusChange,
           onViolationNoteChange,
           onViolationContrastOverrideChange,
         )
@@ -1498,16 +1675,17 @@ export const ViolationsList: React.FC<ViolationsListProps> = React.memo(
         updateListState,
         'requirements',
         onSelectViolation,
-        onHumanReviewStatusChange,
+        onFindingStatusChange,
         onViolationNoteChange,
         onViolationContrastOverrideChange,
       )
     }, [
+      filteredIgnoredViolations,
       filteredRecommendationViolations,
       filteredRequirementViolations,
       filteredReviewViolations,
       listState,
-      onHumanReviewStatusChange,
+      onFindingStatusChange,
       onSelectViolation,
       updateListState,
       onViolationContrastOverrideChange,
