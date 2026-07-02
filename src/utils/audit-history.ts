@@ -1,5 +1,10 @@
 import type { AuditHistoryEntry, AuditResult, Violation } from '@/types'
 import { isNormativeRequirement } from '@/normative'
+import {
+  isIgnoredFinding,
+  isPendingHumanReviewFinding,
+  normalizeViolationFindingState,
+} from '@/utils/audit-triage'
 
 function getAuditCollections(violations: Violation[]) {
   const violationsByRule = violations.reduce<Record<string, Violation[]>>((acc, violation) => {
@@ -20,7 +25,7 @@ function getAuditCollections(violations: Violation[]) {
 }
 
 export function hydrateAuditResult<T extends AuditResult>(result: T): T {
-  const violations = result.violations ?? []
+  const violations = (result.violations ?? []).map(normalizeViolationFindingState)
   const requirementViolations = violations.filter((violation) =>
     isNormativeRequirement(violation.nbrReference),
   )
@@ -56,7 +61,7 @@ export function compactAuditResultForStorage<T extends AuditResult>(result: T): 
   Reflect.deleteProperty(compactResult, 'summary')
 
   const violations = result.violations.map((violation) => {
-    const persistableViolation: Partial<Violation> = { ...violation }
+    const persistableViolation: Partial<Violation> = normalizeViolationFindingState(violation)
     Reflect.deleteProperty(persistableViolation, 'element')
     Reflect.deleteProperty(persistableViolation, 'inheritedFromHistory')
     return persistableViolation as Violation
@@ -117,9 +122,9 @@ export function dedupeAndSortAuditHistory(
 }
 
 export function getVisibleAuditViolations(result: AuditResult): Violation[] {
-  return result.violations.filter(
-    (violation) => !(violation.requiresHumanReview && violation.humanReviewStatus === 'dismissed'),
-  )
+  return result.violations.map(normalizeViolationFindingState).filter((violation) => {
+    return !isIgnoredFinding(violation)
+  })
 }
 
 export function getDisplayAuditResult(
@@ -132,9 +137,7 @@ export function getDisplayAuditResult(
       (includeRecommendations || isNormativeRequirement(violation.nbrReference)) &&
       (includeHumanReview || !violation.requiresHumanReview),
   )
-  const pendingHumanReviewItems = visibleViolations.filter(
-    (violation) => violation.requiresHumanReview && violation.humanReviewStatus === 'pending',
-  ).length
+  const pendingHumanReviewItems = visibleViolations.filter(isPendingHumanReviewFinding).length
 
   const hydratedResult = hydrateAuditResult({
     ...result,
@@ -156,10 +159,10 @@ export function inheritViolationStateFromHistory(
   const persistedViolations = new Map<string, Violation>()
 
   historyEntries.forEach((entry) => {
-    entry.violations.forEach((violation) => {
+    entry.violations.map(normalizeViolationFindingState).forEach((violation) => {
       const hasPersistedState =
-        (violation.humanReviewStatus !== 'not_applicable' &&
-          violation.humanReviewStatus !== 'pending') ||
+        violation.findingStatus !== 'open' ||
+        Boolean(violation.findingStatusUpdatedAt) ||
         Boolean(violation.userNote?.trim()) ||
         Boolean(violation.userContrastOverride)
 
@@ -178,17 +181,20 @@ export function inheritViolationStateFromHistory(
       const persistedViolation = persistedViolations.get(getViolationIdentityKey(violation))
       if (!persistedViolation) return violation
 
-      return {
+      return normalizeViolationFindingState({
         ...violation,
-        humanReviewStatus: violation.requiresHumanReview
-          ? (persistedViolation.humanReviewStatus ?? violation.humanReviewStatus)
-          : violation.humanReviewStatus,
+        findingOrigin: persistedViolation.findingOrigin ?? violation.findingOrigin,
+        findingStatus: persistedViolation.findingStatus ?? violation.findingStatus,
+        ignoreReason: persistedViolation.ignoreReason,
+        ignoreNote: persistedViolation.ignoreNote,
+        findingStatusUpdatedAt:
+          persistedViolation.findingStatusUpdatedAt ?? violation.findingStatusUpdatedAt,
         userContrastOverride:
           persistedViolation.userContrastOverride ?? violation.userContrastOverride,
         userNote: persistedViolation.userNote ?? violation.userNote,
         noteUpdatedAt: persistedViolation.noteUpdatedAt ?? violation.noteUpdatedAt,
         inheritedFromHistory: true,
-      }
+      })
     }),
   }
 }

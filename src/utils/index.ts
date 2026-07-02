@@ -442,6 +442,8 @@ export function createViolation(
     normativeType: getNormativeRuleType(rule.nbrReference),
     requiresHumanReview,
     humanReviewStatus: requiresHumanReview ? 'pending' : 'not_applicable',
+    findingOrigin: 'automatic',
+    findingStatus: 'open',
     message: options.message,
     snippet: options.snippet || element?.outerHTML.substring(0, 200) || '<document>',
     suggestion: options.suggestion,

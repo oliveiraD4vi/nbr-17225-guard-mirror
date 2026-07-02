@@ -15,6 +15,14 @@ export const AUTOMATION_CATEGORIES = {
 
 export type AutomationCategory = (typeof AUTOMATION_CATEGORIES)[keyof typeof AUTOMATION_CATEGORIES]
 export type HumanReviewStatus = 'not_applicable' | 'pending' | 'confirmed' | 'dismissed'
+export type FindingOrigin = 'automatic' | 'manual'
+export type FindingStatus = 'open' | 'confirmed' | 'ignored'
+export type IgnoreReason =
+  | 'false_positive'
+  | 'out_of_scope'
+  | 'accepted_risk'
+  | 'duplicate'
+  | 'other'
 export type ContrastContext = 'text' | 'component' | 'graphic' | 'focus'
 
 export function isFullyAutomatedCategory(category: AutomationCategory): boolean {
@@ -46,6 +54,11 @@ export interface Violation {
   normativeType: NormativeRuleType
   requiresHumanReview: boolean
   humanReviewStatus: HumanReviewStatus
+  findingOrigin: FindingOrigin
+  findingStatus: FindingStatus
+  ignoreReason?: IgnoreReason
+  ignoreNote?: string
+  findingStatusUpdatedAt?: number
   message: string
   snippet: string
   suggestion: string

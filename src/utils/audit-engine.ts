@@ -13,6 +13,7 @@ import {
   hydrateAuditResult,
   inheritViolationStateFromHistory,
 } from '@/utils/audit-history'
+import { normalizeViolationFindingState } from '@/utils/audit-triage'
 
 export class AuditStorageQuotaError extends Error {
   readonly code = 'quota_exceeded'
@@ -61,12 +62,15 @@ function getTabStorageKey(tabId: number): string {
 function normalizeAuditResult<T extends AuditResult>(result: T | null): T | null {
   if (!result) return null
 
-  const violations = result.violations.map((violation) => ({
-    ...violation,
-    normativeType: violation.normativeType ?? getNormativeRuleType(violation.nbrReference),
-    humanReviewStatus:
-      violation.humanReviewStatus ?? (violation.requiresHumanReview ? 'pending' : 'not_applicable'),
-  }))
+  const violations = result.violations.map((violation) =>
+    normalizeViolationFindingState({
+      ...violation,
+      normativeType: violation.normativeType ?? getNormativeRuleType(violation.nbrReference),
+      humanReviewStatus:
+        violation.humanReviewStatus ??
+        (violation.requiresHumanReview ? 'pending' : 'not_applicable'),
+    }),
+  )
   const auditId = result.id || `${getAuditUrlStorageKey(result.url)}|${result.timestamp}`
 
   return hydrateAuditResult({
