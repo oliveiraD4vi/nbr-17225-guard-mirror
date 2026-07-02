@@ -105,6 +105,58 @@ export const ViolationsSummary: React.FC<ViolationsSummaryProps> = React.memo(
         onClick: onDownloadSummary,
       },
     ].filter((item) => Boolean(item.onClick))
+    const scoreFactItems = [
+      {
+        key: 'requirement-rules',
+        label: t('summary.scorePanelRequirementRules'),
+        value: auditScore.totalRequirementRules,
+      },
+      {
+        key: 'failed-requirements',
+        label: t('summary.scorePanelFailedRequirements'),
+        value: auditScore.violatedRequirementRules,
+      },
+      {
+        key: 'recommendation-rules',
+        label: t('summary.scorePanelRecommendationRules'),
+        value: auditScore.totalRecommendationRules,
+      },
+      {
+        key: 'failed-recommendations',
+        label: t('summary.scorePanelFailedRecommendations'),
+        value: auditScore.violatedRecommendationRules,
+      },
+      {
+        key: 'problem-types',
+        label: t('summary.scorePanelProblemTypes'),
+        value: auditScore.problemTypeCount,
+      },
+      {
+        key: 'occurrences',
+        label: t('summary.scorePanelOccurrences'),
+        value: auditScore.totalOccurrenceCount,
+      },
+      {
+        key: 'automatic-findings',
+        label: t('summary.scorePanelAutomaticFindings'),
+        value: auditScore.automaticFindingCount,
+      },
+      {
+        key: 'human-review',
+        label: t('summary.scorePanelHumanReview'),
+        value: `${auditScore.completedHumanReviewItems}/${auditScore.totalHumanReviewItems}`,
+      },
+    ]
+    const scoreFormula = auditScore.includesRecommendations
+      ? t('summary.scoreFormulaWithRecommendations', {
+          requirements: Math.round(auditScore.weights.requirements * 100),
+          recommendations: Math.round(auditScore.weights.recommendations * 100),
+          requirementScore: auditScore.requirementScore,
+          recommendationScore: auditScore.recommendationScore,
+        })
+      : t('summary.scoreFormulaRequirementsOnly', {
+          requirementScore: auditScore.requirementScore,
+        })
 
     return (
       <div className="violations-summary">
@@ -203,14 +255,24 @@ export const ViolationsSummary: React.FC<ViolationsSummaryProps> = React.memo(
                   })}
                 </Tag>
               )}
-              {auditScore.volumeScoreCap < auditScore.baseScore && (
-                <Tag color="purple">
-                  {t('summary.volumeScoreCap', {
-                    score: auditScore.volumeScoreCap,
-                  })}
-                </Tag>
-              )}
+              {auditScore.isProvisional && <Tag color="gold">{t('summary.provisionalScore')}</Tag>}
             </div>
+          </div>
+
+          <div className="summary-score-panel">
+            <div className="summary-score-panel-header">
+              <h3>{t('summary.scorePanelTitle')}</h3>
+              <p>{t('summary.scorePanelDescription')}</p>
+            </div>
+            <div className="summary-score-fact-grid">
+              {scoreFactItems.map((item) => (
+                <div className="summary-score-fact" key={item.key}>
+                  <span>{item.label}</span>
+                  <strong>{item.value}</strong>
+                </div>
+              ))}
+            </div>
+            <p className="summary-score-formula">{scoreFormula}</p>
           </div>
 
           <div className="summary-total-wrapper">
@@ -273,11 +335,7 @@ export const ViolationsSummary: React.FC<ViolationsSummaryProps> = React.memo(
           )}
 
           <div className={`summary-next-step is-${nextStep.tone}`}>
-            <button
-              className="summary-next-step-button"
-              type="button"
-              onClick={onOpenViolations}
-            >
+            <button className="summary-next-step-button" type="button" onClick={onOpenViolations}>
               <span className="summary-next-step-icon">{nextStep.icon}</span>
               <span>
                 <span className="summary-stat-label">{t('summary.nextStepLabel')}</span>

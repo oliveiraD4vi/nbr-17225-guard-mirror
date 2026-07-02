@@ -1,17 +1,19 @@
-import { getRunnableRules } from '@/rules'
 import { isNormativeRecommendation, isNormativeRequirement } from '@/normative'
-import type { AuditResult, Violation } from '@/types'
+import { getRunnableRules } from '@/rules'
+import type { AuditResult, Rule, SeverityLevel, Violation } from '@/types'
 
-function getRequirementRuleIds(includeHumanReview: boolean): Set<string> {
-  return new Set(getRunnableRules(false, includeHumanReview).map((rule) => rule.id))
+function getRequirementRules(includeHumanReview: boolean): Rule[] {
+  return getRunnableRules(false, includeHumanReview)
 }
 
-function getRecommendationRuleIds(includeHumanReview: boolean): Set<string> {
-  return new Set(
-    getRunnableRules(true, includeHumanReview)
-    .filter((rule) => isNormativeRecommendation(rule.nbrReference))
-    .map((rule) => rule.id),
+function getRecommendationRules(includeHumanReview: boolean): Rule[] {
+  return getRunnableRules(true, includeHumanReview).filter((rule) =>
+    isNormativeRecommendation(rule.nbrReference),
   )
+}
+
+function getRuleWeight(severity: SeverityLevel): number {
+  return severity === 'error' ? 2 : 1
 }
 
 function shouldCountViolation(violation: Violation): boolean {
@@ -19,17 +21,29 @@ function shouldCountViolation(violation: Violation): boolean {
   return violation.humanReviewStatus === 'confirmed'
 }
 
-function getViolatedRuleCount(
+function shouldCountAsActiveOccurrence(violation: Violation): boolean {
+  return !(violation.requiresHumanReview && violation.humanReviewStatus === 'dismissed')
+}
+
+function getRuleMap(rules: Rule[]): Map<string, Rule> {
+  return new Map(rules.map((rule) => [rule.id, rule]))
+}
+
+function getTotalWeight(rules: Rule[]): number {
+  return rules.reduce((total, rule) => total + getRuleWeight(rule.severity), 0)
+}
+
+function getFailedRuleIds(
   result: AuditResult,
   ruleIds: Set<string>,
   predicate: (reference: string) => boolean,
-): number {
+): Set<string> {
   return new Set(
     result.violations
       .filter((violation) => predicate(violation.nbrReference) && shouldCountViolation(violation))
       .map((violation) => violation.ruleId)
       .filter((ruleId) => ruleIds.has(ruleId)),
-  ).size
+  )
 }
 
 function getPendingHumanRuleCount(
@@ -50,19 +64,16 @@ function getPendingHumanRuleCount(
   ).size
 }
 
-function getRuleScore(totalRules: number, violatedRules: number): number {
-  if (totalRules === 0) return 100
-  return Math.max(0, Math.round(((totalRules - violatedRules) / totalRules) * 100))
+function getFailedWeight(failedRuleIds: Set<string>, ruleMap: Map<string, Rule>): number {
+  return [...failedRuleIds].reduce((total, ruleId) => {
+    const rule = ruleMap.get(ruleId)
+    return total + (rule ? getRuleWeight(rule.severity) : 0)
+  }, 0)
 }
 
-function getViolationVolumeScoreCap(violationCount: number): number {
-  if (violationCount <= 0) return 100
-  if (violationCount <= 20) return 100 - Math.ceil(violationCount / 2)
-  if (violationCount <= 40) return 90 - Math.ceil((violationCount - 20) / 2)
-  if (violationCount <= 60) return 80 - Math.ceil((violationCount - 40) / 2)
-  if (violationCount <= 80) return 70 - Math.ceil((violationCount - 60) / 2)
-  if (violationCount <= 100) return 60 - Math.ceil((violationCount - 80) / 2)
-  return Math.max(0, 50 - Math.ceil((violationCount - 100) / 5))
+function getWeightedRuleScore(totalWeight: number, failedWeight: number): number {
+  if (totalWeight === 0) return 100
+  return Math.max(0, Math.round(((totalWeight - failedWeight) / totalWeight) * 100))
 }
 
 export interface AuditScoreWeights {
@@ -91,6 +102,18 @@ export interface AuditScoreData {
   includesRecommendations: boolean
   includesHumanReview: boolean
   weights: AuditScoreWeights
+  isProvisional: boolean
+  totalRequirementWeight: number
+  failedRequirementWeight: number
+  totalRecommendationWeight: number
+  failedRecommendationWeight: number
+  activeOccurrenceCount: number
+  totalOccurrenceCount: number
+  problemTypeCount: number
+  automaticFindingCount: number
+  confirmedFindingCount: number
+  ignoredFindingCount: number
+  manualFindingCount: number
 }
 
 export type RequirementScoreData = Pick<
@@ -103,18 +126,26 @@ export function getAuditScoreData(result: AuditResult): AuditScoreData {
     result.includeRecommendations ??
     result.violations.some((violation) => isNormativeRecommendation(violation.nbrReference))
   const includesHumanReview = result.includeHumanReview ?? true
-  const requirementRuleIds = getRequirementRuleIds(includesHumanReview)
-  const recommendationRuleIds = getRecommendationRuleIds(includesHumanReview)
-  const totalRequirementRules = requirementRuleIds.size
-  const totalRecommendationRules = includesRecommendations ? recommendationRuleIds.size : 0
-  const violatedRequirementRules = getViolatedRuleCount(
+  const requirementRules = getRequirementRules(includesHumanReview)
+  const recommendationRules = includesRecommendations
+    ? getRecommendationRules(includesHumanReview)
+    : []
+  const requirementRuleMap = getRuleMap(requirementRules)
+  const recommendationRuleMap = getRuleMap(recommendationRules)
+  const requirementRuleIds = new Set(requirementRuleMap.keys())
+  const recommendationRuleIds = new Set(recommendationRuleMap.keys())
+  const totalRequirementRules = requirementRules.length
+  const totalRecommendationRules = recommendationRules.length
+  const failedRequirementRuleIds = getFailedRuleIds(
     result,
     requirementRuleIds,
     isNormativeRequirement,
   )
-  const violatedRecommendationRules = includesRecommendations
-    ? getViolatedRuleCount(result, recommendationRuleIds, isNormativeRecommendation)
-    : 0
+  const failedRecommendationRuleIds = includesRecommendations
+    ? getFailedRuleIds(result, recommendationRuleIds, isNormativeRecommendation)
+    : new Set<string>()
+  const violatedRequirementRules = failedRequirementRuleIds.size
+  const violatedRecommendationRules = failedRecommendationRuleIds.size
   const pendingHumanRequirementRules = getPendingHumanRuleCount(
     result,
     requirementRuleIds,
@@ -134,36 +165,39 @@ export function getAuditScoreData(result: AuditResult): AuditScoreData {
       violation.humanReviewStatus === 'confirmed' || violation.humanReviewStatus === 'dismissed',
   ).length
   const totalHumanReviewItems = humanReviewViolations.length
-  const requirementScore = getRuleScore(totalRequirementRules, violatedRequirementRules)
-  const recommendationScore = getRuleScore(totalRecommendationRules, violatedRecommendationRules)
+  const totalRequirementWeight = getTotalWeight(requirementRules)
+  const totalRecommendationWeight = getTotalWeight(recommendationRules)
+  const failedRequirementWeight = getFailedWeight(failedRequirementRuleIds, requirementRuleMap)
+  const failedRecommendationWeight = getFailedWeight(
+    failedRecommendationRuleIds,
+    recommendationRuleMap,
+  )
+  const requirementScore = getWeightedRuleScore(totalRequirementWeight, failedRequirementWeight)
+  const recommendationScore = includesRecommendations
+    ? getWeightedRuleScore(totalRecommendationWeight, failedRecommendationWeight)
+    : 100
   const humanReviewScore =
     totalHumanReviewItems === 0
       ? 100
       : Math.round((completedHumanReviewItems / totalHumanReviewItems) * 100)
   const weights: AuditScoreWeights = includesRecommendations
-    ? includesHumanReview
-      ? { requirements: 0.7, recommendations: 0.2, humanReview: 0.1 }
-      : { requirements: 0.8, recommendations: 0.2, humanReview: 0 }
-    : includesHumanReview
-      ? { requirements: 0.9, recommendations: 0, humanReview: 0.1 }
-      : { requirements: 1, recommendations: 0, humanReview: 0 }
-  const baseScore = Math.max(
+    ? { requirements: 0.9, recommendations: 0.1, humanReview: 0 }
+    : { requirements: 1, recommendations: 0, humanReview: 0 }
+  const score = Math.max(
     0,
     Math.round(
-      requirementScore * weights.requirements +
-        recommendationScore * weights.recommendations +
-        humanReviewScore * weights.humanReview,
+      requirementScore * weights.requirements + recommendationScore * weights.recommendations,
     ),
   )
-  const scoredViolationCount = result.totalViolations || result.violations.length
-  const volumeScoreCap = getViolationVolumeScoreCap(scoredViolationCount)
-  const score = Math.min(baseScore, volumeScoreCap)
+  const activeViolations = result.violations.filter(shouldCountAsActiveOccurrence)
+  const failedRuleIds = new Set([...failedRequirementRuleIds, ...failedRecommendationRuleIds])
+  const totalOccurrenceCount = result.totalViolations || result.violations.length
 
   return {
     score,
-    baseScore,
-    volumeScoreCap,
-    scoredViolationCount,
+    baseScore: score,
+    volumeScoreCap: 100,
+    scoredViolationCount: failedRuleIds.size,
     requirementScore,
     recommendationScore,
     humanReviewScore,
@@ -179,6 +213,23 @@ export function getAuditScoreData(result: AuditResult): AuditScoreData {
     includesRecommendations,
     includesHumanReview,
     weights,
+    isProvisional: pendingHumanReviewItems > 0,
+    totalRequirementWeight,
+    failedRequirementWeight,
+    totalRecommendationWeight,
+    failedRecommendationWeight,
+    activeOccurrenceCount: activeViolations.length,
+    totalOccurrenceCount,
+    problemTypeCount: new Set(activeViolations.map((violation) => violation.ruleId)).size,
+    automaticFindingCount: result.violations.filter((violation) => !violation.requiresHumanReview)
+      .length,
+    confirmedFindingCount: humanReviewViolations.filter(
+      (violation) => violation.humanReviewStatus === 'confirmed',
+    ).length,
+    ignoredFindingCount: humanReviewViolations.filter(
+      (violation) => violation.humanReviewStatus === 'dismissed',
+    ).length,
+    manualFindingCount: 0,
   }
 }
 

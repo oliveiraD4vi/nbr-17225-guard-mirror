@@ -74,14 +74,20 @@ export function buildAuditSummaryJson(result: AuditResult) {
     },
     score: {
       general: auditScore.score,
-      base: auditScore.baseScore,
-      volumeCap: auditScore.volumeScoreCap,
-      scoredViolationCount: auditScore.scoredViolationCount,
+      provisional: auditScore.isProvisional,
       requirements: auditScore.requirementScore,
-      recommendations: auditScore.includesRecommendations
-        ? auditScore.recommendationScore
+      recommendations: auditScore.includesRecommendations ? auditScore.recommendationScore : null,
+      weights: auditScore.weights,
+      requirementWeight: {
+        total: auditScore.totalRequirementWeight,
+        failed: auditScore.failedRequirementWeight,
+      },
+      recommendationWeight: auditScore.includesRecommendations
+        ? {
+            total: auditScore.totalRecommendationWeight,
+            failed: auditScore.failedRecommendationWeight,
+          }
         : null,
-      humanReview: auditScore.humanReviewScore,
     },
     counts: {
       total: result.totalViolations,
