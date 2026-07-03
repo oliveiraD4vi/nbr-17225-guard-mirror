@@ -6,6 +6,8 @@ O formato segue, de forma simples, a ideia de "Keep a Changelog" e versionamento
 
 ## [Unreleased]
 
+## [1.1.0-beta.4] - 2026-07-03
+
 ### Added
 
 - modelo persistente de achados com origem automática ou manual e estados aberto, confirmado e ignorado;
