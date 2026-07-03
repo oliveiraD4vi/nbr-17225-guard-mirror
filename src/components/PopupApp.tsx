@@ -108,9 +108,12 @@ const severityRank: Record<Violation['severity'], number> = {
   warning: 1,
 }
 
-const maxHeaderTabTitleLength = 300
+const maxHeaderTabTitleLength = 120
 const popupStateStorageKey = 'popupStateByUrl'
 const maxStoredPopupStates = 50
+const defaultIncludeHumanReview = true
+// Toggle temporariamente oculto: a auditoria continua incluindo itens não automatizáveis.
+const showHumanReviewScopeToggle = false
 
 type PopupTabKey = 'summary' | 'violations' | 'history'
 
@@ -322,7 +325,7 @@ export const PopupApp: React.FC = () => {
   const [siteAuditHistory, setSiteAuditHistory] = useState<AuditHistoryEntry[]>([])
   const [selectedHistoryId, setSelectedHistoryId] = useState<string | null>(null)
   const [includeRecommendations, setIncludeRecommendations] = useState(false)
-  const [includeHumanReview, setIncludeHumanReview] = useState(false)
+  const [includeHumanReview, setIncludeHumanReview] = useState(defaultIncludeHumanReview)
   const [initialLoading, setInitialLoading] = useState(true)
   const [loading, setLoading] = useState(false)
   const [activeTab, setActiveTab] = useState<(chrome.tabs.Tab & { id: number }) | null>(null)
@@ -395,8 +398,7 @@ export const PopupApp: React.FC = () => {
       ])
       const resolvedPreference =
         result?.includeRecommendations ?? Boolean(preferences.includeRecommendationsPreference)
-      const resolvedHumanReviewPreference =
-        result?.includeHumanReview ?? Boolean(preferences.includeHumanReviewPreference)
+      const resolvedHumanReviewPreference = defaultIncludeHumanReview
       const savedState = getStoredPopupState(preferences[popupStateStorageKey], tab.url)
       const availableAuditIds = new Set(
         [result?.id, ...history.map((entry) => entry.id), ...siteHistory.map((entry) => entry.id)]
@@ -429,7 +431,7 @@ export const PopupApp: React.FC = () => {
       setAuditHistory([])
       setSiteAuditHistory([])
       setSelectedHistoryId(null)
-      setIncludeHumanReview(false)
+      setIncludeHumanReview(defaultIncludeHumanReview)
       setPopupStoredState(null)
       setActiveTabKey('summary')
       setIsAuditMetaCollapsed(false)
@@ -1697,7 +1699,6 @@ export const PopupApp: React.FC = () => {
         label: t('shared.actions.highlightAll'),
         icon: <EyeOutlined />,
         onClick: handleHighlightAll,
-        type: 'primary' as const,
         disabled: isHistoricalView,
       },
       {
@@ -1717,16 +1718,17 @@ export const PopupApp: React.FC = () => {
         disabled: isHistoricalView,
       },
       {
-        key: 'json',
-        label: t('shared.actions.exportJson'),
-        icon: <DownloadOutlined />,
-        onClick: handleExportJSON,
-      },
-      {
         key: 'csv',
         label: t('shared.actions.exportCsv'),
         icon: <DownloadOutlined />,
         onClick: handleExportCSV,
+      },
+      {
+        key: 'json',
+        label: t('shared.actions.exportJson'),
+        icon: <DownloadOutlined />,
+        onClick: handleExportJSON,
+        type: 'primary' as const,
       },
     ]
   }, [
@@ -1861,7 +1863,11 @@ export const PopupApp: React.FC = () => {
               </Tag>
               <span className="header-version-tag">v{APP_VERSION}</span>
             </h1>
-            <p>
+            <p
+              title={
+                activeTab?.title ? t('popup.header.activeTab', { title: activeTab.title }) : ''
+              }
+            >
               {activeTab?.title
                 ? t('popup.header.activeTab', { title: truncateHeaderTabTitle(activeTab.title) })
                 : t('popup.header.fallback')}
@@ -1957,27 +1963,29 @@ export const PopupApp: React.FC = () => {
                       </div>
                     </div>
                   </div>
-                  <div className="tab-status-item tab-status-item-toggle">
-                    <span className="tab-status-label">
-                      {t('popup.scope.humanReviewLabel')}:{' '}
-                      {includeHumanReview
-                        ? t('popup.scope.humanReviewIncluded')
-                        : t('popup.scope.humanReviewExcluded')}
-                    </span>
-                    <div className="recommendations-toggle-row">
-                      <Switch
-                        checked={includeHumanReview}
-                        loading={loading}
-                        onChange={(checked) => {
-                          void handleHumanReviewToggle(checked)
-                        }}
-                      />
-                      <div className="recommendations-toggle-copy">
-                        <strong>{t('popup.scope.humanReviewAction')}</strong>
-                        <small>{t('popup.scope.humanReviewNote')}</small>
+                  {showHumanReviewScopeToggle && (
+                    <div className="tab-status-item tab-status-item-toggle">
+                      <span className="tab-status-label">
+                        {t('popup.scope.humanReviewLabel')}:{' '}
+                        {includeHumanReview
+                          ? t('popup.scope.humanReviewIncluded')
+                          : t('popup.scope.humanReviewExcluded')}
+                      </span>
+                      <div className="recommendations-toggle-row">
+                        <Switch
+                          checked={includeHumanReview}
+                          loading={loading}
+                          onChange={(checked) => {
+                            void handleHumanReviewToggle(checked)
+                          }}
+                        />
+                        <div className="recommendations-toggle-copy">
+                          <strong>{t('popup.scope.humanReviewAction')}</strong>
+                          <small>{t('popup.scope.humanReviewNote')}</small>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
                   {quotaIssue && !isQuotaModalOpen && (
                     <div className="tab-status-item tab-status-item-toggle">
                       <span className="tab-status-label">{t('popup.quota.resumeLabel')}</span>
