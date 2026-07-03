@@ -1,6 +1,6 @@
 # Guardião NBR 17225
 
-Verificador de acessibilidade para navegadores Chromium, alinhado à V1.1 Bússola Beta do catálogo documental da ABNT NBR 17225:2025.
+Verificador de acessibilidade para navegadores Chromium, alinhado à V1 Farol Beta do catálogo documental da ABNT NBR 17225:2025.
 
 ## Visão geral
 
@@ -93,7 +93,7 @@ O Guardião NBR 17225 executa auditorias diretamente na página inspecionada e o
 
 Produto: `1.1.0-beta.4`
 Manifest Chrome: `1.1.0`
-Nome: **V1.1 Bússola Beta**
+Nome: **V1 Farol Beta**
 
 Escopo da Beta:
 
@@ -246,7 +246,7 @@ Quando um PR alterar, remover ou criar uma função de verificação de regra, o
 
 Produto: `1.1.0-beta.4`
 Manifest Chrome: `1.1.0`
-Nome: **V1.1 Bússola Beta**
+Nome: **V1 Farol Beta**
 
 A política de nomes e evolução está documentada em `docs/VERSIONING.md`.
 

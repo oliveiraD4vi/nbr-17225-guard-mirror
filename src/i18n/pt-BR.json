@@ -139,7 +139,7 @@
       "eyebrow": "Sobre",
       "title": "Auditoria assistida da ABNT NBR 17225",
       "version": "{{version}}",
-      "descriptionA": "O Guardião V1.1 Bússola Beta organiza achados automáticos e manuais pela nomenclatura da ABNT NBR 17225: requisitos, recomendações e itens que dependem de revisão humana.",
+      "descriptionA": "O Guardião V1 Farol Beta organiza achados automáticos e manuais pela nomenclatura da ABNT NBR 17225: requisitos, recomendações e itens que dependem de revisão humana.",
       "descriptionB": "Use a verificação na aba atual para gerar um diagnóstico por URL, destacar elementos da página, manter histórico local e reimportar relatórios JSON quando precisar continuar a revisão em outro ambiente.",
       "links": {
         "label": "Links do projeto",

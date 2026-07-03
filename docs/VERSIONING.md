@@ -1,15 +1,15 @@
 # Versionamento
 
-O Guardião NBR 17225 usa versionamento semântico para a extensão e nomes curtos para marcos funcionais maiores.
+O Guardião NBR 17225 usa versionamento semântico para a extensão e nomes curtos para linhas principais do produto.
 
 ## Versão Atual
 
 Produto: `1.1.0-beta.4`
 Manifest Chrome: `1.1.0`
 
-| Versão         | Nome              | Escopo                                                                                                                 |
-| -------------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `1.1.0-beta.4` | V1.1 Bússola Beta | Nota por regra, números objetivos, triagem opcional, achados manuais, ações em massa e prévia temporária de contraste. |
+| Versão         | Nome          | Escopo                                                                                                                 |
+| -------------- | ------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `1.1.0-beta.4` | V1 Farol Beta | Nota por regra, números objetivos, triagem opcional, achados manuais, ações em massa e prévia temporária de contraste. |
 
 Regra executada na Beta significa regra habilitada para avaliação assistida. Não significa regra final.
 
@@ -25,7 +25,7 @@ O processo de preparação, validação, criação de tags e publicação está 
 
 ## Tema dos Nomes
 
-As versões seguem um tema de navegação, orientação e sinalização. Esse tema combina com a ideia de guardião porque comunica direção, vigilância, segurança e progressão contínua sem depender de propriedade intelectual de franquias.
+As linhas principais seguem um tema de navegação, orientação e sinalização. Esse tema combina com a ideia de guardião porque comunica direção, vigilância, segurança e progressão contínua sem depender de propriedade intelectual de franquias.
 
 Critérios para escolher nomes:
 
@@ -33,7 +33,7 @@ Critérios para escolher nomes:
 - o significado deve estar ligado a orientar, sinalizar, guiar, atravessar ou manter rota;
 - o nome não deve depender de personagem, marca registrada ou universo ficcional específico;
 - o nome precisa funcionar em documentação técnica e comunicação pública;
-- nomes de versões principais devem transmitir um salto claro de maturidade.
+- nomes de linhas principais devem transmitir um salto claro de maturidade.
 
 ## Padrão por Tipo de Versão
 
@@ -51,52 +51,36 @@ Sugestões:
 
 ### Minor
 
-Use nomes de instrumentos, sinais, rotas ou componentes de navegação. Eles representam entrega funcional compatível com a major atual.
-
-Exemplos para a V1 Farol:
-
-- V1.1 Bússola: refinamento de score, exportações e orientação de priorização.
-- V1.2 Baliza: melhoria de alertas, tooltips, status visuais e trilhas de revisão.
-- V1.3 Carta Náutica: documentação de regras, rastreabilidade pública e comparação entre auditorias.
-- V1.4 Sextante: leitura mais precisa de heurísticas sensíveis e redução de ruído.
-- V1.5 Porto Seguro: estabilidade, quota de armazenamento, recuperação e robustez operacional.
+Use apenas o número semântico. Entregas `MINOR` ampliam a linha atual sem trocar o nome público. Na linha V1, versões como `1.1.x` e `1.2.x` continuam comunicadas como V1 Farol.
 
 ### Patch
 
-Use nomes menores ligados a ajustes de rota, luz, marcação e manutenção. O nome pode aparecer apenas em changelog interno, sem destaque público obrigatório.
-
-Exemplos:
-
-- Feixe: ajuste visual ou correção pequena de UI.
-- Lente: correção de legibilidade, contraste ou foco visual.
-- Marco: correção de documentação, contagem ou rastreabilidade.
-- Nó: correção pequena de persistência ou integração.
-- Rumo: refinamento pontual de fluxo ou comportamento.
+Use apenas o número semântico. Correções `PATCH` não recebem nome público próprio.
 
 ## Sugestões de Próximas Versões
 
-### V1.1 Bússola
+### V1.1
 
 - nota geral com leitura mais clara da composição;
 - exportação de resumo simples;
 - correções visuais em tooltips e estados auxiliares;
 - documentação do padrão de versões.
 
-### V1.2 Baliza
+### V1.2
 
 - melhoria dos sinais visuais de revisão contextual;
 - maior clareza de estados abertos, confirmados e ignorados;
 - ajustes de acessibilidade da própria interface da extensão;
 - microinterações para reduzir confusão em listas longas.
 
-### V1.3 Carta Náutica
+### V1.3
 
 - documentação pública mais completa de regras e limites;
 - links cruzados entre extensão, Página do Projeto, políticas e issues;
 - orientação formal para atualizar a Página do Projeto quando regras mudarem;
 - melhoria de navegação da página pública de regras.
 
-### V1.4 Sextante
+### V1.4
 
 - revisão técnica de heurísticas sensíveis;
 - redução de ruído sem ocultar problemas reais;
