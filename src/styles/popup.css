@@ -183,25 +183,72 @@
   overflow: hidden;
 }
 
-.audit-meta-toggle {
+.audit-meta-header {
   display: flex;
-  width: 100%;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
   padding: 10px 12px;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-  text-align: left;
 }
 
-.audit-meta-toggle > span:first-child {
+.audit-meta-primary {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.audit-meta-date {
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+
+.audit-meta-url {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   min-width: 0;
+  color: var(--guard-color-text-secondary);
+  font-size: 12px;
+}
+
+.audit-meta-url > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.audit-meta-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 0 0 auto;
+}
+
+.audit-meta-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.audit-meta-toggle:hover,
+.audit-meta-toggle:focus-visible {
+  background: var(--guard-color-surface-muted);
+}
+
+.audit-meta-toggle:focus-visible {
+  outline: 2px solid var(--guard-color-primary);
+  outline-offset: 1px;
 }
 
 .audit-meta-toggle-icon {
@@ -209,7 +256,7 @@
   color: var(--guard-color-text-muted);
 }
 
-.audit-meta-toggle strong {
+.audit-meta-date strong {
   display: inline-flex;
   align-items: center;
   gap: 6px;

@@ -18,12 +18,14 @@ import {
   ArrowLeftOutlined,
   ClockCircleOutlined,
   CloseOutlined,
+  CopyOutlined,
   DownOutlined,
   DownloadOutlined,
   EyeOutlined,
   FallOutlined,
   FlagOutlined,
   InfoCircleOutlined,
+  LinkOutlined,
   MinusOutlined,
   PlusOutlined,
   ReloadOutlined,
@@ -816,6 +818,17 @@ export const PopupApp: React.FC = () => {
       return nextValue
     })
   }, [persistPopupState])
+
+  const handleCopyAuditUrl = useCallback(async () => {
+    if (!displayedAuditResult?.url) return
+    try {
+      await navigator.clipboard.writeText(displayedAuditResult.url)
+      message.success(t('popup.messages.auditUrlCopied'))
+    } catch (error) {
+      console.error('Erro ao copiar URL da auditoria:', error)
+      message.error(t('popup.messages.auditUrlCopyError'))
+    }
+  }, [displayedAuditResult?.url])
 
   const handleSelectHistory = useCallback(
     (historyId: string | null) => {
@@ -1954,7 +1967,6 @@ export const PopupApp: React.FC = () => {
             onDownloadSummary={handleExportSummary}
             onOpenViolations={() => handleTabChange('violations')}
             onRerunAudit={canRerunViewedAudit ? handleRunAudit : undefined}
-            showHumanReview={includeHumanReview}
           />
         ),
       },
@@ -2053,6 +2065,8 @@ export const PopupApp: React.FC = () => {
 
   const canReturnFromAbout = showAboutView && Boolean(displayedAuditResult)
   const canOpenAbout = !showAboutView && Boolean(displayedAuditResult)
+  const displayedPageTitle =
+    displayedAuditResult?.pageTitle || activeTab?.title || activeTab?.url || ''
 
   return (
     <Layout className="popup-app">
@@ -2069,11 +2083,13 @@ export const PopupApp: React.FC = () => {
             </h1>
             <p
               title={
-                activeTab?.title ? t('popup.header.activeTab', { title: activeTab.title }) : ''
+                displayedPageTitle ? t('popup.header.activeTab', { title: displayedPageTitle }) : ''
               }
             >
-              {activeTab?.title
-                ? t('popup.header.activeTab', { title: truncateHeaderTabTitle(activeTab.title) })
+              {displayedPageTitle
+                ? t('popup.header.activeTab', {
+                    title: truncateHeaderTabTitle(displayedPageTitle),
+                  })
                 : t('popup.header.fallback')}
             </p>
           </div>
@@ -2118,34 +2134,52 @@ export const PopupApp: React.FC = () => {
         ) : (
           <>
             <section className="audit-meta-panel">
-              <button
-                className="audit-meta-toggle"
-                type="button"
-                aria-expanded={!isAuditMetaCollapsed}
-                onClick={handleAuditMetaToggle}
-              >
-                <span>
-                  <span className="tab-status-label">
-                    {isHistoricalView ? t('shared.labels.historyOf') : t('shared.labels.auditedAt')}
+              <div className="audit-meta-header">
+                <div className="audit-meta-primary">
+                  <span className="audit-meta-date">
+                    <span className="tab-status-label">
+                      {isHistoricalView
+                        ? t('shared.labels.historyOf')
+                        : t('shared.labels.auditedAt')}
+                    </span>
+                    <strong>
+                      <ClockCircleOutlined />{' '}
+                      {new Date(displayedAuditResult.timestamp).toLocaleString('pt-BR')}
+                    </strong>
                   </span>
-                  <strong>
-                    <ClockCircleOutlined />{' '}
-                    {new Date(displayedAuditResult.timestamp).toLocaleString('pt-BR')}
-                  </strong>
-                </span>
-                <span className="audit-meta-toggle-icon" aria-hidden="true">
-                  {isAuditMetaCollapsed ? <DownOutlined /> : <UpOutlined />}
-                </span>
-              </button>
+                  <span className="audit-meta-url" title={displayedAuditResult.url}>
+                    <LinkOutlined aria-hidden="true" />
+                    <span>{displayedAuditResult.url}</span>
+                  </span>
+                </div>
+                <div className="audit-meta-actions">
+                  <Tooltip title={t('shared.actions.copyUrl')}>
+                    <Button
+                      type="text"
+                      size="small"
+                      icon={<CopyOutlined />}
+                      aria-label={t('shared.actions.copyUrl')}
+                      onClick={() => {
+                        void handleCopyAuditUrl()
+                      }}
+                    />
+                  </Tooltip>
+                  <button
+                    className="audit-meta-toggle"
+                    type="button"
+                    aria-expanded={!isAuditMetaCollapsed}
+                    aria-label={t('popup.scope.toggleDetails')}
+                    onClick={handleAuditMetaToggle}
+                  >
+                    <span className="audit-meta-toggle-icon" aria-hidden="true">
+                      {isAuditMetaCollapsed ? <DownOutlined /> : <UpOutlined />}
+                    </span>
+                  </button>
+                </div>
+              </div>
 
               {!isAuditMetaCollapsed && (
                 <div className="tab-status-strip">
-                  <div className="tab-status-item">
-                    <span className="tab-status-label">{t('shared.labels.currentTab')}</span>
-                    <strong>
-                      {activeTab?.title || activeTab?.url || t('shared.labels.untitled')}
-                    </strong>
-                  </div>
                   <div className="tab-status-item tab-status-item-toggle">
                     <span className="tab-status-label">
                       {t('popup.scope.toggleLabel')}:{' '}

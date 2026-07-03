@@ -1,22 +1,12 @@
 import React, { Suspense } from 'react'
 import ReactDOM from 'react-dom/client'
-import { Alert, Button, ConfigProvider, Empty, Layout, Space, Tag } from 'antd'
-import {
-  DownloadOutlined,
-  PrinterOutlined,
-  RobotOutlined,
-  UserSwitchOutlined,
-} from '@ant-design/icons'
+import { Alert, Button, ConfigProvider, Empty, Layout, Space } from 'antd'
+import { DownloadOutlined, PrinterOutlined } from '@ant-design/icons'
 import ptBR from 'antd/locale/pt_BR'
 import { ReportSkeleton } from './components/LoadingSkeletons'
 import { t } from './i18n'
 import type { AuditResult } from './types'
 import { buildExportableAuditResult } from './utils/audit-export'
-import {
-  getConfirmedFindingCount,
-  getIgnoredFindingCount,
-  getPendingHumanReviewCount,
-} from './utils/audit-comparison'
 import { getActiveTab, getAuditResult, getDisplayResultForScope } from './utils/audit-engine'
 import './styles/theme.css'
 import './styles/popup.css'
@@ -116,9 +106,6 @@ export const ReportApp: React.FC = () => {
     URL.revokeObjectURL(url)
   }, [auditResult])
 
-  const confirmedFindings = auditResult ? getConfirmedFindingCount(auditResult) : 0
-  const ignoredFindings = auditResult ? getIgnoredFindingCount(auditResult) : 0
-  const pendingReviews = auditResult ? getPendingHumanReviewCount(auditResult) : 0
   const displayedAuditResult = auditResult
     ? getDisplayResultForScope(
         auditResult,
@@ -151,22 +138,7 @@ export const ReportApp: React.FC = () => {
               type="info"
               showIcon
               message={t('report.introTitle')}
-              description={
-                <Space wrap size={[8, 8]}>
-                  <Tag icon={<RobotOutlined />} color="blue">
-                    {t('shared.states.automaticDetection')}
-                  </Tag>
-                  <Tag icon={<UserSwitchOutlined />} color="gold">
-                    {t('shared.states.humanConfirmation')}
-                  </Tag>
-                  <span>{t('report.introDescription')}</span>
-                  <Tag color="red">
-                    {t('shared.counts.confirmed', { count: confirmedFindings })}
-                  </Tag>
-                  <Tag>{t('shared.counts.ignored', { count: ignoredFindings })}</Tag>
-                  <Tag color="gold">{t('shared.counts.pending', { count: pendingReviews })}</Tag>
-                </Space>
-              }
+              description={t('report.introDescription')}
             />
             <Suspense fallback={<ReportSkeleton />}>
               <ViolationsSummary result={displayedAuditResult} reviewSourceResult={auditResult} />

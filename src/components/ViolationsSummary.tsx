@@ -2,14 +2,13 @@ import React from 'react'
 import { Button, Card, Dropdown, Empty, Space, Tag } from 'antd'
 import {
   ArrowRightOutlined,
-  CalendarOutlined,
   CheckCircleOutlined,
   DownOutlined,
   DownloadOutlined,
   FileTextOutlined,
   InfoCircleOutlined,
-  LinkOutlined,
   ReloadOutlined,
+  UpOutlined,
   WarningOutlined,
 } from '@ant-design/icons'
 import { PROJECT_SCORE_URL } from '@/config/links'
@@ -27,7 +26,6 @@ interface ViolationsSummaryProps {
   onDownloadSummary?: () => void
   onOpenViolations?: () => void
   onRerunAudit?: () => void
-  showHumanReview?: boolean
 }
 
 export const ViolationsSummary: React.FC<ViolationsSummaryProps> = React.memo(
@@ -40,6 +38,10 @@ export const ViolationsSummary: React.FC<ViolationsSummaryProps> = React.memo(
     onOpenViolations,
     onRerunAudit,
   }) => {
+    const resultKey = result ? (result.id ?? `${result.url}:${result.timestamp}`) : 'empty'
+    const [scorePanelState, setScorePanelState] = React.useState({ key: resultKey, open: false })
+    const isScorePanelOpen = scorePanelState.key === resultKey && scorePanelState.open
+
     if (loading) {
       return <SummarySkeleton />
     }
@@ -160,14 +162,6 @@ export const ViolationsSummary: React.FC<ViolationsSummaryProps> = React.memo(
                   : t('summary.descriptionWithoutIssues')}
               </p>
             </div>
-            <div className={`summary-status-pill ${hasViolations ? 'is-warning' : 'is-success'}`}>
-              {hasViolations ? <WarningOutlined /> : <CheckCircleOutlined />}
-              <span>
-                {hasViolations
-                  ? t('shared.states.actionRequired')
-                  : t('shared.states.verifiedCompliant')}
-              </span>
-            </div>
             <Space className="summary-actions" size={8}>
               {downloadItems.length > 0 && (
                 <Dropdown menu={{ items: downloadItems }} trigger={['click']}>
@@ -182,17 +176,6 @@ export const ViolationsSummary: React.FC<ViolationsSummaryProps> = React.memo(
                 </Button>
               )}
             </Space>
-          </div>
-
-          <div className="summary-meta">
-            <div className="summary-meta-item">
-              <LinkOutlined />
-              <span>{result.url}</span>
-            </div>
-            <div className="summary-meta-item">
-              <CalendarOutlined />
-              <span>{new Date(result.timestamp).toLocaleString('pt-BR')}</span>
-            </div>
           </div>
 
           <div className={`summary-score-card is-${scoreTone}`}>
@@ -238,27 +221,45 @@ export const ViolationsSummary: React.FC<ViolationsSummaryProps> = React.memo(
             </div>
           </div>
 
-          <div className="summary-score-panel">
-            <div className="summary-score-panel-header">
-              <h3>{t('summary.scorePanelTitle')}</h3>
-              <p>{t('summary.scorePanelDescription')}</p>
-            </div>
-            <div className="summary-score-metrics">
-              {scorePrimaryItems.map((item) => (
-                <div className={`summary-score-metric is-${item.tone}`} key={item.key}>
-                  <span>{item.label}</span>
-                  <strong>{item.value}</strong>
+          <div className={`summary-score-panel${isScorePanelOpen ? ' is-open' : ''}`}>
+            <button
+              type="button"
+              className="summary-score-panel-toggle"
+              aria-expanded={isScorePanelOpen}
+              onClick={() =>
+                setScorePanelState((current) => ({
+                  key: resultKey,
+                  open: current.key === resultKey ? !current.open : true,
+                }))
+              }
+            >
+              <span className="summary-score-panel-header">
+                <strong>{t('summary.scorePanelTitle')}</strong>
+                <small>{t('summary.scorePanelCollapsedDescription')}</small>
+              </span>
+              {isScorePanelOpen ? <UpOutlined /> : <DownOutlined />}
+            </button>
+            {isScorePanelOpen && (
+              <div className="summary-score-panel-content">
+                <p>{t('summary.scorePanelDescription')}</p>
+                <div className="summary-score-metrics">
+                  {scorePrimaryItems.map((item) => (
+                    <div className={`summary-score-metric is-${item.tone}`} key={item.key}>
+                      <span>{item.label}</span>
+                      <strong>{item.value}</strong>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-            <div className="summary-score-details">
-              {scoreSecondaryItems.map((item) => (
-                <span key={item.key}>
-                  <strong>{item.value}</strong> {item.label}
-                </span>
-              ))}
-            </div>
-            <p className="summary-score-formula">{scoreFormula}</p>
+                <div className="summary-score-details">
+                  {scoreSecondaryItems.map((item) => (
+                    <span key={item.key}>
+                      <strong>{item.value}</strong> {item.label}
+                    </span>
+                  ))}
+                </div>
+                <p className="summary-score-formula">{scoreFormula}</p>
+              </div>
+            )}
           </div>
 
           <div className="summary-total-wrapper">
