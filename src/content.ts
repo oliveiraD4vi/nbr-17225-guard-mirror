@@ -791,7 +791,7 @@ if (contentScope.__nbrGuardContentLoaded) {
           break
       }
     } catch (error) {
-      console.error('[Guardião NBR 17225] Erro ao aplicar simulador de visão:', error)
+      console.error('[Guardião NBR 17225] Erro ao aplicar simulador de percepção visual:', error)
     }
   }
 

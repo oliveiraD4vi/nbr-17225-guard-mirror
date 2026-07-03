@@ -89,6 +89,7 @@ export const VisionSimulator: React.FC<VisionSimulatorProps> = React.memo(({ onF
         <details className="simulator-info">
           <summary>{t('vision.infoSummary')}</summary>
           <div className="simulator-info-content">
+            <p>{t('vision.infoDisclaimer')}</p>
             <p>
               <strong>Protanopia:</strong> {t('vision.infoProtanopia')}
             </p>

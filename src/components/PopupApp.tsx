@@ -1235,7 +1235,7 @@ export const PopupApp: React.FC = () => {
         await ensureContentScriptReady(activeTab.id)
         await chrome.tabs.sendMessage(activeTab.id, { action: 'APPLY_VISION_FILTER', filter })
       } catch (error) {
-        console.error('Erro ao aplicar simulador de visão:', error)
+        console.error('Erro ao aplicar simulador de percepção visual:', error)
       }
     },
     [activeTab?.id],
