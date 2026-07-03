@@ -90,6 +90,21 @@ export interface Violation {
   customId: string
 }
 
+export interface ManualFindingElementDraft {
+  selector: string
+  tagName?: string
+  snippet: string
+  accessibleName?: string
+  visibleText?: string
+  url: string
+  pageTitle?: string
+  selectedAt: number
+}
+
+export interface ManualFindingDraft extends ManualFindingElementDraft {
+  tabId: number
+}
+
 export interface AuditResult {
   id?: string
   timestamp: number
@@ -130,6 +145,7 @@ export interface ExtensionMessage {
 export interface StorageData {
   auditResultsByTab?: Record<string, AuditResult>
   auditHistoryByUrl?: Record<string, AuditHistoryEntry[]>
+  manualFindingDraftsByTab?: Record<string, ManualFindingDraft>
   highlightState?: HighlightState
   visionFilter?: VisionSimulationFilter
   includeRecommendationsPreference?: boolean

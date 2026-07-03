@@ -1,6 +1,10 @@
 import type { Rule, SeverityLevel, Violation, WCAGLevel } from '@/types'
 import { getNormativeRuleType } from '@/normative'
 import { isFullyAutomatedCategory } from '@/types'
+import {
+  MANUAL_FINDING_SELECTION_HOST_ID,
+  MANUAL_FINDING_SELECTION_ID_PREFIX,
+} from '@/utils/manual-findings'
 
 /**
  * Utilitários gerais para a extensão
@@ -95,11 +99,18 @@ export function isGuardInjectedElement(element: Element | null): boolean {
   if (!(element instanceof HTMLElement || element instanceof SVGElement)) return false
 
   const ownId = element.id || ''
-  if (ownId === VISION_FILTER_HOST_ID || ownId.startsWith(HIGHLIGHT_ID_PREFIX)) {
+  if (
+    ownId === VISION_FILTER_HOST_ID ||
+    ownId === MANUAL_FINDING_SELECTION_HOST_ID ||
+    ownId.startsWith(HIGHLIGHT_ID_PREFIX) ||
+    ownId.startsWith(MANUAL_FINDING_SELECTION_ID_PREFIX)
+  ) {
     return true
   }
 
-  return !!element.closest?.(`#${VISION_FILTER_HOST_ID}, [id^="${HIGHLIGHT_ID_PREFIX}"]`)
+  return !!element.closest?.(
+    `#${VISION_FILTER_HOST_ID}, #${MANUAL_FINDING_SELECTION_HOST_ID}, [id^="${HIGHLIGHT_ID_PREFIX}"], [id^="${MANUAL_FINDING_SELECTION_ID_PREFIX}"]`,
+  )
 }
 
 /**
@@ -183,9 +194,15 @@ export function getEffectiveBackgroundColor(element: HTMLElement): string {
     if (alpha === 0) return { r: 255, g: 255, b: 255, a: 1 }
 
     return {
-      r: Math.round((foreground.r * foreground.a + background.r * background.a * (1 - foreground.a)) / alpha),
-      g: Math.round((foreground.g * foreground.a + background.g * background.a * (1 - foreground.a)) / alpha),
-      b: Math.round((foreground.b * foreground.a + background.b * background.a * (1 - foreground.a)) / alpha),
+      r: Math.round(
+        (foreground.r * foreground.a + background.r * background.a * (1 - foreground.a)) / alpha,
+      ),
+      g: Math.round(
+        (foreground.g * foreground.a + background.g * background.a * (1 - foreground.a)) / alpha,
+      ),
+      b: Math.round(
+        (foreground.b * foreground.a + background.b * background.a * (1 - foreground.a)) / alpha,
+      ),
       a: alpha,
     }
   }

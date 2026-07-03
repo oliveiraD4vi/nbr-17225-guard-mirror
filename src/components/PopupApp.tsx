@@ -11,6 +11,7 @@ import {
   FlagOutlined,
   InfoCircleOutlined,
   MinusOutlined,
+  PlusOutlined,
   ReloadOutlined,
   RiseOutlined,
   StopOutlined,
@@ -460,7 +461,11 @@ export const PopupApp: React.FC = () => {
     async (payload: Record<string, unknown>) => {
       const tab = activeTab ?? (await getActiveTab())
       await ensureContentScriptReady(tab.id)
-      await chrome.tabs.sendMessage(tab.id, payload)
+      const response = await chrome.tabs.sendMessage(tab.id, payload)
+      if (response?.error) {
+        throw new Error(response.error)
+      }
+      return response
     },
     [activeTab],
   )
@@ -975,6 +980,18 @@ export const PopupApp: React.FC = () => {
     }
   }, [displayedAuditResult, isHistoricalView, sendMessageToActiveTab])
 
+  const handleStartManualFindingSelection = useCallback(async () => {
+    if (isHistoricalView) return
+
+    try {
+      await sendMessageToActiveTab({ action: 'START_MANUAL_FINDING_SELECTION' })
+      message.info(t('popup.messages.manualFindingSelectionStarted'))
+    } catch (error) {
+      console.error('Erro ao iniciar seleção de achado manual:', error)
+      message.error(t('popup.messages.manualFindingSelectionError'))
+    }
+  }, [isHistoricalView, sendMessageToActiveTab])
+
   const handleHighlightViolation = useCallback(
     async (violation: Violation) => {
       try {
@@ -1401,6 +1418,13 @@ export const PopupApp: React.FC = () => {
         disabled: !canRerunViewedAudit,
       },
       {
+        key: 'manual-finding',
+        label: t('shared.actions.createManualFinding'),
+        icon: <PlusOutlined />,
+        onClick: handleStartManualFindingSelection,
+        disabled: isHistoricalView,
+      },
+      {
         key: 'highlight',
         label: t('shared.actions.highlightAll'),
         icon: <EyeOutlined />,
@@ -1442,6 +1466,7 @@ export const PopupApp: React.FC = () => {
     handleRunAudit,
     canRerunViewedAudit,
     loading,
+    handleStartManualFindingSelection,
     handleHighlightAll,
     isHistoricalView,
     handleNextPriorityIssue,

@@ -17,6 +17,7 @@
       "usingHistory": "Usando histórico",
       "startVerification": "Iniciar verificação",
       "rerun": "Reexecutar",
+      "createManualFinding": "Criar achado manual",
       "highlightAll": "Destacar tudo",
       "nextPriority": "Próximo prioritário",
       "clearHighlights": "Limpar destaques",
@@ -189,7 +190,9 @@
       "quotaRecovered": "Espaço liberado e alteração salva com sucesso.",
       "quotaRecoveryFailed": "Não foi possível liberar espaço suficiente no armazenamento local.",
       "storageCompacted": "Armazenamento local compactado com sucesso.",
-      "storageCompactError": "Não foi possível compactar o armazenamento local."
+      "storageCompactError": "Não foi possível compactar o armazenamento local.",
+      "manualFindingSelectionStarted": "Clique no elemento da página que deve virar achado manual.",
+      "manualFindingSelectionError": "Não foi possível iniciar a seleção do elemento."
     },
     "scope": {
       "toggleLabel": "Escopo da auditoria",
@@ -632,7 +635,11 @@
   "content": {
     "unknownAuditError": "Erro desconhecido ao auditar a página",
     "highlightAriaLabel": "Detalhes da regra {{ruleName}}",
-    "highlightMeta": "NBR {{reference}} · {{severity}}"
+    "highlightMeta": "NBR {{reference}} · {{severity}}",
+    "manualSelectionTitle": "Selecione o elemento para o achado manual",
+    "manualSelectionDescription": "Clique no elemento da página ou pressione Esc para cancelar.",
+    "manualSelectionUnavailable": "Não foi possível iniciar a seleção nesta página.",
+    "manualSelectionError": "Não foi possível iniciar a seleção do elemento."
   },
   "engine": {
     "noActiveTab": "Nenhuma aba ativa encontrada.",
@@ -646,6 +653,9 @@
     "installed": "Extensão instalada com sucesso",
     "updated": "Extensão atualizada",
     "message": "Mensagem no background:",
-    "loaded": "Background service worker carregado"
+    "loaded": "Background service worker carregado",
+    "manualFindingDraftError": "Não foi possível salvar o rascunho do achado manual.",
+    "manualFindingDraftInvalid": "O rascunho do achado manual está incompleto.",
+    "manualFindingDraftNoTab": "Não foi possível identificar a aba do achado manual."
   }
 }
