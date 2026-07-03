@@ -1047,8 +1047,7 @@ export const PopupApp: React.FC<PopupAppProps> = ({ surface = 'popup', targetTab
       }
     },
     [
-      activeTab?.id,
-      activeTab?.url,
+      activeTab,
       auditResult,
       clearHighlightsOnPage,
       includeHumanReview,
@@ -1112,7 +1111,7 @@ export const PopupApp: React.FC<PopupAppProps> = ({ surface = 'popup', targetTab
       }
     },
     [
-      activeTab?.id,
+      activeTab,
       auditResult,
       clearHighlightsOnPage,
       includeRecommendations,

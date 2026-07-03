@@ -259,14 +259,19 @@ const manifest = JSON.parse(await fs.readFile(path.resolve('public/manifest.json
 const viteConfig = await fs.readFile(path.resolve('vite.config.ts'), 'utf8')
 const devtoolsSource = await fs.readFile(path.resolve('src/devtools.ts'), 'utf8')
 const devtoolsPanelSource = await fs.readFile(path.resolve('src/devtools-panel.tsx'), 'utf8')
+const devtoolsPanelAppSource = await fs.readFile(
+  path.resolve('src/components/DevToolsPanelApp.tsx'),
+  'utf8',
+)
 const popupSource = await fs.readFile(path.resolve('src/components/PopupApp.tsx'), 'utf8')
 
 assert.equal(manifest.devtools_page, 'src/devtools.html')
 assert.match(viteConfig, /devtoolsPanel/)
 assert.match(devtoolsSource, /chrome\.devtools\.panels\.create/)
-assert.match(devtoolsPanelSource, /chrome\.devtools\?\.inspectedWindow\?\.tabId/)
-assert.match(devtoolsPanelSource, /surface="devtools"/)
-assert.match(devtoolsPanelSource, /targetTab=\{targetTab\}/)
+assert.match(devtoolsPanelSource, /DevToolsPanelApp/)
+assert.match(devtoolsPanelAppSource, /chrome\.devtools\?\.inspectedWindow\?\.tabId/)
+assert.match(devtoolsPanelAppSource, /surface="devtools"/)
+assert.match(devtoolsPanelAppSource, /targetTab=\{targetTab\}/)
 assert.match(popupSource, /surface\?: 'popup' \| 'devtools'/)
 
 console.log('Alternative text, report snapshot and DevTools checks passed.')
