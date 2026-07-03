@@ -17,7 +17,7 @@
     "format:check": "prettier . --check",
     "stage-lint": "lint-staged",
     "preview": "vite preview",
-    "test": "pnpm test:audit-history-utils && pnpm test:audit-import && pnpm test:audit-history && pnpm test:audit-triage && pnpm test:audit-manual-findings && pnpm test:audit-bulk-actions && pnpm test:contrast-preview",
+    "test": "pnpm test:audit-history-utils && pnpm test:audit-import && pnpm test:audit-history && pnpm test:audit-triage && pnpm test:audit-manual-findings && pnpm test:audit-bulk-actions && pnpm test:contrast-preview && pnpm test:audit-alt-report-devtools",
     "verify:rules": "node scripts/verify-rules.mjs",
     "type-check": "tsc --noEmit",
     "test:audit-history": "node scripts/test-audit-history.mjs",
@@ -26,7 +26,8 @@
     "test:audit-manual-findings": "node scripts/test-audit-manual-findings.mjs",
     "test:audit-bulk-actions": "node scripts/test-audit-bulk-actions.mjs",
     "test:contrast-preview": "node scripts/test-contrast-preview.mjs",
-    "test:audit-triage": "node scripts/test-audit-triage.mjs"
+    "test:audit-triage": "node scripts/test-audit-triage.mjs",
+    "test:audit-alt-report-devtools": "node scripts/test-audit-alt-report-devtools.mjs"
   },
   "lint-staged": {
     "*.{md,json,css,js,mjs,ts,tsx,html}": [
