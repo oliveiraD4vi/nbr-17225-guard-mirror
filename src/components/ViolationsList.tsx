@@ -35,7 +35,12 @@ import { PROJECT_RULES_URL } from '@/config/links'
 import { t } from '@/i18n'
 import { isNormativeRequirement } from '@/normative'
 import { getRuleTopicCategory, type RuleTopicCategory } from '@/rules'
-import type { FindingStatus, IgnoreReason, Violation } from '@/types'
+import type {
+  AlternativeTextTargetAttribute,
+  FindingStatus,
+  IgnoreReason,
+  Violation,
+} from '@/types'
 import { getContrastRatio } from '@/utils'
 import { countSimilarViolations } from '@/utils/audit-bulk-actions'
 import {
@@ -70,6 +75,10 @@ interface ViolationsListProps {
   onBulkFindingStatusChange?: (violation: Violation, update: FindingStatusUpdate) => void
   onStateChange?: (state: ViolationsListState) => void
   onViolationNoteChange?: (violation: Violation, note: string) => void
+  onViolationAlternativeTextReviewChange?: (
+    violation: Violation,
+    review: Violation['alternativeTextReview'],
+  ) => void
   onViolationContrastOverrideChange?: (
     violation: Violation,
     override: Violation['userContrastOverride'] | undefined,
@@ -119,6 +128,15 @@ type RuleExplanationFamily =
 
 const { TextArea } = Input
 const REVIEW_STATUS_TRANSITION_MS = 220
+const alternativeTextTargetOptions: Array<{
+  label: string
+  value: AlternativeTextTargetAttribute
+}> = [
+  { label: 'alt', value: 'alt' },
+  { label: 'aria-label', value: 'aria-label' },
+  { label: 'aria-labelledby', value: 'aria-labelledby' },
+  { label: 'title', value: 'title' },
+]
 
 const severityRank: Record<Violation['severity'], number> = {
   error: 0,
@@ -127,6 +145,29 @@ const severityRank: Record<Violation['severity'], number> = {
 
 function getSeverityColor(severity: Violation['severity']): string {
   return severity === 'error' ? 'red' : 'orange'
+}
+
+function getAlternativeTextSourceLabel(
+  source: NonNullable<Violation['alternativeTextReview']>['currentSource'],
+): string {
+  const sourceKeys: Record<typeof source, string> = {
+    alt: 'violations.alternativeTextSources.alt',
+    'aria-label': 'violations.alternativeTextSources.ariaLabel',
+    'aria-labelledby': 'violations.alternativeTextSources.ariaLabelledBy',
+    title: 'violations.alternativeTextSources.title',
+    accessible_name: 'violations.alternativeTextSources.accessibleName',
+    missing: 'violations.alternativeTextSources.missing',
+  }
+
+  return t(sourceKeys[source])
+}
+
+function getAlternativeTextCurrentValue(
+  review: NonNullable<Violation['alternativeTextReview']>,
+): string {
+  if (review.currentSource === 'missing') return t('violations.alternativeTextCurrentMissing')
+  if (review.currentText === '') return t('violations.alternativeTextCurrentEmpty')
+  return review.currentText || t('violations.alternativeTextCurrentMissing')
 }
 
 function getSeverityLabel(severity: Violation['severity']): string {
@@ -401,6 +442,10 @@ function renderViolationGroups(
   onFindingStatusChange?: (violation: Violation, update: FindingStatusUpdate) => void,
   onBulkFindingStatusChange?: (violation: Violation, update: FindingStatusUpdate) => void,
   onViolationNoteChange?: (violation: Violation, note: string) => void,
+  onViolationAlternativeTextReviewChange?: (
+    violation: Violation,
+    review: Violation['alternativeTextReview'],
+  ) => void,
   onViolationContrastOverrideChange?: (
     violation: Violation,
     override: Violation['userContrastOverride'] | undefined,
@@ -516,6 +561,9 @@ function renderViolationGroups(
                   onFindingStatusChange={onFindingStatusChange}
                   onBulkFindingStatusChange={onBulkFindingStatusChange}
                   onViolationNoteChange={onViolationNoteChange}
+                  onViolationAlternativeTextReviewChange={
+                    onViolationAlternativeTextReviewChange
+                  }
                   onViolationContrastOverrideChange={onViolationContrastOverrideChange}
                   onBulkViolationContrastOverrideChange={onBulkViolationContrastOverrideChange}
                   onViolationContrastPreviewChange={onViolationContrastPreviewChange}
@@ -570,6 +618,10 @@ function renderReviewSections(
   onFindingStatusChange?: (violation: Violation, update: FindingStatusUpdate) => void,
   onBulkFindingStatusChange?: (violation: Violation, update: FindingStatusUpdate) => void,
   onViolationNoteChange?: (violation: Violation, note: string) => void,
+  onViolationAlternativeTextReviewChange?: (
+    violation: Violation,
+    review: Violation['alternativeTextReview'],
+  ) => void,
   onViolationContrastOverrideChange?: (
     violation: Violation,
     override: Violation['userContrastOverride'] | undefined,
@@ -628,6 +680,7 @@ function renderReviewSections(
               onFindingStatusChange,
               onBulkFindingStatusChange,
               onViolationNoteChange,
+              onViolationAlternativeTextReviewChange,
               onViolationContrastOverrideChange,
               onBulkViolationContrastOverrideChange,
               onViolationContrastPreviewChange,
@@ -654,6 +707,10 @@ interface ViolationCardProps {
   onFindingStatusChange?: (violation: Violation, update: FindingStatusUpdate) => void
   onBulkFindingStatusChange?: (violation: Violation, update: FindingStatusUpdate) => void
   onViolationNoteChange?: (violation: Violation, note: string) => void
+  onViolationAlternativeTextReviewChange?: (
+    violation: Violation,
+    review: Violation['alternativeTextReview'],
+  ) => void
   onViolationContrastOverrideChange?: (
     violation: Violation,
     override: Violation['userContrastOverride'] | undefined,
@@ -681,6 +738,7 @@ const ViolationCard: React.FC<ViolationCardProps> = React.memo(
     onFindingStatusChange,
     onBulkFindingStatusChange,
     onViolationNoteChange,
+    onViolationAlternativeTextReviewChange,
     onViolationContrastOverrideChange,
     onBulkViolationContrastOverrideChange,
     onViolationContrastPreviewChange,
@@ -698,6 +756,13 @@ const ViolationCard: React.FC<ViolationCardProps> = React.memo(
     const [ignoreReasonError, setIgnoreReasonError] = React.useState(false)
     const [isApplyingFindingDecision, setIsApplyingFindingDecision] = React.useState(false)
     const [noteDraft, setNoteDraft] = React.useState(violation.userNote || '')
+    const [alternativeTextDraft, setAlternativeTextDraft] = React.useState(
+      violation.alternativeTextReview?.proposedText || '',
+    )
+    const [alternativeTextTargetAttribute, setAlternativeTextTargetAttribute] =
+      React.useState<AlternativeTextTargetAttribute>(
+        violation.alternativeTextReview?.targetAttribute || 'alt',
+      )
     const [foregroundHex, setForegroundHex] = React.useState(
       violation.userContrastOverride?.foregroundHex ||
         violation.contrastDetails?.foregroundHex ||
@@ -713,6 +778,15 @@ const ViolationCard: React.FC<ViolationCardProps> = React.memo(
     React.useEffect(() => {
       setNoteDraft(violation.userNote || '')
     }, [violation.id, violation.userNote])
+
+    React.useEffect(() => {
+      setAlternativeTextDraft(violation.alternativeTextReview?.proposedText || '')
+      setAlternativeTextTargetAttribute(violation.alternativeTextReview?.targetAttribute || 'alt')
+    }, [
+      violation.alternativeTextReview?.proposedText,
+      violation.alternativeTextReview?.targetAttribute,
+      violation.id,
+    ])
 
     React.useEffect(() => {
       setForegroundHex(
@@ -767,6 +841,43 @@ const ViolationCard: React.FC<ViolationCardProps> = React.memo(
         onViolationNoteChange?.(violation, noteDraft.trim())
       },
       [noteDraft, onViolationNoteChange, violation],
+    )
+
+    const handleSaveAlternativeTextReview = React.useCallback(
+      (event: React.MouseEvent<HTMLElement>) => {
+        event.stopPropagation()
+        if (!violation.alternativeTextReview) return
+        const proposedText = alternativeTextDraft.trim()
+        if (!proposedText) return
+
+        onViolationAlternativeTextReviewChange?.(violation, {
+          ...violation.alternativeTextReview,
+          proposedText,
+          targetAttribute: alternativeTextTargetAttribute,
+          updatedAt: Date.now(),
+        })
+      },
+      [
+        alternativeTextDraft,
+        alternativeTextTargetAttribute,
+        onViolationAlternativeTextReviewChange,
+        violation,
+      ],
+    )
+
+    const handleClearAlternativeTextReview = React.useCallback(
+      (event: React.MouseEvent<HTMLElement>) => {
+        event.stopPropagation()
+        if (!violation.alternativeTextReview) return
+        setAlternativeTextDraft('')
+        onViolationAlternativeTextReviewChange?.(violation, {
+          ...violation.alternativeTextReview,
+          proposedText: undefined,
+          targetAttribute: alternativeTextTargetAttribute,
+          updatedAt: undefined,
+        })
+      },
+      [alternativeTextTargetAttribute, onViolationAlternativeTextReviewChange, violation],
     )
 
     const handleCardClick = React.useCallback(() => {
@@ -1104,6 +1215,81 @@ const ViolationCard: React.FC<ViolationCardProps> = React.memo(
                 )}
               </div>
             </div>
+
+            {violation.alternativeTextReview && (
+              <div
+                className="violation-alternative-text-card"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <div className="violation-alternative-text-header">
+                  <div>
+                    <strong>{t('violations.alternativeTextTitle')}</strong>
+                    <p>{t('violations.alternativeTextDescription')}</p>
+                  </div>
+                  {violation.alternativeTextReview.updatedAt && (
+                    <Tag>
+                      {t('violations.alternativeTextUpdatedAt', {
+                        date: new Date(
+                          violation.alternativeTextReview.updatedAt,
+                        ).toLocaleString('pt-BR'),
+                      })}
+                    </Tag>
+                  )}
+                </div>
+
+                <div className="violation-alternative-text-grid">
+                  <div className="violation-alternative-text-current">
+                    <span>{t('violations.alternativeTextCurrentLabel')}</span>
+                    <p>{getAlternativeTextCurrentValue(violation.alternativeTextReview)}</p>
+                    <Tag>
+                      {t('violations.alternativeTextSourceLabel')}:{' '}
+                      {getAlternativeTextSourceLabel(
+                        violation.alternativeTextReview.currentSource,
+                      )}
+                    </Tag>
+                  </div>
+
+                  <label className="violation-alternative-text-field">
+                    <span>{t('violations.alternativeTextTargetAttributeLabel')}</span>
+                    <Select
+                      value={alternativeTextTargetAttribute}
+                      options={alternativeTextTargetOptions}
+                      onChange={(value) => setAlternativeTextTargetAttribute(value)}
+                    />
+                  </label>
+                </div>
+
+                <label className="violation-alternative-text-field">
+                  <span>{t('violations.alternativeTextProposedLabel')}</span>
+                  <TextArea
+                    rows={3}
+                    maxLength={500}
+                    placeholder={t('violations.alternativeTextProposedPlaceholder')}
+                    value={alternativeTextDraft}
+                    onChange={(event) => setAlternativeTextDraft(event.target.value)}
+                  />
+                </label>
+
+                <Space wrap>
+                  <Button
+                    size="small"
+                    icon={<SaveOutlined />}
+                    disabled={!alternativeTextDraft.trim()}
+                    onClick={handleSaveAlternativeTextReview}
+                  >
+                    {t('violations.alternativeTextSave')}
+                  </Button>
+                  <Button
+                    size="small"
+                    icon={<ClearOutlined />}
+                    disabled={!violation.alternativeTextReview.proposedText}
+                    onClick={handleClearAlternativeTextReview}
+                  >
+                    {t('violations.alternativeTextClear')}
+                  </Button>
+                </Space>
+              </div>
+            )}
 
             <div className="violation-detected-signal">
               <strong>{t('violations.detectedSignal')}</strong>
@@ -1545,6 +1731,7 @@ export const ViolationsList: React.FC<ViolationsListProps> = React.memo(
     onBulkFindingStatusChange,
     onStateChange,
     onViolationNoteChange,
+    onViolationAlternativeTextReviewChange,
     onViolationContrastOverrideChange,
     onBulkViolationContrastOverrideChange,
     onViolationContrastPreviewChange,
@@ -1701,6 +1888,7 @@ export const ViolationsList: React.FC<ViolationsListProps> = React.memo(
           onFindingStatusChange,
           onBulkFindingStatusChange,
           onViolationNoteChange,
+          onViolationAlternativeTextReviewChange,
           onViolationContrastOverrideChange,
           onBulkViolationContrastOverrideChange,
           onViolationContrastPreviewChange,
@@ -1718,6 +1906,7 @@ export const ViolationsList: React.FC<ViolationsListProps> = React.memo(
           onFindingStatusChange,
           onBulkFindingStatusChange,
           onViolationNoteChange,
+          onViolationAlternativeTextReviewChange,
           onViolationContrastOverrideChange,
           onBulkViolationContrastOverrideChange,
           onViolationContrastPreviewChange,
@@ -1734,6 +1923,7 @@ export const ViolationsList: React.FC<ViolationsListProps> = React.memo(
           onFindingStatusChange,
           onBulkFindingStatusChange,
           onViolationNoteChange,
+          onViolationAlternativeTextReviewChange,
           onViolationContrastOverrideChange,
           onBulkViolationContrastOverrideChange,
           onViolationContrastPreviewChange,
@@ -1750,6 +1940,7 @@ export const ViolationsList: React.FC<ViolationsListProps> = React.memo(
         onFindingStatusChange,
         onBulkFindingStatusChange,
         onViolationNoteChange,
+        onViolationAlternativeTextReviewChange,
         onViolationContrastOverrideChange,
         onBulkViolationContrastOverrideChange,
         onViolationContrastPreviewChange,
@@ -1765,6 +1956,7 @@ export const ViolationsList: React.FC<ViolationsListProps> = React.memo(
       onBulkViolationContrastOverrideChange,
       onContrastPreviewEnd,
       onFindingStatusChange,
+      onViolationAlternativeTextReviewChange,
       onSelectViolation,
       updateListState,
       onViolationContrastOverrideChange,

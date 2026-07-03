@@ -17,6 +17,14 @@ export type AutomationCategory = (typeof AUTOMATION_CATEGORIES)[keyof typeof AUT
 export type HumanReviewStatus = 'not_applicable' | 'pending' | 'confirmed' | 'dismissed'
 export type FindingOrigin = 'automatic' | 'manual'
 export type FindingStatus = 'open' | 'confirmed' | 'ignored'
+export type AlternativeTextSource =
+  | 'alt'
+  | 'aria-label'
+  | 'aria-labelledby'
+  | 'title'
+  | 'accessible_name'
+  | 'missing'
+export type AlternativeTextTargetAttribute = 'alt' | 'aria-label' | 'aria-labelledby' | 'title'
 export type IgnoreReason =
   | 'false_positive'
   | 'out_of_scope'
@@ -97,6 +105,13 @@ export interface Violation {
     foregroundHex: string
     backgroundHex: string
     updatedAt: number
+  }
+  alternativeTextReview?: {
+    currentText?: string
+    currentSource: AlternativeTextSource
+    proposedText?: string
+    targetAttribute: AlternativeTextTargetAttribute
+    updatedAt?: number
   }
   userNote?: string
   noteUpdatedAt?: number

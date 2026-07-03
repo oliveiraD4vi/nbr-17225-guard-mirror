@@ -25,6 +25,8 @@ export interface AuditComparisonSummary {
   targetOpenCount: number
   baselineNoteCount: number
   targetNoteCount: number
+  baselineAlternativeTextReviewCount: number
+  targetAlternativeTextReviewCount: number
   baselineConfirmedReviews: number
   targetConfirmedReviews: number
   baselineDismissedReviews: number
@@ -33,6 +35,7 @@ export interface AuditComparisonSummary {
   targetPendingReviews: number
   openIssuesDeltaPercentage: number
   notesDeltaPercentage: number
+  alternativeTextReviewsDeltaPercentage: number
   confirmedReviewsDeltaPercentage: number
 }
 
@@ -50,6 +53,12 @@ function getViolationsByKey(violations: Violation[]): Map<string, Violation> {
 
 export function getAuditNoteCount(result: AuditResult): number {
   return result.violations.filter((violation) => Boolean(violation.userNote?.trim())).length
+}
+
+export function getAlternativeTextReviewCount(result: AuditResult): number {
+  return result.violations.filter((violation) =>
+    Boolean(violation.alternativeTextReview?.proposedText?.trim()),
+  ).length
 }
 
 export function getConfirmedFindingCount(result: AuditResult): number {
@@ -127,6 +136,8 @@ export function compareAuditResults(
     targetOpenCount: targetOpenViolations.length,
     baselineNoteCount: getAuditNoteCount(baseline),
     targetNoteCount: getAuditNoteCount(target),
+    baselineAlternativeTextReviewCount: getAlternativeTextReviewCount(baseline),
+    targetAlternativeTextReviewCount: getAlternativeTextReviewCount(target),
     baselineConfirmedReviews: getConfirmedFindingCount(baseline),
     targetConfirmedReviews: getConfirmedFindingCount(target),
     baselineDismissedReviews: getIgnoredFindingCount(baseline),
@@ -140,6 +151,10 @@ export function compareAuditResults(
     notesDeltaPercentage: getPercentageDelta(
       getAuditNoteCount(baseline),
       getAuditNoteCount(target),
+    ),
+    alternativeTextReviewsDeltaPercentage: getPercentageDelta(
+      getAlternativeTextReviewCount(baseline),
+      getAlternativeTextReviewCount(target),
     ),
     confirmedReviewsDeltaPercentage: getPercentageDelta(
       getConfirmedFindingCount(baseline),

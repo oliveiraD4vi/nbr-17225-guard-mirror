@@ -166,7 +166,8 @@ export function inheritViolationStateFromHistory(
         violation.findingStatus !== 'open' ||
         Boolean(violation.findingStatusUpdatedAt) ||
         Boolean(violation.userNote?.trim()) ||
-        Boolean(violation.userContrastOverride)
+        Boolean(violation.userContrastOverride) ||
+        Boolean(violation.alternativeTextReview?.proposedText?.trim())
 
       if (!hasPersistedState) return
 
@@ -182,6 +183,8 @@ export function inheritViolationStateFromHistory(
     violations: result.violations.map((violation) => {
       const persistedViolation = persistedViolations.get(getViolationIdentityKey(violation))
       if (!persistedViolation) return violation
+      const inheritedAlternativeTextReview = persistedViolation.alternativeTextReview
+      const currentAlternativeTextReview = violation.alternativeTextReview
 
       return normalizeViolationFindingState({
         ...violation,
@@ -193,6 +196,20 @@ export function inheritViolationStateFromHistory(
           persistedViolation.findingStatusUpdatedAt ?? violation.findingStatusUpdatedAt,
         userContrastOverride:
           persistedViolation.userContrastOverride ?? violation.userContrastOverride,
+        alternativeTextReview: inheritedAlternativeTextReview
+          ? {
+              currentSource:
+                currentAlternativeTextReview?.currentSource ??
+                inheritedAlternativeTextReview.currentSource,
+              currentText:
+                currentAlternativeTextReview?.currentText ?? inheritedAlternativeTextReview.currentText,
+              targetAttribute:
+                inheritedAlternativeTextReview.targetAttribute ??
+                currentAlternativeTextReview?.targetAttribute,
+              proposedText: inheritedAlternativeTextReview.proposedText,
+              updatedAt: inheritedAlternativeTextReview.updatedAt,
+            }
+          : currentAlternativeTextReview,
         userNote: persistedViolation.userNote ?? violation.userNote,
         noteUpdatedAt: persistedViolation.noteUpdatedAt ?? violation.noteUpdatedAt,
         inheritedFromHistory: true,

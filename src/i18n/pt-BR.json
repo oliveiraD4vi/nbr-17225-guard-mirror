@@ -183,6 +183,8 @@
       "importAuditError": "Não foi possível importar o relatório",
       "contrastSaved": "Correção de contraste salva",
       "contrastRemoved": "Correção de contraste resetada para os valores originais da página",
+      "alternativeTextSaved": "Proposta de texto alternativo salva",
+      "alternativeTextRemoved": "Proposta de texto alternativo removida",
       "quotaUnsavedAudit": "A auditoria foi concluída, mas não pôde ser salva localmente por falta de espaço.",
       "quotaUnsavedReview": "A alteração foi aplicada na interface, mas ainda não foi salva localmente por falta de espaço.",
       "quotaUnsavedImport": "O relatório foi lido, mas não pôde ser salvo localmente por falta de espaço.",
@@ -280,6 +282,7 @@
       "exportPersistentProblems": "Problemas persistentes",
       "exportStateChangedFindings": "Mudanças de estado",
       "exportNotes": "Itens com anotação",
+      "exportAlternativeTextReviews": "Propostas de texto alternativo",
       "exportConfirmedFindings": "Achados confirmados",
       "exportCompletedReview": "Itens com decisão registrada",
       "exportPendingReview": "Revisão contextual aberta",
@@ -557,7 +560,27 @@
     "contrastSaveCorrection": "Salvar",
     "contrastResetTooltip": "Voltar para as cores originais detectadas na página.",
     "contrastSaveCorrectionTooltip": "Salvar esta combinação de cores como correção do usuário para este item.",
-    "contrastApplyToSimilar": "Aplicar aos semelhantes ({{count}})"
+    "contrastApplyToSimilar": "Aplicar aos semelhantes ({{count}})",
+    "alternativeTextTitle": "Texto alternativo",
+    "alternativeTextDescription": "Compare o valor detectado com uma proposta de correção para orientar o ajuste no código.",
+    "alternativeTextCurrentLabel": "Texto atual",
+    "alternativeTextCurrentMissing": "Nenhum texto alternativo detectado",
+    "alternativeTextCurrentEmpty": "Atributo vazio",
+    "alternativeTextSourceLabel": "Origem",
+    "alternativeTextTargetAttributeLabel": "Atributo a ajustar",
+    "alternativeTextProposedLabel": "Texto proposto",
+    "alternativeTextProposedPlaceholder": "Descreva a informação ou função essencial da imagem.",
+    "alternativeTextSave": "Salvar proposta",
+    "alternativeTextClear": "Limpar proposta",
+    "alternativeTextUpdatedAt": "Proposta salva em {{date}}",
+    "alternativeTextSources": {
+      "alt": "alt",
+      "ariaLabel": "aria-label",
+      "ariaLabelledBy": "aria-labelledby",
+      "title": "title",
+      "accessibleName": "nome acessível",
+      "missing": "ausente"
+    }
   },
   "contrast": {
     "foreground": {

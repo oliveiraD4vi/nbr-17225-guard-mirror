@@ -1493,6 +1493,7 @@ export const PopupApp: React.FC = () => {
       `- ${t('popup.history.exportPersistentProblems')}: ${comparisonSummary.persistentViolations.length}`,
       `- ${t('popup.history.exportStateChangedFindings')}: ${comparisonSummary.stateChangedViolations.length}`,
       `- ${t('popup.history.exportNotes')}: ${comparisonSummary.baselineNoteCount} -> ${comparisonSummary.targetNoteCount} (${comparisonSummary.notesDeltaPercentage}%)`,
+      `- ${t('popup.history.exportAlternativeTextReviews')}: ${comparisonSummary.baselineAlternativeTextReviewCount} -> ${comparisonSummary.targetAlternativeTextReviewCount} (${comparisonSummary.alternativeTextReviewsDeltaPercentage}%)`,
       `- ${t('popup.history.exportConfirmedFindings')}: ${comparisonSummary.baselineConfirmedReviews} -> ${comparisonSummary.targetConfirmedReviews} (${comparisonSummary.confirmedReviewsDeltaPercentage}%)`,
       `- ${t('popup.history.exportCompletedReview')}: ${comparisonSummary.baselineConfirmedReviews + comparisonSummary.baselineDismissedReviews} -> ${comparisonSummary.targetConfirmedReviews + comparisonSummary.targetDismissedReviews}`,
       `- ${t('popup.history.exportPendingReview')}: ${comparisonSummary.baselinePendingReviews} -> ${comparisonSummary.targetPendingReviews}`,
@@ -1733,6 +1734,43 @@ export const PopupApp: React.FC = () => {
         return
       }
       message.success(note ? t('popup.messages.noteSaved') : t('popup.messages.noteRemoved'))
+    },
+    [activeTab?.id, persistWithQuotaHandling, syncAuditResultUpdate, viewedAuditResult],
+  )
+
+  const handleViolationAlternativeTextReviewChange = useCallback(
+    async (violation: Violation, review: Violation['alternativeTextReview']) => {
+      if (!viewedAuditResult) return
+
+      const updatedResult: AuditResult = {
+        ...viewedAuditResult,
+        violations: viewedAuditResult.violations.map((currentViolation) =>
+          currentViolation.id === violation.id
+            ? {
+                ...currentViolation,
+                alternativeTextReview: review,
+              }
+            : currentViolation,
+        ),
+      }
+
+      syncAuditResultUpdate(updatedResult)
+      const persisted = await persistWithQuotaHandling(
+        async () => {
+          await updateStoredAuditResult(updatedResult, activeTab?.id)
+          return true
+        },
+        { url: updatedResult.url, scope: 'review', hasUnsavedChanges: true },
+      )
+      if (persisted === null) {
+        message.warning(t('popup.messages.quotaUnsavedReview'))
+        return
+      }
+      message.success(
+        review?.proposedText
+          ? t('popup.messages.alternativeTextSaved')
+          : t('popup.messages.alternativeTextRemoved'),
+      )
     },
     [activeTab?.id, persistWithQuotaHandling, syncAuditResultUpdate, viewedAuditResult],
   )
@@ -1983,6 +2021,7 @@ export const PopupApp: React.FC = () => {
             onBulkFindingStatusChange={handleBulkFindingStatusChange}
             onStateChange={handleViolationsListStateChange}
             onViolationNoteChange={handleViolationNoteChange}
+            onViolationAlternativeTextReviewChange={handleViolationAlternativeTextReviewChange}
             onViolationContrastOverrideChange={handleViolationContrastOverrideChange}
             onBulkViolationContrastOverrideChange={handleBulkViolationContrastOverrideChange}
             onViolationContrastPreviewChange={handleViolationContrastPreviewChange}
@@ -2039,6 +2078,7 @@ export const PopupApp: React.FC = () => {
     handleBulkFindingStatusChange,
     handleViolationsListStateChange,
     handleViolationNoteChange,
+    handleViolationAlternativeTextReviewChange,
     handleViolationContrastOverrideChange,
     handleBulkViolationContrastOverrideChange,
     handleViolationContrastPreviewChange,

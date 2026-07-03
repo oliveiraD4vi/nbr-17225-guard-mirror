@@ -17,6 +17,14 @@ const VISION_FILTER_HOST_ID = 'nbr-vision-filter-host'
 const visuallyHiddenClassPattern =
   /\b(sr-only|screen-reader|screenreader|visually-hidden|hidden-visually|a11y-hidden)\b/i
 const nonRenderableTags = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEMPLATE', 'HEAD'])
+const alternativeTextRuleIds = new Set([
+  'image-alt-text',
+  'image-functional-alt',
+  'image-decorative',
+  'complex-image-description',
+  'image-of-text',
+  'image-map-alt-text',
+])
 
 function hashString(value: string): string {
   let hash = 2166136261
@@ -390,6 +398,98 @@ export function getAccessibleName(element: HTMLElement): string {
   return ''
 }
 
+function getLabelledByText(element: Element): string {
+  const labelledBy = element.getAttribute('aria-labelledby')
+  if (!labelledBy) return ''
+
+  return labelledBy
+    .split(/\s+/)
+    .map((id) => document.getElementById(id)?.textContent?.trim() || '')
+    .filter(Boolean)
+    .join(' ')
+    .trim()
+}
+
+function isAlternativeTextRule(ruleId: string, nbrReference: string): boolean {
+  return alternativeTextRuleIds.has(ruleId) || nbrReference.startsWith('5.2.')
+}
+
+function getAlternativeTextTargetAttribute(
+  element: Element,
+  currentSource: NonNullable<Violation['alternativeTextReview']>['currentSource'],
+): NonNullable<Violation['alternativeTextReview']>['targetAttribute'] {
+  if (currentSource === 'aria-label' || currentSource === 'aria-labelledby' || currentSource === 'title') {
+    return currentSource
+  }
+
+  if (element.matches('img, area')) {
+    return 'alt'
+  }
+
+  return 'aria-label'
+}
+
+function getAlternativeTextReviewForElement(
+  element: HTMLElement,
+  ruleId: string,
+  nbrReference: string,
+): Violation['alternativeTextReview'] {
+  if (!isAlternativeTextRule(ruleId, nbrReference) || !element.matches('img, area')) {
+    return undefined
+  }
+
+  let currentSource: NonNullable<Violation['alternativeTextReview']>['currentSource'] = 'missing'
+  let currentText = ''
+
+  const ariaLabel = element.getAttribute('aria-label')
+  const labelledBy = element.getAttribute('aria-labelledby')
+  const alt = element.getAttribute('alt')
+  const title = element.getAttribute('title')
+
+  if (ariaLabel?.trim()) {
+    currentSource = 'aria-label'
+    currentText = ariaLabel.trim()
+  } else if (labelledBy) {
+    currentSource = 'aria-labelledby'
+    currentText = getLabelledByText(element)
+  } else if (alt !== null) {
+    currentSource = 'alt'
+    currentText = alt.trim()
+  } else if (title?.trim()) {
+    currentSource = 'title'
+    currentText = title.trim()
+  } else {
+    const parentControl = element.closest<HTMLElement>('a, button')
+    const parentName = parentControl ? getAccessibleName(parentControl).trim() : ''
+    if (parentName) {
+      currentSource = 'accessible_name'
+      currentText = parentName
+    }
+  }
+
+  return {
+    currentSource,
+    currentText,
+    targetAttribute: getAlternativeTextTargetAttribute(element, currentSource),
+  }
+}
+
+function getAlternativeTextReviewForManualDraft(
+  rule: Pick<Rule, 'id' | 'nbrReference'>,
+  draft: ManualFindingDraft,
+): Violation['alternativeTextReview'] {
+  const tagName = draft.tagName?.toLowerCase()
+  if (!isAlternativeTextRule(rule.id, rule.nbrReference) || !['img', 'area'].includes(tagName || '')) {
+    return undefined
+  }
+
+  return {
+    currentSource: draft.accessibleName ? 'accessible_name' : 'missing',
+    currentText: draft.accessibleName || '',
+    targetAttribute: 'alt',
+  }
+}
+
 export function getAssociatedLabelText(
   element: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement,
 ): string {
@@ -470,6 +570,9 @@ export function createViolation(
     elementAccessibleName: element ? getAccessibleName(element) || undefined : undefined,
     elementVisibleText: element ? getVisibleText(element) || undefined : undefined,
     contrastDetails: options.contrastDetails,
+    alternativeTextReview: element
+      ? getAlternativeTextReviewForElement(element, rule.id, rule.nbrReference)
+      : undefined,
     customId: generateCustomId(options.customIdPrefix || rule.id, stableSeed),
   }
 }
@@ -525,6 +628,7 @@ export function createManualViolation(
     elementTagName: options.draft.tagName,
     elementAccessibleName: options.draft.accessibleName,
     elementVisibleText: options.draft.visibleText,
+    alternativeTextReview: getAlternativeTextReviewForManualDraft(rule, options.draft),
     userNote,
     noteUpdatedAt: userNote ? createdAt : undefined,
     customId: generateCustomId(`manual-${rule.id}`, stableSeed),

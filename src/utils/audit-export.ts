@@ -12,6 +12,9 @@ export function buildExportableAuditResult(result: AuditResult) {
   const confirmedFindings = getConfirmedFindingCount(result)
   const ignoredFindings = getIgnoredFindingCount(result)
   const pendingReviews = getPendingHumanReviewCount(result)
+  const alternativeTextReviewCount = result.violations.filter((violation) =>
+    Boolean(violation.alternativeTextReview?.proposedText?.trim()),
+  ).length
   const auditScore = getAuditScoreData(result)
   const requirementScore = getRequirementScoreData(result)
   const compactAudit = {
@@ -39,6 +42,7 @@ export function buildExportableAuditResult(result: AuditResult) {
         actionable: auditScore.activeOccurrenceCount,
         confirmed: confirmedFindings,
         ignored: ignoredFindings,
+        alternativeTextReviews: alternativeTextReviewCount,
         total: auditScore.totalOccurrenceCount,
       },
       humanReview: {
@@ -61,6 +65,9 @@ export function buildAuditSummaryJson(result: AuditResult) {
   const ignoredFindings = getIgnoredFindingCount(result)
   const pendingReviews = getPendingHumanReviewCount(result)
   const normalizedViolations = result.violations.map(normalizeViolationFindingState)
+  const alternativeTextReviewCount = normalizedViolations.filter((violation) =>
+    Boolean(violation.alternativeTextReview?.proposedText?.trim()),
+  ).length
   const actionableViolations = normalizedViolations.filter(
     (violation) => !isIgnoredFinding(violation),
   )
@@ -114,6 +121,7 @@ export function buildAuditSummaryJson(result: AuditResult) {
       confirmed: confirmedFindings,
       ignored: ignoredFindings,
       pending: pendingReviews,
+      alternativeTextReviews: alternativeTextReviewCount,
     },
     mainFindings: topViolations.map((violation) => ({
       nbrReference: violation.nbrReference,
@@ -126,6 +134,7 @@ export function buildAuditSummaryJson(result: AuditResult) {
       findingStatus: violation.findingStatus,
       ignoreReason: violation.ignoreReason,
       ignoreNote: violation.ignoreNote,
+      alternativeTextReview: violation.alternativeTextReview,
     })),
   }
 }
