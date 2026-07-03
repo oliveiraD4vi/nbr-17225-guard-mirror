@@ -196,7 +196,9 @@
       "manualFindingSaved": "Achado manual criado e confirmado.",
       "manualFindingSaveError": "Não foi possível salvar o achado manual.",
       "manualFindingSaveUnavailable": "Execute uma auditoria atual antes de salvar o achado manual.",
-      "manualFindingRuleMissing": "Selecione uma regra NBR válida para o achado manual."
+      "manualFindingRuleMissing": "Selecione uma regra NBR válida para o achado manual.",
+      "bulkFindingsIgnored": "{{count}} achado(s) semelhante(s) ignorado(s).",
+      "bulkContrastApplied": "Ajuste de contraste aplicado a {{count}} achado(s) semelhante(s)."
     },
     "manualFinding": {
       "title": "Criar achado manual",
@@ -459,11 +461,14 @@
     "loadMoreOccurrences": "Carregar mais {{count}} ocorrência(s)",
     "otherOccurrences": "Demais ocorrências",
     "findingActionIgnore": "Ignorar achado",
+    "findingActionIgnoreSimilar": "Ignorar semelhantes ({{count}})",
     "findingActionReopen": "Reabrir achado",
     "findingTransitionApplying": "Aplicando decisão e reorganizando o item na lista...",
     "findingStatusUpdatedAt": "Atualizado em {{date}}",
     "ignoreModalTitle": "Ignorar achado",
     "ignoreModalDescription": "Informe por que este achado deve sair dos números acionáveis. Ele continuará registrado para rastreabilidade.",
+    "ignoreSimilarModalTitle": "Ignorar {{count}} achado(s) semelhante(s)",
+    "ignoreSimilarModalDescription": "Informe por que estes achados semelhantes devem sair dos números acionáveis. Eles continuarão registrados para rastreabilidade.",
     "ignoreModalConfirm": "Ignorar",
     "ignoreReasonLabel": "Motivo",
     "ignoreReasonPlaceholder": "Selecione um motivo",
@@ -584,7 +589,8 @@
     "contrastReset": "Resetar",
     "contrastSaveCorrection": "Salvar",
     "contrastResetTooltip": "Voltar para as cores originais detectadas na página.",
-    "contrastSaveCorrectionTooltip": "Salvar esta combinação de cores como correção do usuário para este item."
+    "contrastSaveCorrectionTooltip": "Salvar esta combinação de cores como correção do usuário para este item.",
+    "contrastApplyToSimilar": "Aplicar aos semelhantes ({{count}})"
   },
   "contrast": {
     "foreground": {

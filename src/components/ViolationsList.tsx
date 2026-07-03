@@ -37,6 +37,7 @@ import { isNormativeRequirement } from '@/normative'
 import { getRuleTopicCategory, type RuleTopicCategory } from '@/rules'
 import type { FindingStatus, IgnoreReason, Violation } from '@/types'
 import { getContrastRatio } from '@/utils'
+import { countSimilarViolations } from '@/utils/audit-bulk-actions'
 import {
   type FindingStatusUpdate,
   isConfirmedFinding,
@@ -61,11 +62,16 @@ interface ViolationsListProps {
   showHumanReview?: boolean
   onSelectViolation?: (violation: Violation) => void
   onFindingStatusChange?: (violation: Violation, update: FindingStatusUpdate) => void
+  onBulkFindingStatusChange?: (violation: Violation, update: FindingStatusUpdate) => void
   onStateChange?: (state: ViolationsListState) => void
   onViolationNoteChange?: (violation: Violation, note: string) => void
   onViolationContrastOverrideChange?: (
     violation: Violation,
     override: Violation['userContrastOverride'] | undefined,
+  ) => void
+  onBulkViolationContrastOverrideChange?: (
+    violation: Violation,
+    override: NonNullable<Violation['userContrastOverride']>,
   ) => void
 }
 
@@ -386,10 +392,15 @@ function renderViolationGroups(
   groupScope: string,
   onSelectViolation?: (violation: Violation) => void,
   onFindingStatusChange?: (violation: Violation, update: FindingStatusUpdate) => void,
+  onBulkFindingStatusChange?: (violation: Violation, update: FindingStatusUpdate) => void,
   onViolationNoteChange?: (violation: Violation, note: string) => void,
   onViolationContrastOverrideChange?: (
     violation: Violation,
     override: Violation['userContrastOverride'] | undefined,
+  ) => void,
+  onBulkViolationContrastOverrideChange?: (
+    violation: Violation,
+    override: NonNullable<Violation['userContrastOverride']>,
   ) => void,
 ): React.ReactNode {
   if (violations.length === 0) {
@@ -472,6 +483,18 @@ function renderViolationGroups(
                   violation={violation}
                   index={index}
                   isOpen={openOccurrenceId === violation.id}
+                  similarActionableCount={countSimilarViolations(
+                    violation,
+                    group.violations,
+                    (candidate) => !isIgnoredFinding(candidate),
+                  )}
+                  similarContrastOverrideCount={
+                    violation.contrastDetails
+                      ? countSimilarViolations(violation, group.violations, (candidate) =>
+                          Boolean(candidate.contrastDetails),
+                        )
+                      : 0
+                  }
                   onToggle={() => {
                     updateListState({
                       openGroupKey: groupStateKey,
@@ -482,8 +505,10 @@ function renderViolationGroups(
                   }}
                   onSelectViolation={onSelectViolation}
                   onFindingStatusChange={onFindingStatusChange}
+                  onBulkFindingStatusChange={onBulkFindingStatusChange}
                   onViolationNoteChange={onViolationNoteChange}
                   onViolationContrastOverrideChange={onViolationContrastOverrideChange}
+                  onBulkViolationContrastOverrideChange={onBulkViolationContrastOverrideChange}
                   pinned
                 />
               ))}
@@ -532,10 +557,15 @@ function renderReviewSections(
   onStateChange: ((state: ViolationsListState) => void) | undefined,
   onSelectViolation?: (violation: Violation) => void,
   onFindingStatusChange?: (violation: Violation, update: FindingStatusUpdate) => void,
+  onBulkFindingStatusChange?: (violation: Violation, update: FindingStatusUpdate) => void,
   onViolationNoteChange?: (violation: Violation, note: string) => void,
   onViolationContrastOverrideChange?: (
     violation: Violation,
     override: Violation['userContrastOverride'] | undefined,
+  ) => void,
+  onBulkViolationContrastOverrideChange?: (
+    violation: Violation,
+    override: NonNullable<Violation['userContrastOverride']>,
   ) => void,
 ): React.ReactNode {
   if (violations.length === 0) {
@@ -583,8 +613,10 @@ function renderReviewSections(
               `review-${section.key}`,
               onSelectViolation,
               onFindingStatusChange,
+              onBulkFindingStatusChange,
               onViolationNoteChange,
               onViolationContrastOverrideChange,
+              onBulkViolationContrastOverrideChange,
             )
           ) : (
             <Empty
@@ -605,11 +637,18 @@ interface ViolationCardProps {
   onToggle: () => void
   onSelectViolation?: (violation: Violation) => void
   onFindingStatusChange?: (violation: Violation, update: FindingStatusUpdate) => void
+  onBulkFindingStatusChange?: (violation: Violation, update: FindingStatusUpdate) => void
   onViolationNoteChange?: (violation: Violation, note: string) => void
   onViolationContrastOverrideChange?: (
     violation: Violation,
     override: Violation['userContrastOverride'] | undefined,
   ) => void
+  onBulkViolationContrastOverrideChange?: (
+    violation: Violation,
+    override: NonNullable<Violation['userContrastOverride']>,
+  ) => void
+  similarActionableCount: number
+  similarContrastOverrideCount: number
   pinned?: boolean
 }
 
@@ -618,16 +657,21 @@ const ViolationCard: React.FC<ViolationCardProps> = React.memo(
     violation,
     index,
     isOpen,
+    similarActionableCount,
+    similarContrastOverrideCount,
     onToggle,
     onSelectViolation,
     onFindingStatusChange,
+    onBulkFindingStatusChange,
     onViolationNoteChange,
     onViolationContrastOverrideChange,
+    onBulkViolationContrastOverrideChange,
     pinned = false,
   }) => {
     const [isNotesOpen, setIsNotesOpen] = React.useState(false)
     const [isContrastModalOpen, setIsContrastModalOpen] = React.useState(false)
     const [isIgnoreModalOpen, setIsIgnoreModalOpen] = React.useState(false)
+    const [ignoreScope, setIgnoreScope] = React.useState<'single' | 'similar'>('single')
     const [ignoreReason, setIgnoreReason] = React.useState<IgnoreReason | undefined>(
       violation.ignoreReason,
     )
@@ -666,6 +710,7 @@ const ViolationCard: React.FC<ViolationCardProps> = React.memo(
     React.useEffect(() => {
       setIsApplyingFindingDecision(false)
       setIsIgnoreModalOpen(false)
+      setIgnoreScope('single')
       setIgnoreReason(violation.ignoreReason)
       setIgnoreNote(violation.ignoreNote || '')
       setIgnoreReasonError(false)
@@ -749,6 +794,18 @@ const ViolationCard: React.FC<ViolationCardProps> = React.memo(
       setBackgroundHex(violation.contrastDetails.backgroundHex)
       onViolationContrastOverrideChange?.(violation, undefined)
     }, [onViolationContrastOverrideChange, violation])
+
+    const handleApplyContrastOverrideToSimilar = React.useCallback(
+      (event: React.MouseEvent<HTMLElement>) => {
+        event.stopPropagation()
+        if (!violation.userContrastOverride) return
+        onBulkViolationContrastOverrideChange?.(violation, {
+          ...violation.userContrastOverride,
+          updatedAt: Date.now(),
+        })
+      },
+      [onBulkViolationContrastOverrideChange, violation],
+    )
     const topicCategory = React.useMemo(
       () => getRuleTopicCategory(violation.ruleId),
       [violation.ruleId],
@@ -763,11 +820,16 @@ const ViolationCard: React.FC<ViolationCardProps> = React.memo(
     )
 
     const handleRequestFindingStatusChange = React.useCallback(
-      (event: React.MouseEvent<HTMLElement>, nextStatus: FindingStatus) => {
+      (
+        event: React.MouseEvent<HTMLElement>,
+        nextStatus: FindingStatus,
+        scope: 'single' | 'similar' = 'single',
+      ) => {
         event.stopPropagation()
         if (isApplyingFindingDecision || nextStatus === violation.findingStatus) return
 
         if (nextStatus === 'ignored') {
+          setIgnoreScope(scope)
           setIgnoreReason(violation.ignoreReason)
           setIgnoreNote(violation.ignoreNote || '')
           setIgnoreReasonError(false)
@@ -798,13 +860,26 @@ const ViolationCard: React.FC<ViolationCardProps> = React.memo(
 
       setIsApplyingFindingDecision(true)
       window.setTimeout(() => {
-        void onFindingStatusChange?.(violation, {
+        const update: FindingStatusUpdate = {
           status: 'ignored',
           ignoreReason,
           ignoreNote,
-        })
+        }
+        if (ignoreScope === 'similar') {
+          void onBulkFindingStatusChange?.(violation, update)
+          return
+        }
+
+        void onFindingStatusChange?.(violation, update)
       }, REVIEW_STATUS_TRANSITION_MS)
-    }, [ignoreNote, ignoreReason, onFindingStatusChange, violation])
+    }, [
+      ignoreNote,
+      ignoreReason,
+      ignoreScope,
+      onBulkFindingStatusChange,
+      onFindingStatusChange,
+      violation,
+    ])
 
     const handleCancelIgnore = React.useCallback(() => {
       if (isApplyingFindingDecision) return
@@ -875,6 +950,20 @@ const ViolationCard: React.FC<ViolationCardProps> = React.memo(
               {action.label}
             </Button>
           ))}
+          {onBulkFindingStatusChange &&
+            !isIgnoredFinding(violation) &&
+            similarActionableCount > 1 && (
+              <Button
+                icon={<CloseCircleOutlined />}
+                loading={isApplyingFindingDecision}
+                size="small"
+                onClick={(event) => handleRequestFindingStatusChange(event, 'ignored', 'similar')}
+              >
+                {t('violations.findingActionIgnoreSimilar', {
+                  count: similarActionableCount,
+                })}
+              </Button>
+            )}
         </Space>
         {isApplyingFindingDecision && (
           <span className="violation-human-review-transition-note" aria-live="polite">
@@ -1026,15 +1115,29 @@ const ViolationCard: React.FC<ViolationCardProps> = React.memo(
                     <Tag color="blue">{t('violations.contrastUserOverrideSaved')}</Tag>
                   )}
                 </div>
-                <Button
-                  icon={<BgColorsOutlined />}
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    setIsContrastModalOpen(true)
-                  }}
-                >
-                  {t('violations.contrastBoard')}
-                </Button>
+                <Space wrap>
+                  {onBulkViolationContrastOverrideChange &&
+                    violation.userContrastOverride &&
+                    similarContrastOverrideCount > 1 && (
+                      <Button
+                        icon={<SaveOutlined />}
+                        onClick={handleApplyContrastOverrideToSimilar}
+                      >
+                        {t('violations.contrastApplyToSimilar', {
+                          count: similarContrastOverrideCount,
+                        })}
+                      </Button>
+                    )}
+                  <Button
+                    icon={<BgColorsOutlined />}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      setIsContrastModalOpen(true)
+                    }}
+                  >
+                    {t('violations.contrastBoard')}
+                  </Button>
+                </Space>
               </div>
             )}
 
@@ -1179,7 +1282,11 @@ const ViolationCard: React.FC<ViolationCardProps> = React.memo(
 
             <Modal
               open={isIgnoreModalOpen}
-              title={t('violations.ignoreModalTitle')}
+              title={
+                ignoreScope === 'similar'
+                  ? t('violations.ignoreSimilarModalTitle', { count: similarActionableCount })
+                  : t('violations.ignoreModalTitle')
+              }
               okText={t('violations.ignoreModalConfirm')}
               cancelText={t('violations.reviewConfirmCancel')}
               okButtonProps={{
@@ -1198,7 +1305,13 @@ const ViolationCard: React.FC<ViolationCardProps> = React.memo(
                 onClick={(event) => event.stopPropagation()}
                 onMouseDown={(event) => event.stopPropagation()}
               >
-                <p>{t('violations.ignoreModalDescription')}</p>
+                <p>
+                  {ignoreScope === 'similar'
+                    ? t('violations.ignoreSimilarModalDescription', {
+                        count: similarActionableCount,
+                      })
+                    : t('violations.ignoreModalDescription')}
+                </p>
                 <label className="violation-ignore-field">
                   <span>{t('violations.ignoreReasonLabel')}</span>
                   <Select
@@ -1388,9 +1501,11 @@ export const ViolationsList: React.FC<ViolationsListProps> = React.memo(
     showHumanReview = true,
     onSelectViolation,
     onFindingStatusChange,
+    onBulkFindingStatusChange,
     onStateChange,
     onViolationNoteChange,
     onViolationContrastOverrideChange,
+    onBulkViolationContrastOverrideChange,
   }) => {
     const [selectedCategory, setSelectedCategory] = React.useState<'all' | RuleTopicCategory>(
       state?.selectedCategory ?? 'all',
@@ -1541,8 +1656,10 @@ export const ViolationsList: React.FC<ViolationsListProps> = React.memo(
           'recommendations',
           onSelectViolation,
           onFindingStatusChange,
+          onBulkFindingStatusChange,
           onViolationNoteChange,
           onViolationContrastOverrideChange,
+          onBulkViolationContrastOverrideChange,
         )
       }
 
@@ -1554,8 +1671,10 @@ export const ViolationsList: React.FC<ViolationsListProps> = React.memo(
           'ignored',
           onSelectViolation,
           onFindingStatusChange,
+          onBulkFindingStatusChange,
           onViolationNoteChange,
           onViolationContrastOverrideChange,
+          onBulkViolationContrastOverrideChange,
         )
       }
 
@@ -1566,8 +1685,10 @@ export const ViolationsList: React.FC<ViolationsListProps> = React.memo(
           updateListState,
           onSelectViolation,
           onFindingStatusChange,
+          onBulkFindingStatusChange,
           onViolationNoteChange,
           onViolationContrastOverrideChange,
+          onBulkViolationContrastOverrideChange,
         )
       }
 
@@ -1578,8 +1699,10 @@ export const ViolationsList: React.FC<ViolationsListProps> = React.memo(
         'requirements',
         onSelectViolation,
         onFindingStatusChange,
+        onBulkFindingStatusChange,
         onViolationNoteChange,
         onViolationContrastOverrideChange,
+        onBulkViolationContrastOverrideChange,
       )
     }, [
       filteredIgnoredViolations,
@@ -1587,6 +1710,8 @@ export const ViolationsList: React.FC<ViolationsListProps> = React.memo(
       filteredRequirementViolations,
       filteredReviewViolations,
       listState,
+      onBulkFindingStatusChange,
+      onBulkViolationContrastOverrideChange,
       onFindingStatusChange,
       onSelectViolation,
       updateListState,

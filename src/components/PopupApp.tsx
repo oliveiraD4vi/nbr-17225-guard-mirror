@@ -67,6 +67,7 @@ import {
   updateStoredAuditResult,
 } from '@/utils/audit-engine'
 import { createManualViolation } from '@/utils'
+import { areSimilarViolations } from '@/utils/audit-bulk-actions'
 import { getAuditUrlStorageKey, hydrateAuditResult } from '@/utils/audit-history'
 import { applyFindingStatusUpdate, type FindingStatusUpdate } from '@/utils/audit-triage'
 import {
@@ -1550,6 +1551,42 @@ export const PopupApp: React.FC = () => {
     [activeTab?.id, persistWithQuotaHandling, syncAuditResultUpdate, viewedAuditResult],
   )
 
+  const handleBulkFindingStatusChange = useCallback(
+    async (violation: Violation, update: FindingStatusUpdate) => {
+      if (!viewedAuditResult) return
+
+      let affectedCount = 0
+      const updatedResult = hydrateAuditResult({
+        ...viewedAuditResult,
+        violations: viewedAuditResult.violations.map((currentViolation) => {
+          if (!areSimilarViolations(currentViolation, violation)) return currentViolation
+          if (currentViolation.findingStatus === 'ignored') return currentViolation
+
+          affectedCount += 1
+          return applyFindingStatusUpdate(currentViolation, update)
+        }),
+      })
+
+      if (affectedCount === 0) return
+
+      syncAuditResultUpdate(updatedResult)
+      const persisted = await persistWithQuotaHandling(
+        async () => {
+          await updateStoredAuditResult(updatedResult, activeTab?.id)
+          return true
+        },
+        { url: updatedResult.url, scope: 'review', hasUnsavedChanges: true },
+      )
+      if (persisted === null) {
+        message.warning(t('popup.messages.quotaUnsavedReview'))
+        return
+      }
+
+      message.success(t('popup.messages.bulkFindingsIgnored', { count: affectedCount }))
+    },
+    [activeTab?.id, persistWithQuotaHandling, syncAuditResultUpdate, viewedAuditResult],
+  )
+
   const handleViolationNoteChange = useCallback(
     async (violation: Violation, note: string) => {
       if (!viewedAuditResult) return
@@ -1615,6 +1652,45 @@ export const PopupApp: React.FC = () => {
       message.success(
         override ? t('popup.messages.contrastSaved') : t('popup.messages.contrastRemoved'),
       )
+    },
+    [activeTab?.id, persistWithQuotaHandling, syncAuditResultUpdate, viewedAuditResult],
+  )
+
+  const handleBulkViolationContrastOverrideChange = useCallback(
+    async (violation: Violation, override: NonNullable<Violation['userContrastOverride']>) => {
+      if (!viewedAuditResult) return
+
+      let affectedCount = 0
+      const updatedResult = hydrateAuditResult({
+        ...viewedAuditResult,
+        violations: viewedAuditResult.violations.map((currentViolation) => {
+          if (!currentViolation.contrastDetails) return currentViolation
+          if (!areSimilarViolations(currentViolation, violation)) return currentViolation
+
+          affectedCount += 1
+          return {
+            ...currentViolation,
+            userContrastOverride: override,
+          }
+        }),
+      })
+
+      if (affectedCount === 0) return
+
+      syncAuditResultUpdate(updatedResult)
+      const persisted = await persistWithQuotaHandling(
+        async () => {
+          await updateStoredAuditResult(updatedResult, activeTab?.id)
+          return true
+        },
+        { url: updatedResult.url, scope: 'review', hasUnsavedChanges: true },
+      )
+      if (persisted === null) {
+        message.warning(t('popup.messages.quotaUnsavedReview'))
+        return
+      }
+
+      message.success(t('popup.messages.bulkContrastApplied', { count: affectedCount }))
     },
     [activeTab?.id, persistWithQuotaHandling, syncAuditResultUpdate, viewedAuditResult],
   )
@@ -1774,9 +1850,11 @@ export const PopupApp: React.FC = () => {
             showHumanReview={includeHumanReview}
             onSelectViolation={isHistoricalView ? undefined : handleHighlightViolation}
             onFindingStatusChange={handleFindingStatusChange}
+            onBulkFindingStatusChange={handleBulkFindingStatusChange}
             onStateChange={handleViolationsListStateChange}
             onViolationNoteChange={handleViolationNoteChange}
             onViolationContrastOverrideChange={handleViolationContrastOverrideChange}
+            onBulkViolationContrastOverrideChange={handleBulkViolationContrastOverrideChange}
           />
         ),
       },
@@ -1824,9 +1902,11 @@ export const PopupApp: React.FC = () => {
     isHistoricalView,
     handleHighlightViolation,
     handleFindingStatusChange,
+    handleBulkFindingStatusChange,
     handleViolationsListStateChange,
     handleViolationNoteChange,
     handleViolationContrastOverrideChange,
+    handleBulkViolationContrastOverrideChange,
     activeTab?.title,
     auditHistory,
     siteAuditHistory,
