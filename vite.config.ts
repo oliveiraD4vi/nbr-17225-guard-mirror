@@ -73,6 +73,8 @@ export default defineConfig({
       input: {
         popup: path.resolve(__dirname, 'src/popup.html'),
         report: path.resolve(__dirname, 'src/report.html'),
+        devtools: path.resolve(__dirname, 'src/devtools.html'),
+        devtoolsPanel: path.resolve(__dirname, 'src/devtools-panel.html'),
         background: path.resolve(__dirname, 'src/background.ts'),
         content: path.resolve(__dirname, 'src/content.ts'),
       },

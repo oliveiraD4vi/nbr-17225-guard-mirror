@@ -58,12 +58,13 @@ import {
   deleteAuditHistoryEntry,
   ensureContentScriptReady,
   getDisplayResultForScope,
-  getActiveTab,
   getAuditHistoryForSite,
   getAuditHistoryForUrl,
   getAuditResult,
   getAuditStorageDiagnostics,
+  getAuditTargetTab,
   type AuditStorageDiagnostics,
+  type AuditTargetTab,
   importAuditReportToHistory,
   isAuditStorageQuotaError,
   parseImportedAuditReport,
@@ -141,6 +142,11 @@ interface ManualFindingFormValues {
   suggestion?: string
   remediationAdvice?: string
   userNote?: string
+}
+
+interface PopupAppProps {
+  surface?: 'popup' | 'devtools'
+  targetTab?: AuditTargetTab
 }
 
 function truncateHeaderTabTitle(value: string): string {
@@ -335,7 +341,7 @@ function formatStorageSize(bytes: number): string {
   })} MB`
 }
 
-export const PopupApp: React.FC = () => {
+export const PopupApp: React.FC<PopupAppProps> = ({ surface = 'popup', targetTab }) => {
   const quotaRetryRef = useRef<(() => Promise<unknown>) | null>(null)
   const importInputRef = useRef<HTMLInputElement | null>(null)
   const popupContentRef = useRef<HTMLDivElement | null>(null)
@@ -351,7 +357,7 @@ export const PopupApp: React.FC = () => {
   const [includeHumanReview, setIncludeHumanReview] = useState(defaultIncludeHumanReview)
   const [initialLoading, setInitialLoading] = useState(true)
   const [loading, setLoading] = useState(false)
-  const [activeTab, setActiveTab] = useState<(chrome.tabs.Tab & { id: number }) | null>(null)
+  const [activeTab, setActiveTab] = useState<AuditTargetTab | null>(null)
   const [activeTabKey, setActiveTabKey] = useState<PopupTabKey>('summary')
   const [isAuditMetaCollapsed, setIsAuditMetaCollapsed] = useState(false)
   const [popupStoredState, setPopupStoredState] = useState<PopupStoredState | null>(null)
@@ -377,6 +383,8 @@ export const PopupApp: React.FC = () => {
   const [manualFindingSaving, setManualFindingSaving] = useState(false)
   const [manualFindingForm] = Form.useForm<ManualFindingFormValues>()
   const appIconUrl = useMemo(() => chrome.runtime.getURL('icons/icon-white.png'), [])
+
+  const resolveCurrentTab = useCallback(async () => getAuditTargetTab(targetTab), [targetTab])
 
   const syncAuditResultUpdate = useCallback((updatedResult: AuditResult) => {
     setAuditHistory((currentHistory) =>
@@ -406,7 +414,7 @@ export const PopupApp: React.FC = () => {
 
   const loadAuditForCurrentTab = useCallback(async () => {
     try {
-      const tab = await getActiveTab()
+      const tab = await resolveCurrentTab()
       setActiveTab(tab)
       const [result, preferences, history, siteHistory, diagnostics] = await Promise.all([
         getAuditResult(tab.id, tab.url),
@@ -466,7 +474,7 @@ export const PopupApp: React.FC = () => {
     } finally {
       setInitialLoading(false)
     }
-  }, [])
+  }, [resolveCurrentTab])
 
   const persistWithQuotaHandling = useCallback(
     async <T,>(
@@ -502,6 +510,8 @@ export const PopupApp: React.FC = () => {
   useEffect(() => {
     void loadAuditForCurrentTab()
 
+    if (surface === 'devtools') return undefined
+
     const handleTabActivated = () => {
       void loadAuditForCurrentTab()
     }
@@ -520,11 +530,11 @@ export const PopupApp: React.FC = () => {
       chrome.tabs.onActivated.removeListener(handleTabActivated)
       chrome.tabs.onUpdated.removeListener(handleTabUpdated)
     }
-  }, [activeTab?.id, loadAuditForCurrentTab])
+  }, [activeTab?.id, loadAuditForCurrentTab, surface])
 
   const sendMessageToActiveTab = useCallback(
     async (payload: Record<string, unknown>) => {
-      const tab = activeTab ?? (await getActiveTab())
+      const tab = activeTab ?? (await resolveCurrentTab())
       await ensureContentScriptReady(tab.id)
       const response = await chrome.tabs.sendMessage(tab.id, payload)
       if (response?.error) {
@@ -532,7 +542,7 @@ export const PopupApp: React.FC = () => {
       }
       return response
     },
-    [activeTab],
+    [activeTab, resolveCurrentTab],
   )
 
   const manualFindingRuleOptions = useMemo(
@@ -582,7 +592,7 @@ export const PopupApp: React.FC = () => {
   )
 
   const loadManualFindingDraftForTab = useCallback(
-    async (tab: chrome.tabs.Tab & { id: number }) => {
+    async (tab: AuditTargetTab) => {
       const data = await chrome.storage.local.get(MANUAL_FINDING_DRAFTS_STORAGE_KEY)
       const rawDraft = (
         data[MANUAL_FINDING_DRAFTS_STORAGE_KEY] as Record<string, ManualFindingDraft> | undefined
@@ -905,14 +915,24 @@ export const PopupApp: React.FC = () => {
     try {
       await clearContrastPreviewsOnPage()
       await clearHighlightsOnPage(false)
-      const result = await runAccessibilityAudit({ includeRecommendations, includeHumanReview })
-      const tab = await getActiveTab()
-      setActiveTab(tab)
+      const tab = await resolveCurrentTab()
+      const result = await runAccessibilityAudit({
+        includeRecommendations,
+        includeHumanReview,
+        tabId: tab.id,
+        tabUrl: tab.url,
+      })
+      const auditedTab = {
+        ...tab,
+        title: result.pageTitle || tab.title,
+        url: result.url || tab.url,
+      }
+      setActiveTab(auditedTab)
       const persistAudit = async () => {
-        const persistedResult = await saveAuditResult(result, tab.id)
+        const persistedResult = await saveAuditResult(result, auditedTab.id)
         const [history, siteHistory] = await Promise.all([
-          getAuditHistoryForUrl(tab.url),
-          getAuditHistoryForSite(tab.url),
+          getAuditHistoryForUrl(auditedTab.url),
+          getAuditHistoryForSite(auditedTab.url),
         ])
         setAuditResult(persistedResult)
         setAuditHistory(history)
@@ -940,7 +960,7 @@ export const PopupApp: React.FC = () => {
       }
 
       const persistedResult = await persistWithQuotaHandling(persistAudit, {
-        url: tab.url || result.url,
+        url: auditedTab.url || result.url,
         scope: 'audit',
         hasUnsavedChanges: true,
       })
@@ -971,6 +991,7 @@ export const PopupApp: React.FC = () => {
     includeRecommendations,
     persistPopupState,
     persistWithQuotaHandling,
+    resolveCurrentTab,
   ])
 
   const handleRecommendationsToggle = useCallback(
@@ -985,9 +1006,12 @@ export const PopupApp: React.FC = () => {
       setLoading(true)
       try {
         await clearHighlightsOnPage(false)
+        const tab = activeTab ?? (await resolveCurrentTab())
         const upgradedResult = await runAccessibilityAudit({
           includeRecommendations: true,
           includeHumanReview,
+          tabId: tab.id,
+          tabUrl: tab.url,
         })
         const preservedResult: AuditResult = {
           ...upgradedResult,
@@ -1030,6 +1054,7 @@ export const PopupApp: React.FC = () => {
       includeHumanReview,
       isHistoricalView,
       persistWithQuotaHandling,
+      resolveCurrentTab,
       syncAuditResultUpdate,
     ],
   )
@@ -1051,9 +1076,12 @@ export const PopupApp: React.FC = () => {
       setLoading(true)
       try {
         await clearHighlightsOnPage(false)
+        const tab = activeTab ?? (await resolveCurrentTab())
         const upgradedResult = await runAccessibilityAudit({
           includeRecommendations,
           includeHumanReview: true,
+          tabId: tab.id,
+          tabUrl: tab.url,
         })
         const preservedResult: AuditResult = {
           ...upgradedResult,
@@ -1090,6 +1118,7 @@ export const PopupApp: React.FC = () => {
       includeRecommendations,
       isHistoricalView,
       persistWithQuotaHandling,
+      resolveCurrentTab,
       syncAuditResultUpdate,
     ],
   )
@@ -1205,7 +1234,7 @@ export const PopupApp: React.FC = () => {
         const importedEntry = parseImportedAuditReport(parsedPayload)
         const persistImportedAudit = async () => {
           const persisted = await importAuditReportToHistory(importedEntry)
-          const tab = activeTab ?? (await getActiveTab())
+          const tab = activeTab ?? (await resolveCurrentTab())
           setActiveTab(tab)
 
           const refreshedHistory = await getAuditHistoryForUrl(tab.url)
@@ -1245,7 +1274,7 @@ export const PopupApp: React.FC = () => {
         setLoading(false)
       }
     },
-    [activeTab, handleSelectHistory, handleTabChange, persistWithQuotaHandling],
+    [activeTab, handleSelectHistory, handleTabChange, persistWithQuotaHandling, resolveCurrentTab],
   )
 
   const handleFilterChange = useCallback(
@@ -2137,7 +2166,7 @@ export const PopupApp: React.FC = () => {
     displayedAuditResult?.pageTitle || activeTab?.title || activeTab?.url || ''
 
   return (
-    <Layout className="popup-app">
+    <Layout className={`popup-app popup-app-${surface}`}>
       <Header className="popup-header">
         <div className="header-row">
           <div className="header-content">

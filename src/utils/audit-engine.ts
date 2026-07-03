@@ -28,6 +28,8 @@ export class AuditStorageQuotaError extends Error {
 interface RunAuditOptions {
   includeRecommendations?: boolean
   includeHumanReview?: boolean
+  tabId?: number
+  tabUrl?: string
 }
 
 export interface ManualFindingSelectorCandidate {
@@ -68,6 +70,17 @@ export async function getActiveTab(): Promise<chrome.tabs.Tab & { id: number }> 
   return activeTab as chrome.tabs.Tab & { id: number }
 }
 
+export interface AuditTargetTab {
+  id: number
+  title?: string
+  url?: string
+}
+
+export async function getAuditTargetTab(targetTab?: AuditTargetTab): Promise<AuditTargetTab> {
+  if (targetTab?.id) return targetTab
+  return getActiveTab()
+}
+
 function getTabStorageKey(tabId: number): string {
   return String(tabId)
 }
@@ -101,9 +114,11 @@ function normalizeAuditResult<T extends AuditResult>(result: T | null): T | null
  */
 export async function runAccessibilityAudit(options: RunAuditOptions = {}): Promise<AuditResult> {
   try {
-    const activeTab = await getActiveTab()
+    const activeTab = await getAuditTargetTab(
+      options.tabId ? { id: options.tabId, url: options.tabUrl } : undefined,
+    )
 
-    if (!activeTab.url || !isSupportedTabUrl(activeTab.url)) {
+    if (activeTab.url && !isSupportedTabUrl(activeTab.url)) {
       throw new Error(t('engine.unsupportedUrl'))
     }
 
@@ -124,7 +139,7 @@ export async function runAccessibilityAudit(options: RunAuditOptions = {}): Prom
     }
 
     const result: AuditResult = normalizeAuditResult(response.result)!
-    result.url = activeTab.url
+    result.url = activeTab.url || result.url
     result.timestamp = Date.now()
     result.includeRecommendations = options.includeRecommendations ?? false
     result.includeHumanReview = options.includeHumanReview ?? true
