@@ -1,7 +1,7 @@
 {
   "name": "nbr-17225-guard",
   "private": true,
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Verificador profissional de acessibilidade web conforme ABNT NBR 17225:2025",
   "type": "module",
   "scripts": {

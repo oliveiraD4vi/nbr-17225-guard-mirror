@@ -99,8 +99,8 @@ O Guardião NBR 17225 executa auditorias diretamente na página inspecionada e o
 
 ## Definição da Beta
 
-Produto: `1.1.0-beta.4`
-Manifest Chrome: `1.1.0`
+Produto: `1.1.1-beta.5`
+Manifest Chrome: `1.1.1`
 Nome: **V1 Farol Beta**
 
 Escopo da Beta:
@@ -255,8 +255,8 @@ Quando um PR alterar, remover ou criar uma função de verificação de regra, o
 
 ## Versionamento
 
-Produto: `1.1.0-beta.4`
-Manifest Chrome: `1.1.0`
+Produto: `1.1.1-beta.5`
+Manifest Chrome: `1.1.1`
 Nome: **V1 Farol Beta**
 
 A política de nomes e evolução está documentada em `docs/VERSIONING.md`.

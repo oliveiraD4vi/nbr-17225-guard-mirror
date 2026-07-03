@@ -6,6 +6,8 @@ O formato segue, de forma simples, a ideia de "Keep a Changelog" e versionamento
 
 ## [Unreleased]
 
+## [1.1.1-beta.5] - 2026-07-03
+
 ### Added
 
 - propostas editáveis de texto alternativo em achados de imagem e mapa de imagem;

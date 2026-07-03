@@ -4,8 +4,8 @@ O Guardião NBR 17225 usa versionamento semântico para a extensão e nomes curt
 
 ## Versão Atual
 
-Produto: `1.1.0-beta.4`
-Manifest Chrome: `1.1.0`
+Produto: `1.1.1-beta.5`
+Manifest Chrome: `1.1.1`
 
 | Versão         | Nome          | Escopo                                                                                                                 |
 | -------------- | ------------- | ---------------------------------------------------------------------------------------------------------------------- |

@@ -1,4 +1,4 @@
-export const APP_VERSION = '1.1.0-beta.4'
+export const APP_VERSION = '1.1.1-beta.5'
 export const APP_VERSION_NAME = 'Farol'
 export const APP_VERSION_STAGE = 'Beta'
 export const APP_VERSION_LABEL = `V1 ${APP_VERSION_NAME} ${APP_VERSION_STAGE} (${APP_VERSION})`

@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Guardião NBR 17225",
-  "version": "1.1.0",
-  "version_name": "1.1.0-beta.4",
+  "version": "1.1.1",
+  "version_name": "1.1.1-beta.5",
   "description": "Verificador profissional de acessibilidade web conforme ABNT NBR 17225:2025",
   "permissions": ["storage", "activeTab", "scripting"],
   "devtools_page": "src/devtools.html",
