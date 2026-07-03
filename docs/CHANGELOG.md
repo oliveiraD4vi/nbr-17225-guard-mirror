@@ -6,6 +6,30 @@ O formato segue, de forma simples, a ideia de "Keep a Changelog" e versionamento
 
 ## [Unreleased]
 
+### Added
+
+- modelo persistente de achados com origem automática ou manual e estados aberto, confirmado e ignorado;
+- possibilidade de ignorar qualquer achado com motivo obrigatório e reabri-lo posteriormente;
+- seleção de elementos na página para criação manual de achados vinculados à NBR;
+- ações em massa para ocorrências semelhantes, incluindo propostas de contraste compatíveis;
+- pré-visualização temporária das cores propostas diretamente na página auditada;
+- validação local e contínua do padrão Conventional Commits.
+
+### Changed
+
+- nota geral passa a penalizar cada regra uma única vez, com pesos 2 para erros e 1 para avisos;
+- painel da nota passa a mostrar números absolutos e fica recolhido por padrão;
+- achados abertos contam como falha, enquanto ignorados ficam fora dos números acionáveis;
+- resumo deixa de repetir título, URL e data e concentra as ações no cabeçalho do card;
+- confirmação deixa de ser uma etapa obrigatória da triagem;
+- simulador passa a usar linguagem orientada à percepção visual e explicita seus limites.
+
+### Fixed
+
+- URL da auditoria passa a ter um único ponto de exibição com ação de cópia;
+- título longo da aba deixa de ultrapassar o cabeçalho do popup;
+- estilos alterados pela prévia de contraste são restaurados com valor e prioridade originais.
+
 ## [1.0.3-beta.3] - 2026-07-01
 
 ### Changed

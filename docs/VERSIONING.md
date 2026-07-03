@@ -19,6 +19,10 @@ Regra executada na Beta significa regra habilitada para avaliação assistida. N
 - `MINOR`: nova regra, novo relatório, novo filtro, melhoria de histórico ou funcionalidade complementar compatível.
 - `PATCH`: correção de bug, ajuste visual, refinamento de texto, redução de falso positivo ou melhoria interna sem quebra de contrato.
 
+Versões Beta usam o identificador `MAJOR.MINOR.PATCH-beta.N`. O número final identifica a rodada pública da Beta e cresce a cada novo pacote publicado. O campo `version` do manifesto permanece numérico, enquanto `version_name` preserva o identificador completo exibido ao usuário.
+
+O processo de preparação, validação, criação de tags e publicação está em `RELEASES.md`.
+
 ## Tema dos Nomes
 
 As versões seguem um tema de navegação, orientação e sinalização. Esse tema combina com a ideia de guardião porque comunica direção, vigilância, segurança e progressão contínua sem depender de propriedade intelectual de franquias.
@@ -80,8 +84,8 @@ Exemplos:
 
 ### V1.2 Baliza
 
-- melhoria dos sinais visuais de confirmação humana;
-- maior clareza de estados pendentes, confirmados e descartados;
+- melhoria dos sinais visuais de revisão contextual;
+- maior clareza de estados abertos, confirmados e ignorados;
 - ajustes de acessibilidade da própria interface da extensão;
 - microinterações para reduzir confusão em listas longas.
 

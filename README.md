@@ -4,7 +4,7 @@ Verificador de acessibilidade para navegadores Chromium, alinhado à V1 Farol Be
 
 ## Visão geral
 
-O Guardião NBR 17225 executa auditorias diretamente na página inspecionada e organiza os achados com referência normativa, severidade, contexto do elemento afetado, revisão humana e histórico local por URL.
+O Guardião NBR 17225 executa auditorias diretamente na página inspecionada e organiza os achados com referência normativa, severidade, contexto do elemento afetado, triagem opcional e histórico local por URL.
 
 ## Principais capacidades
 
@@ -21,24 +21,24 @@ O Guardião NBR 17225 executa auditorias diretamente na página inspecionada e o
 - leitura curta mais clara nos cards de violação, com resumo orientado por família de regra antes do detalhe técnico;
 - link de regra por achado, abrindo a explicação completa e a rastreabilidade na Página do Projeto;
 - explicação pública por regra, ajudando a entender expectativa normativa, sinal verificado, limite residual e foco de revisão;
-- board auxiliar para regras de contraste, com ajuste em tempo real de cores, persistência da correção do usuário e restauração para os valores originais da página.
+- board auxiliar para regras de contraste, com ajuste em tempo real, pré-visualização temporária na página auditada e restauração exata dos estilos originais;
+- criação de achados manuais a partir da seleção de um elemento na página, vinculados a uma regra da NBR;
+- ações em massa para ignorar ocorrências semelhantes e reaplicar propostas de contraste compatíveis.
 
-### Revisão humana
+### Triagem de achados
 
-- distinção explícita entre detecção automática e itens que exigem confirmação humana;
-- confirmação explícita antes da mudança de estado, com reorganização visual do item entre pendentes, confirmados e descartados;
-- estados persistidos por item:
-  - pendente;
-  - confirmado;
-  - descartado;
-- aba dedicada para revisão humana, com agrupamento visual por estado;
-- itens descartados continuam disponíveis para reavaliação posterior;
-- anotações por item, com persistência entre auditorias equivalentes.
+- origem explícita para achados automáticos e manuais;
+- estados persistidos por item: aberto, confirmado ou ignorado;
+- possibilidade de ignorar qualquer achado, sem transformar confirmação manual em etapa obrigatória;
+- motivo obrigatório ao ignorar, com nota complementar opcional;
+- achados ignorados permanecem no histórico, nas comparações e nas exportações, mas ficam fora da nota e dos números acionáveis;
+- seção dedicada aos itens ignorados, com ação para reabrir;
+- anotações por item e decisões de triagem reaproveitadas entre auditorias equivalentes.
 
 ### Histórico e comparação
 
 - histórico compacto de auditorias por URL;
-- herança de revisão humana, anotações e correções de contraste entre auditorias equivalentes;
+- herança de decisões de triagem, anotações e correções de contraste entre auditorias equivalentes;
 - exclusão de entradas do histórico com confirmação explícita no popup;
 - comparação entre auditorias salvas, com indicadores de evolução, regressão e estabilidade;
 - importação de relatórios JSON exportados pela própria extensão para retomar a análise em outro navegador ou computador;
@@ -47,14 +47,17 @@ O Guardião NBR 17225 executa auditorias diretamente na página inspecionada e o
 
 ### Apoio à decisão
 
-- nota geral baseada em requisitos, recomendações do escopo atual e conclusão da revisão humana;
+- nota geral baseada em regras com falha, com peso 2 para erros e peso 1 para avisos;
+- cada regra penaliza a nota no máximo uma vez, independentemente do número de ocorrências semelhantes;
+- requisitos representam 100% da nota no escopo padrão e 90% quando recomendações são incluídas;
+- painel objetivo com achados acionáveis, tipos de problema, regras obrigatórias com falha, ignorados e volume total de ocorrências;
 - controles de escopo com linguagem orientada à ação, deixando explícito o que será incluído ou removido da leitura atual;
 - feedback visual para a nota, com leitura rápida de risco;
-- contadores do resumo baseados no estado atual da revisão humana, evitando inflar pendências já descartadas;
+- contadores acionáveis que excluem achados ignorados sem apagar seu registro;
 - relatório detalhado em página dedicada.
 - exportação de resumo simples da auditoria diretamente pela aba de resumo.
 
-### Simulador de visão
+### Simulador de percepção visual
 
 - simulação de:
   - protanopia;
@@ -62,7 +65,8 @@ O Guardião NBR 17225 executa auditorias diretamente na página inspecionada e o
   - tritanopia;
   - desfoque;
 - aplicação direta sobre a página auditada;
-- uso complementar ao motor de regras, para inspeção visual assistida.
+- uso complementar ao motor de regras, para inspeção visual assistida;
+- filtros apresentados como apoio técnico, sem alegar que reproduzem integralmente a experiência de uma pessoa com deficiência.
 
 ### Governança técnica
 
@@ -76,7 +80,7 @@ O Guardião NBR 17225 executa auditorias diretamente na página inspecionada e o
 ### Resiliência de armazenamento
 
 - tratamento orientado para `QuotaExceeded` no `chrome.storage.local`;
-- persistência enxuta do histórico, removendo dados derivados e reconstruindo agrupamentos na leitura sem descartar revisão humana, anotações ou correções de contraste;
+- persistência enxuta do histórico, removendo dados derivados e reconstruindo agrupamentos na leitura sem descartar decisões de triagem, anotações ou correções de contraste;
 - aviso preventivo quando o armazenamento local se aproxima do limite, com leitura de uso atual, ação de compactação e orientação sobre retenção local;
 - importação de relatórios como caminho de continuidade quando o armazenamento local não for suficiente para reter todo o histórico indefinidamente;
 - opções de recuperação no popup:
@@ -133,6 +137,7 @@ Consulte também:
 - [RULES_NORMATIVE_MATRIX.md](docs/RULES_NORMATIVE_MATRIX.md)
 - [FUTURE_RULES_PLAN.md](docs/FUTURE_RULES_PLAN.md)
 - [VERSIONING.md](docs/VERSIONING.md)
+- [RELEASES.md](docs/RELEASES.md)
 
 ## Rastreabilidade pública
 
@@ -165,9 +170,9 @@ Use:
 - o link da regra para abrir a explicação completa, os limites e a rastreabilidade em `https://guardiaonbr.com.br/rules.html`;
 - a board de contraste, quando aplicável.
 
-### 3. Fechar a revisão humana
+### 3. Registrar decisões de triagem
 
-Na aba `Verificação humana`, confirme ou descarte os itens pendentes. O fluxo agora pede confirmação antes da mudança de estado e reorganiza visualmente o card para reduzir perda de contexto. Esse passo é importante para estabilizar o diagnóstico e melhorar a utilidade do histórico.
+Quando um achado não se aplicar ao contexto, use `Ignorar achado`, informe o motivo e acrescente uma observação quando necessário. Não é preciso confirmar cada item para que ele conte como falha: achados abertos já entram nos números acionáveis, enquanto os ignorados permanecem documentados e podem ser reabertos.
 
 ### 4. Incluir recomendações
 
@@ -179,13 +184,13 @@ Quando a auditoria precisar continuar em outro ambiente, exporte o relatório em
 
 Se o popup avisar que o armazenamento local está em atenção, compacte o histórico e exporte os relatórios que precisarem de retenção de longo prazo.
 
-### 6. Usar o simulador de visão
+### 6. Usar o simulador de percepção visual
 
-O simulador de visão deve entrar como validação complementar, não como substituto da auditoria automática. Um fluxo profissional de uso é:
+O simulador de percepção visual deve entrar como validação complementar, não como substituto da auditoria automática nem como reprodução completa da experiência de pessoas com deficiência. Um fluxo profissional de uso é:
 
 1. rodar a auditoria de requisitos;
 2. revisar achados de contraste, foco, componentes e leitura;
-3. ativar o simulador de visão;
+3. ativar o simulador de percepção visual;
 4. inspecionar visualmente:
    - contraste textual;
    - contraste de componentes;
