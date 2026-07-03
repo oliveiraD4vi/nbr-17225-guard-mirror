@@ -23,6 +23,7 @@ import {
   DownloadOutlined,
   EyeOutlined,
   FallOutlined,
+  FileTextOutlined,
   FlagOutlined,
   InfoCircleOutlined,
   LinkOutlined,
@@ -1135,6 +1136,26 @@ export const PopupApp: React.FC = () => {
     message.success(t('popup.messages.exportSummarySuccess'))
   }, [reviewSourceResult])
 
+  const handleOpenReport = useCallback(async () => {
+    if (!reviewSourceResult) {
+      message.warning(t('popup.messages.noAuditToExport'))
+      return
+    }
+
+    try {
+      const response = await chrome.runtime.sendMessage({
+        action: 'OPEN_REPORT',
+        auditResult: reviewSourceResult,
+      })
+      if (response?.error) {
+        throw new Error(response.error)
+      }
+    } catch (error) {
+      console.error('Erro ao abrir relatório em nova aba:', error)
+      message.error(t('popup.messages.reportOpenError'))
+    }
+  }, [reviewSourceResult])
+
   const handleExportHistoryJSON = useCallback((entry: AuditHistoryEntry) => {
     downloadTextFile(
       JSON.stringify(buildExportableAuditResult(entry), null, 2),
@@ -1969,6 +1990,12 @@ export const PopupApp: React.FC = () => {
         onClick: handleExportCSV,
       },
       {
+        key: 'report',
+        label: t('shared.actions.openReport'),
+        icon: <FileTextOutlined />,
+        onClick: handleOpenReport,
+      },
+      {
         key: 'json',
         label: t('shared.actions.exportJson'),
         icon: <DownloadOutlined />,
@@ -1988,6 +2015,7 @@ export const PopupApp: React.FC = () => {
     clearHighlightsOnPage,
     handleExportJSON,
     handleExportCSV,
+    handleOpenReport,
   ])
 
   const tabItems = useMemo(() => {

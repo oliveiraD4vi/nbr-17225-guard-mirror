@@ -2,12 +2,13 @@
  * Background Service Worker
  */
 import { t } from '@/i18n'
-import type { ManualFindingDraft } from '@/types'
+import type { AuditResult, ManualFindingDraft } from '@/types'
 import {
   getManualFindingDraftTabKey,
   MANUAL_FINDING_DRAFTS_STORAGE_KEY,
   sanitizeManualFindingDraft,
 } from '@/utils/manual-findings'
+import { saveReportSnapshot } from '@/utils/report-snapshots'
 
 chrome.runtime.onInstalled.addListener((details) => {
   if (details.reason === 'install') {
@@ -22,9 +23,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
   switch (request.action) {
     case 'OPEN_REPORT':
-      openDetailedReport()
-      sendResponse({ status: 'OK' })
-      break
+      openDetailedReport(request.auditResult)
+        .then((snapshotId) => sendResponse({ status: 'OK', snapshotId }))
+        .catch((error: unknown) => {
+          const message = error instanceof Error ? error.message : t('background.reportOpenError')
+          sendResponse({ error: message })
+        })
+      return true
     case 'STORE_MANUAL_FINDING_DRAFT':
       storeManualFindingDraft(request.draft, sender.tab?.id)
         .then(() => sendResponse({ status: 'OK' }))
@@ -50,10 +55,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   return true
 })
 
-function openDetailedReport() {
+async function openDetailedReport(rawAuditResult: AuditResult | undefined): Promise<string> {
+  if (!rawAuditResult) {
+    throw new Error(t('background.reportOpenError'))
+  }
+
+  const snapshot = await saveReportSnapshot(rawAuditResult)
   chrome.tabs.create({
-    url: chrome.runtime.getURL('src/report.html'),
+    url: chrome.runtime.getURL(`src/report.html?snapshotId=${encodeURIComponent(snapshot.id)}`),
   })
+  return snapshot.id
 }
 
 async function storeManualFindingDraft(

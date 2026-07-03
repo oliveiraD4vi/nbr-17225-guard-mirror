@@ -22,6 +22,7 @@
       "nextPriority": "Próximo prioritário",
       "clearHighlights": "Limpar destaques",
       "clearAudit": "Limpar auditoria",
+      "openReport": "Abrir relatório",
       "download": "Baixar",
       "ruleDetails": "Ver regra",
       "delete": "Excluir",
@@ -203,7 +204,8 @@
       "contrastPreviewPartial": "A prévia foi aplicada parcialmente. Elementos não encontrados: {{count}}.",
       "contrastPreviewUnavailable": "O elemento desta ocorrência não está disponível para pré-visualização.",
       "auditUrlCopied": "URL da auditoria copiada",
-      "auditUrlCopyError": "Não foi possível copiar a URL da auditoria"
+      "auditUrlCopyError": "Não foi possível copiar a URL da auditoria",
+      "reportOpenError": "Não foi possível abrir o relatório em nova aba"
     },
     "manualFinding": {
       "title": "Criar achado manual",
@@ -642,10 +644,26 @@
   "report": {
     "title": "Guardião NBR 17225 - Relatório detalhado",
     "loading": "Carregando relatório...",
-    "empty": "Nenhum relatório disponível para a aba ativa",
+    "empty": "Nenhum relatório disponível para esta visualização",
     "introTitle": "Leitura do relatório",
     "introDescription": "O relatório reúne achados automáticos e manuais, decisões de triagem e propostas de correção preservadas na auditoria.",
-    "violationsTitle": "Detalhes das violações"
+    "violationsTitle": "Detalhes das violações",
+    "eyebrow": "Auditoria em nova aba",
+    "alternativeTextCurrent": "Texto atual",
+    "alternativeTextProposal": "Proposta",
+    "sections": {
+      "requirementsTitle": "Requisitos com achado acionável",
+      "requirementsDescription": "Itens obrigatórios que continuam abertos ou confirmados nesta auditoria.",
+      "recommendationsTitle": "Recomendações com achado acionável",
+      "recommendationsDescription": "Pontos incrementais incluídos no escopo visualizado.",
+      "ignoredTitle": "Achados ignorados",
+      "ignoredDescription": "Itens preservados para rastreabilidade, mas fora da nota e dos números acionáveis.",
+      "empty": "Nenhum item nesta seção"
+    }
+  },
+  "devtools": {
+    "panelTitle": "Guardião NBR 17225",
+    "unavailable": "Não foi possível identificar a página inspecionada."
   },
   "content": {
     "unknownAuditError": "Erro desconhecido ao auditar a página",
@@ -671,6 +689,7 @@
     "loaded": "Background service worker carregado",
     "manualFindingDraftError": "Não foi possível salvar o rascunho do achado manual.",
     "manualFindingDraftInvalid": "O rascunho do achado manual está incompleto.",
-    "manualFindingDraftNoTab": "Não foi possível identificar a aba do achado manual."
+    "manualFindingDraftNoTab": "Não foi possível identificar a aba do achado manual.",
+    "reportOpenError": "Não foi possível preparar o relatório em nova aba."
   }
 }

@@ -156,6 +156,12 @@ export interface AuditHistoryEntry extends AuditResult {
   importedAt?: number
 }
 
+export interface AuditReportSnapshot {
+  id: string
+  createdAt: number
+  auditResult: AuditResult
+}
+
 export interface HighlightState {
   isActive: boolean
   violationId?: string
@@ -174,6 +180,7 @@ export interface ExtensionMessage {
 export interface StorageData {
   auditResultsByTab?: Record<string, AuditResult>
   auditHistoryByUrl?: Record<string, AuditHistoryEntry[]>
+  reportSnapshotsById?: Record<string, AuditReportSnapshot>
   manualFindingDraftsByTab?: Record<string, ManualFindingDraft>
   highlightState?: HighlightState
   visionFilter?: VisionSimulationFilter
