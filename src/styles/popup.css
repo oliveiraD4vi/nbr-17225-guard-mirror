@@ -92,6 +92,58 @@
   align-items: center;
 }
 
+.manual-finding-modal-content {
+  width: 100%;
+}
+
+.manual-finding-element-preview {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--guard-color-border-soft);
+  border-radius: 8px;
+  background: var(--guard-color-surface-muted);
+}
+
+.manual-finding-element-preview-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.manual-finding-element-preview code {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--guard-color-text-primary);
+  font-size: 12px;
+}
+
+.manual-finding-element-preview p {
+  margin: 0;
+  color: var(--guard-color-text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.manual-finding-element-preview pre {
+  max-height: 120px;
+  margin: 0;
+  padding: 8px;
+  overflow: auto;
+  border-radius: 6px;
+  background: var(--guard-color-surface);
+  color: var(--guard-color-text-secondary);
+  font-size: 11px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.manual-finding-form .ant-form-item {
+  margin-bottom: 14px;
+}
+
 .popup-loading-state {
   display: flex;
   flex-direction: column;

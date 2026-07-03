@@ -1,5 +1,19 @@
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Alert, Button, Layout, message, Modal, Space, Switch, Tabs, Tag, Tooltip } from 'antd'
+import {
+  Alert,
+  Button,
+  Form,
+  Input,
+  Layout,
+  message,
+  Modal,
+  Select,
+  Space,
+  Switch,
+  Tabs,
+  Tag,
+  Tooltip,
+} from 'antd'
 import {
   ArrowLeftOutlined,
   ClockCircleOutlined,
@@ -21,8 +35,15 @@ import { PopupPanelSkeleton } from './LoadingSkeletons'
 import type { ViolationsListState } from './ViolationsList'
 import { t } from '@/i18n'
 import { isNormativeRequirement } from '@/normative'
+import { allRules } from '@/rules'
 import { APP_VERSION } from '@/version'
-import type { AuditHistoryEntry, AuditResult, Violation, VisionSimulationFilter } from '@/types'
+import type {
+  AuditHistoryEntry,
+  AuditResult,
+  ManualFindingDraft,
+  Violation,
+  VisionSimulationFilter,
+} from '@/types'
 import { compareAuditResults } from '@/utils/audit-comparison'
 import { buildAuditSummaryJson, buildExportableAuditResult } from '@/utils/audit-export'
 import {
@@ -45,8 +66,14 @@ import {
   saveAuditResult,
   updateStoredAuditResult,
 } from '@/utils/audit-engine'
-import { getAuditUrlStorageKey } from '@/utils/audit-history'
+import { createManualViolation } from '@/utils'
+import { getAuditUrlStorageKey, hydrateAuditResult } from '@/utils/audit-history'
 import { applyFindingStatusUpdate, type FindingStatusUpdate } from '@/utils/audit-triage'
+import {
+  getManualFindingDraftTabKey,
+  MANUAL_FINDING_DRAFTS_STORAGE_KEY,
+  sanitizeManualFindingDraft,
+} from '@/utils/manual-findings'
 import '../styles/popup.css'
 
 const { Header, Content, Footer } = Layout
@@ -97,6 +124,15 @@ interface PopupStoredState {
 }
 
 type PopupStateByUrl = Record<string, PopupStoredState>
+
+interface ManualFindingFormValues {
+  ruleId?: string
+  severity?: Violation['severity']
+  message?: string
+  suggestion?: string
+  remediationAdvice?: string
+  userNote?: string
+}
 
 function truncateHeaderTabTitle(value: string): string {
   if (value.length <= maxHeaderTabTitleLength) return value
@@ -310,6 +346,10 @@ export const PopupApp: React.FC = () => {
   const [quotaRecoveryLoading, setQuotaRecoveryLoading] = useState(false)
   const [storageDiagnostics, setStorageDiagnostics] = useState<AuditStorageDiagnostics | null>(null)
   const [storageMaintenanceLoading, setStorageMaintenanceLoading] = useState(false)
+  const [manualFindingDraft, setManualFindingDraft] = useState<ManualFindingDraft | null>(null)
+  const [isManualFindingModalOpen, setIsManualFindingModalOpen] = useState(false)
+  const [manualFindingSaving, setManualFindingSaving] = useState(false)
+  const [manualFindingForm] = Form.useForm<ManualFindingFormValues>()
   const appIconUrl = useMemo(() => chrome.runtime.getURL('icons/icon-white.png'), [])
 
   const syncAuditResultUpdate = useCallback((updatedResult: AuditResult) => {
@@ -470,6 +510,121 @@ export const PopupApp: React.FC = () => {
     [activeTab],
   )
 
+  const manualFindingRuleOptions = useMemo(
+    () =>
+      allRules.map((rule) => ({
+        value: rule.id,
+        label: `NBR ${rule.nbrReference} — ${rule.name}`,
+        searchLabel: `${rule.nbrReference} ${rule.name}`,
+      })),
+    [],
+  )
+
+  const manualFindingSeverityOptions = useMemo(
+    () => [
+      { value: 'error' as const, label: t('shared.severity.error') },
+      { value: 'warning' as const, label: t('shared.severity.warning') },
+    ],
+    [],
+  )
+
+  const clearManualFindingDraftForTab = useCallback(
+    async (tabId = activeTab?.id) => {
+      if (!tabId) return
+
+      const data = await chrome.storage.local.get(MANUAL_FINDING_DRAFTS_STORAGE_KEY)
+      const draftsByTab = {
+        ...((data[MANUAL_FINDING_DRAFTS_STORAGE_KEY] as
+          | Record<string, ManualFindingDraft>
+          | undefined) ?? {}),
+      }
+      delete draftsByTab[getManualFindingDraftTabKey(tabId)]
+
+      await chrome.storage.local.set({
+        [MANUAL_FINDING_DRAFTS_STORAGE_KEY]: draftsByTab,
+      })
+    },
+    [activeTab?.id],
+  )
+
+  const openManualFindingDraft = useCallback(
+    (draft: ManualFindingDraft) => {
+      setManualFindingDraft(draft)
+      setIsManualFindingModalOpen(true)
+      manualFindingForm.resetFields()
+    },
+    [manualFindingForm],
+  )
+
+  const loadManualFindingDraftForTab = useCallback(
+    async (tab: chrome.tabs.Tab & { id: number }) => {
+      const data = await chrome.storage.local.get(MANUAL_FINDING_DRAFTS_STORAGE_KEY)
+      const rawDraft = (
+        data[MANUAL_FINDING_DRAFTS_STORAGE_KEY] as Record<string, ManualFindingDraft> | undefined
+      )?.[getManualFindingDraftTabKey(tab.id)]
+      const draft = sanitizeManualFindingDraft(rawDraft, tab.id)
+
+      if (!draft) {
+        setManualFindingDraft(null)
+        setIsManualFindingModalOpen(false)
+        return
+      }
+
+      if (tab.url && getAuditUrlStorageKey(draft.url) !== getAuditUrlStorageKey(tab.url)) {
+        await clearManualFindingDraftForTab(tab.id)
+        setManualFindingDraft(null)
+        setIsManualFindingModalOpen(false)
+        return
+      }
+
+      openManualFindingDraft(draft)
+    },
+    [clearManualFindingDraftForTab, openManualFindingDraft],
+  )
+
+  useEffect(() => {
+    if (!activeTab?.id) return
+    void loadManualFindingDraftForTab(activeTab)
+  }, [activeTab, loadManualFindingDraftForTab])
+
+  useEffect(() => {
+    const handleManualFindingDraftChange = (
+      changes: Record<string, chrome.storage.StorageChange>,
+      areaName: string,
+    ) => {
+      if (areaName !== 'local' || !activeTab?.id) return
+
+      const change = changes[MANUAL_FINDING_DRAFTS_STORAGE_KEY]
+      if (!change) return
+
+      const rawDraft = (change.newValue as Record<string, ManualFindingDraft> | undefined)?.[
+        getManualFindingDraftTabKey(activeTab.id)
+      ]
+      const draft = sanitizeManualFindingDraft(rawDraft, activeTab.id)
+
+      if (!draft) {
+        setManualFindingDraft(null)
+        setIsManualFindingModalOpen(false)
+        return
+      }
+
+      if (
+        activeTab.url &&
+        getAuditUrlStorageKey(draft.url) !== getAuditUrlStorageKey(activeTab.url)
+      ) {
+        void clearManualFindingDraftForTab(activeTab.id)
+        setManualFindingDraft(null)
+        setIsManualFindingModalOpen(false)
+        return
+      }
+
+      openManualFindingDraft(draft)
+    }
+
+    chrome.storage.onChanged.addListener(handleManualFindingDraftChange)
+    return () => chrome.storage.onChanged.removeListener(handleManualFindingDraftChange)
+  }, [activeTab?.id, activeTab?.url, clearManualFindingDraftForTab, openManualFindingDraft])
+
   const viewedAuditResult = useMemo(() => {
     if (!selectedHistoryId) return auditResult
     return (
@@ -489,7 +644,9 @@ export const PopupApp: React.FC = () => {
       viewedAuditResult?.violations.filter(
         (violation) =>
           (includeRecommendations || isNormativeRequirement(violation.nbrReference)) &&
-          (includeHumanReview || !violation.requiresHumanReview),
+          (includeHumanReview ||
+            !violation.requiresHumanReview ||
+            violation.findingOrigin === 'manual'),
       ) ?? [],
     [includeHumanReview, includeRecommendations, viewedAuditResult],
   )
@@ -991,6 +1148,117 @@ export const PopupApp: React.FC = () => {
       message.error(t('popup.messages.manualFindingSelectionError'))
     }
   }, [isHistoricalView, sendMessageToActiveTab])
+
+  const handleManualFindingRuleChange = useCallback(
+    (ruleId: string) => {
+      const selectedRule = allRules.find((rule) => rule.id === ruleId)
+      if (!selectedRule) return
+
+      manualFindingForm.setFieldsValue({ severity: selectedRule.severity })
+    },
+    [manualFindingForm],
+  )
+
+  const handleCloseManualFindingModal = useCallback(() => {
+    setIsManualFindingModalOpen(false)
+  }, [])
+
+  const handleCancelManualFindingDraft = useCallback(async () => {
+    if (manualFindingDraft?.tabId) {
+      await clearManualFindingDraftForTab(manualFindingDraft.tabId)
+    }
+
+    setManualFindingDraft(null)
+    setIsManualFindingModalOpen(false)
+    manualFindingForm.resetFields()
+  }, [clearManualFindingDraftForTab, manualFindingDraft?.tabId, manualFindingForm])
+
+  const handleReselectManualFindingElement = useCallback(async () => {
+    if (manualFindingDraft?.tabId) {
+      await clearManualFindingDraftForTab(manualFindingDraft.tabId)
+    }
+
+    setManualFindingDraft(null)
+    setIsManualFindingModalOpen(false)
+    manualFindingForm.resetFields()
+    await handleStartManualFindingSelection()
+  }, [
+    clearManualFindingDraftForTab,
+    handleStartManualFindingSelection,
+    manualFindingDraft?.tabId,
+    manualFindingForm,
+  ])
+
+  const handleSaveManualFinding = useCallback(async () => {
+    if (!auditResult || isHistoricalView || !activeTab?.id || !manualFindingDraft) {
+      message.error(t('popup.messages.manualFindingSaveUnavailable'))
+      return
+    }
+
+    setManualFindingSaving(true)
+    try {
+      const values = await manualFindingForm.validateFields()
+      const selectedRule = allRules.find((rule) => rule.id === values.ruleId)
+      if (!selectedRule) {
+        message.error(t('popup.messages.manualFindingRuleMissing'))
+        return
+      }
+
+      const manualViolation = createManualViolation(selectedRule, {
+        draft: manualFindingDraft,
+        message: values.message ?? '',
+        suggestion: values.suggestion ?? '',
+        remediationAdvice: values.remediationAdvice ?? '',
+        severity: values.severity,
+        userNote: values.userNote,
+        createdAt: Date.now(),
+      })
+      const updatedResult = hydrateAuditResult({
+        ...auditResult,
+        violations: [...auditResult.violations, manualViolation],
+      })
+
+      syncAuditResultUpdate(updatedResult)
+      const persisted = await persistWithQuotaHandling(
+        async () => {
+          await updateStoredAuditResult(updatedResult, activeTab.id)
+          return true
+        },
+        { url: updatedResult.url, scope: 'review', hasUnsavedChanges: true },
+      )
+      if (persisted === null) {
+        message.warning(t('popup.messages.quotaUnsavedReview'))
+        return
+      }
+
+      await clearManualFindingDraftForTab(manualFindingDraft.tabId)
+      setManualFindingDraft(null)
+      setIsManualFindingModalOpen(false)
+      manualFindingForm.resetFields()
+      setActiveTabKey('violations')
+      void persistPopupState({ activeTabKey: 'violations' })
+      message.success(t('popup.messages.manualFindingSaved'))
+    } catch (error) {
+      if (typeof error === 'object' && error && 'errorFields' in error) {
+        return
+      }
+
+      console.error('Erro ao salvar achado manual:', error)
+      message.error(t('popup.messages.manualFindingSaveError'))
+    } finally {
+      setManualFindingSaving(false)
+    }
+  }, [
+    activeTab?.id,
+    auditResult,
+    clearManualFindingDraftForTab,
+    isHistoricalView,
+    manualFindingDraft,
+    manualFindingForm,
+    persistPopupState,
+    persistWithQuotaHandling,
+    syncAuditResultUpdate,
+  ])
 
   const handleHighlightViolation = useCallback(
     async (violation: Violation) => {
@@ -1842,6 +2110,157 @@ export const PopupApp: React.FC = () => {
           </>
         )}
       </Content>
+
+      <Modal
+        open={isManualFindingModalOpen}
+        title={t('popup.manualFinding.title')}
+        onCancel={handleCloseManualFindingModal}
+        footer={[
+          <Button key="cancel-draft" onClick={() => void handleCancelManualFindingDraft()}>
+            {t('popup.manualFinding.actions.cancelDraft')}
+          </Button>,
+          <Button key="reselect" onClick={() => void handleReselectManualFindingElement()}>
+            {t('popup.manualFinding.actions.reselect')}
+          </Button>,
+          <Button
+            key="save"
+            type="primary"
+            loading={manualFindingSaving}
+            onClick={() => void handleSaveManualFinding()}
+          >
+            {t('popup.manualFinding.actions.save')}
+          </Button>,
+        ]}
+        getContainer={false}
+        centered
+        width={560}
+      >
+        {manualFindingDraft ? (
+          <Space direction="vertical" size={16} className="manual-finding-modal-content">
+            <Alert
+              type="info"
+              showIcon
+              message={t('popup.manualFinding.selectedElementTitle')}
+              description={t('popup.manualFinding.selectedElementDescription')}
+            />
+
+            <div className="manual-finding-element-preview">
+              <div className="manual-finding-element-preview-header">
+                {manualFindingDraft.tagName && <Tag>{manualFindingDraft.tagName}</Tag>}
+                <code>{manualFindingDraft.selector}</code>
+              </div>
+              {manualFindingDraft.accessibleName && (
+                <p>
+                  <strong>{t('shared.labels.accessibleName')}:</strong>{' '}
+                  {manualFindingDraft.accessibleName}
+                </p>
+              )}
+              {manualFindingDraft.visibleText && (
+                <p>
+                  <strong>{t('shared.labels.visibleText')}:</strong>{' '}
+                  {manualFindingDraft.visibleText}
+                </p>
+              )}
+              <pre>{manualFindingDraft.snippet}</pre>
+            </div>
+
+            <Form
+              form={manualFindingForm}
+              layout="vertical"
+              className="manual-finding-form"
+              requiredMark
+            >
+              <Form.Item
+                name="ruleId"
+                label={t('popup.manualFinding.fields.rule')}
+                rules={[{ required: true, message: t('popup.manualFinding.validation.rule') }]}
+              >
+                <Select
+                  showSearch
+                  options={manualFindingRuleOptions}
+                  optionFilterProp="searchLabel"
+                  placeholder={t('popup.manualFinding.placeholders.rule')}
+                  onChange={handleManualFindingRuleChange}
+                />
+              </Form.Item>
+
+              <Form.Item
+                name="severity"
+                label={t('popup.manualFinding.fields.severity')}
+                rules={[{ required: true, message: t('popup.manualFinding.validation.severity') }]}
+              >
+                <Select options={manualFindingSeverityOptions} />
+              </Form.Item>
+
+              <Form.Item
+                name="message"
+                label={t('popup.manualFinding.fields.message')}
+                rules={[{ required: true, message: t('popup.manualFinding.validation.message') }]}
+              >
+                <Input.TextArea
+                  rows={2}
+                  maxLength={300}
+                  showCount
+                  placeholder={t('popup.manualFinding.placeholders.message')}
+                />
+              </Form.Item>
+
+              <Form.Item
+                name="suggestion"
+                label={t('popup.manualFinding.fields.suggestion')}
+                rules={[
+                  { required: true, message: t('popup.manualFinding.validation.suggestion') },
+                ]}
+              >
+                <Input.TextArea
+                  rows={2}
+                  maxLength={400}
+                  showCount
+                  placeholder={t('popup.manualFinding.placeholders.suggestion')}
+                />
+              </Form.Item>
+
+              <Form.Item
+                name="remediationAdvice"
+                label={t('popup.manualFinding.fields.remediationAdvice')}
+                rules={[
+                  {
+                    required: true,
+                    message: t('popup.manualFinding.validation.remediationAdvice'),
+                  },
+                ]}
+              >
+                <Input.TextArea
+                  rows={3}
+                  maxLength={600}
+                  showCount
+                  placeholder={t('popup.manualFinding.placeholders.remediationAdvice')}
+                />
+              </Form.Item>
+
+              <Form.Item
+                name="userNote"
+                label={t('popup.manualFinding.fields.userNote')}
+                extra={t('popup.manualFinding.fields.userNoteHelp')}
+              >
+                <Input.TextArea
+                  rows={2}
+                  maxLength={400}
+                  showCount
+                  placeholder={t('popup.manualFinding.placeholders.userNote')}
+                />
+              </Form.Item>
+            </Form>
+          </Space>
+        ) : (
+          <Alert
+            type="warning"
+            showIcon
+            message={t('popup.manualFinding.emptyDraftTitle')}
+            description={t('popup.manualFinding.emptyDraftDescription')}
+          />
+        )}
+      </Modal>
 
       <Modal
         open={Boolean(historyEntryPendingDeletion)}

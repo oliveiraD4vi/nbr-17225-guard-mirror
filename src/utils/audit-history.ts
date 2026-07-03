@@ -135,7 +135,9 @@ export function getDisplayAuditResult(
   const visibleViolations = getVisibleAuditViolations(result).filter(
     (violation) =>
       (includeRecommendations || isNormativeRequirement(violation.nbrReference)) &&
-      (includeHumanReview || !violation.requiresHumanReview),
+      (includeHumanReview ||
+        !violation.requiresHumanReview ||
+        violation.findingOrigin === 'manual'),
   )
   const pendingHumanReviewItems = visibleViolations.filter(isPendingHumanReviewFinding).length
 

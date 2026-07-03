@@ -1,4 +1,4 @@
-import type { Rule, SeverityLevel, Violation, WCAGLevel } from '@/types'
+import type { ManualFindingDraft, Rule, SeverityLevel, Violation, WCAGLevel } from '@/types'
 import { getNormativeRuleType } from '@/normative'
 import { isFullyAutomatedCategory } from '@/types'
 import {
@@ -471,6 +471,63 @@ export function createViolation(
     elementVisibleText: element ? getVisibleText(element) || undefined : undefined,
     contrastDetails: options.contrastDetails,
     customId: generateCustomId(options.customIdPrefix || rule.id, stableSeed),
+  }
+}
+
+export function createManualViolation(
+  rule: Pick<
+    Rule,
+    'id' | 'name' | 'nbrReference' | 'severity' | 'wcagLevel' | 'description' | 'category'
+  >,
+  options: {
+    draft: ManualFindingDraft
+    message: string
+    suggestion: string
+    remediationAdvice: string
+    severity?: SeverityLevel
+    userNote?: string
+    createdAt?: number
+  },
+): Violation {
+  const createdAt = options.createdAt ?? Date.now()
+  const message = options.message.trim()
+  const suggestion = options.suggestion.trim()
+  const remediationAdvice = options.remediationAdvice.trim()
+  const userNote = options.userNote?.trim() || undefined
+  const stableSeed = [
+    'manual',
+    rule.id,
+    options.draft.selector,
+    message,
+    options.draft.selectedAt,
+  ].join('|')
+
+  return {
+    id: generateCustomId(`manual-${rule.id}`, stableSeed),
+    ruleId: rule.id,
+    ruleName: rule.name,
+    nbrReference: rule.nbrReference,
+    description: rule.description,
+    severity: options.severity || rule.severity,
+    wcagLevel: rule.wcagLevel,
+    automationCategory: rule.category,
+    normativeType: getNormativeRuleType(rule.nbrReference),
+    requiresHumanReview: !isFullyAutomatedCategory(rule.category),
+    humanReviewStatus: 'confirmed',
+    findingOrigin: 'manual',
+    findingStatus: 'confirmed',
+    findingStatusUpdatedAt: createdAt,
+    message,
+    snippet: options.draft.snippet,
+    suggestion,
+    remediationAdvice,
+    elementSelector: options.draft.selector,
+    elementTagName: options.draft.tagName,
+    elementAccessibleName: options.draft.accessibleName,
+    elementVisibleText: options.draft.visibleText,
+    userNote,
+    noteUpdatedAt: userNote ? createdAt : undefined,
+    customId: generateCustomId(`manual-${rule.id}`, stableSeed),
   }
 }
 

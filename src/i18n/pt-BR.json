@@ -192,7 +192,46 @@
       "storageCompacted": "Armazenamento local compactado com sucesso.",
       "storageCompactError": "Não foi possível compactar o armazenamento local.",
       "manualFindingSelectionStarted": "Clique no elemento da página que deve virar achado manual.",
-      "manualFindingSelectionError": "Não foi possível iniciar a seleção do elemento."
+      "manualFindingSelectionError": "Não foi possível iniciar a seleção do elemento.",
+      "manualFindingSaved": "Achado manual criado e confirmado.",
+      "manualFindingSaveError": "Não foi possível salvar o achado manual.",
+      "manualFindingSaveUnavailable": "Execute uma auditoria atual antes de salvar o achado manual.",
+      "manualFindingRuleMissing": "Selecione uma regra NBR válida para o achado manual."
+    },
+    "manualFinding": {
+      "title": "Criar achado manual",
+      "selectedElementTitle": "Elemento selecionado",
+      "selectedElementDescription": "Revise o elemento e preencha a regra NBR que fundamenta o achado.",
+      "emptyDraftTitle": "Nenhum elemento selecionado",
+      "emptyDraftDescription": "Inicie a seleção novamente para escolher um elemento da página.",
+      "actions": {
+        "cancelDraft": "Cancelar rascunho",
+        "reselect": "Trocar elemento",
+        "save": "Salvar achado"
+      },
+      "fields": {
+        "rule": "Regra ou referência NBR",
+        "severity": "Severidade",
+        "message": "Mensagem do achado",
+        "suggestion": "Sugestão",
+        "remediationAdvice": "Orientação de correção",
+        "userNote": "Observação",
+        "userNoteHelp": "Opcional. Use para registrar contexto da avaliação."
+      },
+      "placeholders": {
+        "rule": "Selecione a regra NBR",
+        "message": "Descreva o problema observado no elemento.",
+        "suggestion": "Informe o ajuste esperado.",
+        "remediationAdvice": "Explique como corrigir ou validar a correção.",
+        "userNote": "Contexto adicional, se necessário."
+      },
+      "validation": {
+        "rule": "Selecione a regra NBR.",
+        "severity": "Selecione a severidade.",
+        "message": "Informe a mensagem do achado.",
+        "suggestion": "Informe a sugestão.",
+        "remediationAdvice": "Informe a orientação de correção."
+      }
     },
     "scope": {
       "toggleLabel": "Escopo da auditoria",
