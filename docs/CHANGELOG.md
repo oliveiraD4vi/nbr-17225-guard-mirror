@@ -6,6 +6,17 @@ O formato segue, de forma simples, a ideia de "Keep a Changelog" e versionamento
 
 ## [Unreleased]
 
+### Added
+
+- propostas editáveis de texto alternativo em achados de imagem e mapa de imagem;
+- relatório em nova aba com snapshot temporário, layout de impressão e exportação JSON;
+- painel do Chrome DevTools para auditar a página inspecionada sem trocar o fluxo do popup.
+
+### Changed
+
+- propostas de texto alternativo passam a ser preservadas em histórico, comparação, relatório e exportação JSON;
+- documentação passa a comunicar V1 Farol Beta como nome da linha V1.x, sem trocar o codinome em versões menores.
+
 ## [1.1.0-beta.4] - 2026-07-03
 
 ### Added

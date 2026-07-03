@@ -10,6 +10,7 @@ Manifest Chrome: `1.1.0`
 | Versão         | Nome          | Escopo                                                                                                                 |
 | -------------- | ------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | `1.1.0-beta.4` | V1 Farol Beta | Nota por regra, números objetivos, triagem opcional, achados manuais, ações em massa e prévia temporária de contraste. |
+| `1.1.1-beta.5` | V1 Farol Beta | Propostas de texto alternativo, relatório em nova aba com snapshot e painel DevTools. |
 
 Regra executada na Beta significa regra habilitada para avaliação assistida. Não significa regra final.
 

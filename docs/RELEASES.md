@@ -33,6 +33,12 @@ Use uma tag anotada no commit de release:
 git tag -a v1.1.0-beta.4 -m "Release v1.1.0-beta.4"
 ```
 
+Para a rodada atual da linha V1 Farol Beta, use:
+
+```bash
+git tag -a v1.1.1-beta.5 -m "Release v1.1.1-beta.5"
+```
+
 ## Atualização dos usuários
 
 Depois que um pacote com versão superior é aprovado e publicado no mesmo item da Chrome Web Store, o Chrome distribui a atualização automaticamente. O navegador procura novas versões ao iniciar e em verificações periódicas, aplicando a atualização quando a extensão está ociosa. Uma extensão carregada manualmente em modo de desenvolvedor não participa desse fluxo da loja.

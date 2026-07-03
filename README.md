@@ -38,12 +38,19 @@ O Guardião NBR 17225 executa auditorias diretamente na página inspecionada e o
 ### Histórico e comparação
 
 - histórico compacto de auditorias por URL;
-- herança de decisões de triagem, anotações e correções de contraste entre auditorias equivalentes;
+- herança de decisões de triagem, anotações, correções de contraste e propostas de texto alternativo entre auditorias equivalentes;
 - exclusão de entradas do histórico com confirmação explícita no popup;
 - comparação entre auditorias salvas, com indicadores de evolução, regressão e estabilidade;
 - importação de relatórios JSON exportados pela própria extensão para retomar a análise em outro navegador ou computador;
 - exportação da auditoria em JSON e CSV;
 - exportação de comparações em Markdown, JSON e CSV.
+
+### Textos alternativos
+
+- leitura comparativa do texto alternativo atual em achados de imagem e mapa de imagem;
+- identificação da origem do texto atual, como `alt`, `aria-label`, `aria-labelledby`, `title`, nome acessível ou ausência de texto;
+- proposta editável de texto alternativo, preservada no histórico, na comparação, no relatório e na exportação JSON;
+- a proposta é registro de auditoria e não altera o DOM nem o código-fonte da página.
 
 ### Apoio à decisão
 
@@ -54,7 +61,8 @@ O Guardião NBR 17225 executa auditorias diretamente na página inspecionada e o
 - controles de escopo com linguagem orientada à ação, deixando explícito o que será incluído ou removido da leitura atual;
 - feedback visual para a nota, com leitura rápida de risco;
 - contadores acionáveis que excluem achados ignorados sem apagar seu registro;
-- relatório detalhado em página dedicada.
+- relatório detalhado em página dedicada, com snapshot imprimível da auditoria visualizada;
+- painel do Chrome DevTools para usar a extensão junto da página inspecionada;
 - exportação de resumo simples da auditoria diretamente pela aba de resumo.
 
 ### Simulador de percepção visual
@@ -74,7 +82,7 @@ O Guardião NBR 17225 executa auditorias diretamente na página inspecionada e o
 - matriz normativa formal em `docs/RULES_NORMATIVE_MATRIX.md`;
 - plano de expansão futura em `docs/FUTURE_RULES_PLAN.md`, com as 34 recomendações ainda não implementadas listadas individualmente;
 - centralização de textos visíveis em catálogo de i18n PT-BR UTF-8;
-- tema centralizado em variáveis CSS, compartilhado entre popup, relatório e superfícies do Ant Design;
+- tema centralizado em variáveis CSS, compartilhado entre popup, relatório, painel DevTools e superfícies do Ant Design;
 - resolução correta dos tokens do Ant Design a partir das variáveis CSS, preservando consistência visual em CTAs, tags, modais, drawers, tooltips e popovers.
 
 ### Resiliência de armazenamento
@@ -159,6 +167,8 @@ Essa página usa a matriz `docs/RULES_NORMATIVE_MATRIX.md` como fonte e não sub
 
 Comece com o escopo padrão `Somente requisitos`. Isso reduz ruído inicial e ajuda a priorizar não conformidades diretas.
 
+O uso normal continua disponível pelo popup da extensão. Para uma revisão mais longa, abra o Chrome DevTools e use o painel `Guardião NBR 17225`, que audita a página inspecionada sem depender da largura do popup.
+
 ### 2. Revisar a aba de violações
 
 Use:
@@ -168,7 +178,8 @@ Use:
 - a navegação por itens prioritários;
 - os resumos curtos dos cards para leitura rápida do achado;
 - o link da regra para abrir a explicação completa, os limites e a rastreabilidade em `https://guardiaonbr.com.br/rules.html`;
-- a board de contraste, quando aplicável.
+- a board de contraste, quando aplicável;
+- a seção de texto alternativo nos achados de imagem, quando aplicável.
 
 ### 3. Registrar decisões de triagem
 
@@ -180,7 +191,7 @@ Ative o escopo `Requisitos e recomendações` quando a base obrigatória já est
 
 ### 5. Exportar ou importar contexto quando necessário
 
-Quando a auditoria precisar continuar em outro ambiente, exporte o relatório em JSON e depois use a importação pela aba de histórico ou pela tela inicial. Se a URL importada for a mesma da aba atual, o relatório volta pronto para comparação.
+Use `Abrir relatório` para gerar uma nova aba com snapshot da auditoria visualizada, adequada para leitura e impressão. Quando a auditoria precisar continuar em outro ambiente, exporte o relatório em JSON e depois use a importação pela aba de histórico ou pela tela inicial. Se a URL importada for a mesma da aba atual, o relatório volta pronto para comparação.
 
 Se o popup avisar que o armazenamento local está em atenção, compacte o histórico e exporte os relatórios que precisarem de retenção de longo prazo.
 
