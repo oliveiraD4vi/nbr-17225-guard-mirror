@@ -11,7 +11,7 @@ O Guardião NBR 17225 executa auditorias diretamente na página inspecionada e o
 ### Auditoria e diagnóstico
 
 - cobertura de 112 regras revisadas contra a referência pública da ABNT NBR 17225: 96 requisitos normativos e 16 recomendações normativas;
-- execução por aba, com suporte a páginas `http(s)` e arquivos locais com permissão;
+- execução por aba, com suporte a páginas HTTP, HTTPS e arquivos locais com permissão;
 - auditoria por escopo:
   - somente requisitos;
   - requisitos e recomendações;

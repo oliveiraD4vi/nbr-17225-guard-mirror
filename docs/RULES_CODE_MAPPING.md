@@ -165,5 +165,5 @@ pnpm verify:rules
 Resultado esperado:
 
 ```text
-Verificação de regras concluída: 112 itens documentados mapeados para 112 implementação(ões): 96 requisitos e 16 recomendações.
+Verificação de regras concluída: 112 itens documentados mapeados para 112 implementações: 96 requisitos e 16 recomendações.
 ```

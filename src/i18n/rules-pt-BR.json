@@ -389,7 +389,7 @@
     "adjustableTimeLimit": {
       "name": "Limite de tempo ajustável",
       "description": "Limites de tempo devem poder ser estendidos, ajustados ou desativados quando aplicável",
-      "metaMessageWithSeconds": "Atualização temporizada detectada em aproximadamente {{seconds}} segundo(s), sem mecanismo visível de ajuste ou extensão.",
+      "metaMessageWithSeconds": "Atualização temporizada detectada. Tempo aproximado: {{seconds}} s. Não há mecanismo visível de ajuste ou extensão.",
       "metaMessage": "Atualização temporizada detectada sem mecanismo visível de ajuste ou extensão.",
       "metaSuggestion": "Ofereça extensão, pausa ou desativação do limite de tempo.",
       "metaRemediation": "Evite meta refresh ou forneça controle equivalente ao usuário.",
