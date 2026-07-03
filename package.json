@@ -17,12 +17,13 @@
     "format:check": "prettier . --check",
     "stage-lint": "lint-staged",
     "preview": "vite preview",
-    "test": "pnpm test:audit-history-utils && pnpm test:audit-import && pnpm test:audit-history && pnpm test:audit-triage",
+    "test": "pnpm test:audit-history-utils && pnpm test:audit-import && pnpm test:audit-history && pnpm test:audit-triage && pnpm test:audit-manual-findings",
     "verify:rules": "node scripts/verify-rules.mjs",
     "type-check": "tsc --noEmit",
     "test:audit-history": "node scripts/test-audit-history.mjs",
     "test:audit-import": "node scripts/test-audit-import.mjs",
     "test:audit-history-utils": "node scripts/test-audit-history-utils.mjs",
+    "test:audit-manual-findings": "node scripts/test-audit-manual-findings.mjs",
     "test:audit-triage": "node scripts/test-audit-triage.mjs"
   },
   "lint-staged": {
