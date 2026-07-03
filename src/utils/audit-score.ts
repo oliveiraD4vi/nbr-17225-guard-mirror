@@ -35,6 +35,37 @@ function getRuleMap(rules: Rule[]): Map<string, Rule> {
   return new Map(rules.map((rule) => [rule.id, rule]))
 }
 
+function getRuleFromViolation(violation: Violation): Rule {
+  return {
+    id: violation.ruleId,
+    nbrReference: violation.nbrReference,
+    name: violation.ruleName,
+    description: violation.description,
+    severity: violation.severity,
+    wcagLevel: violation.wcagLevel,
+    category: violation.automationCategory,
+    check: async () => [],
+  }
+}
+
+function includeManualFindingRules(
+  rules: Rule[],
+  violations: Violation[],
+  predicate: (reference: string) => boolean,
+): Rule[] {
+  const ruleMap = getRuleMap(rules)
+
+  violations.forEach((violation) => {
+    if (violation.findingOrigin !== 'manual') return
+    if (!predicate(violation.nbrReference)) return
+    if (ruleMap.has(violation.ruleId)) return
+
+    ruleMap.set(violation.ruleId, getRuleFromViolation(violation))
+  })
+
+  return Array.from(ruleMap.values())
+}
+
 function getTotalWeight(rules: Rule[]): number {
   return rules.reduce((total, rule) => total + getRuleWeight(rule.severity), 0)
 }
@@ -137,9 +168,17 @@ export function getAuditScoreData(result: AuditResult): AuditScoreData {
     result.includeRecommendations ??
     violations.some((violation) => isNormativeRecommendation(violation.nbrReference))
   const includesHumanReview = result.includeHumanReview ?? true
-  const requirementRules = getRequirementRules(includesHumanReview)
+  const requirementRules = includeManualFindingRules(
+    getRequirementRules(includesHumanReview),
+    violations,
+    isNormativeRequirement,
+  )
   const recommendationRules = includesRecommendations
-    ? getRecommendationRules(includesHumanReview)
+    ? includeManualFindingRules(
+        getRecommendationRules(includesHumanReview),
+        violations,
+        isNormativeRecommendation,
+      )
     : []
   const requirementRuleMap = getRuleMap(requirementRules)
   const recommendationRuleMap = getRuleMap(recommendationRules)
