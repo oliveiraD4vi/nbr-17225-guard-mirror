@@ -40,6 +40,8 @@ import { APP_VERSION } from '@/version'
 import type {
   AuditHistoryEntry,
   AuditResult,
+  ContrastPreviewItem,
+  ContrastPreviewResult,
   ManualFindingDraft,
   Violation,
   VisionSimulationFilter,
@@ -141,6 +143,20 @@ interface ManualFindingFormValues {
 function truncateHeaderTabTitle(value: string): string {
   if (value.length <= maxHeaderTabTitleLength) return value
   return `${value.slice(0, maxHeaderTabTitleLength - 3).trimEnd()}...`
+}
+
+function createContrastPreviewItem(
+  violation: Violation,
+  colors: Pick<NonNullable<Violation['userContrastOverride']>, 'foregroundHex' | 'backgroundHex'>,
+): ContrastPreviewItem | null {
+  if (!violation.contrastDetails || !violation.elementSelector) return null
+  return {
+    id: violation.id,
+    selector: violation.elementSelector,
+    context: violation.contrastDetails.context,
+    foregroundHex: colors.foregroundHex,
+    backgroundHex: colors.backgroundHex,
+  }
 }
 
 function isPopupTabKey(value: unknown): value is PopupTabKey {
@@ -321,6 +337,9 @@ export const PopupApp: React.FC = () => {
   const importInputRef = useRef<HTMLInputElement | null>(null)
   const popupContentRef = useRef<HTMLDivElement | null>(null)
   const scrollPersistTimeoutRef = useRef<number | null>(null)
+  const contrastPreviewPortRef = useRef<chrome.runtime.Port | null>(null)
+  const contrastPreviewItemsRef = useRef<Map<string, ContrastPreviewItem>>(new Map())
+  const contrastPreviewWarningRef = useRef<string | null>(null)
   const [auditResult, setAuditResult] = useState<AuditResult | null>(null)
   const [auditHistory, setAuditHistory] = useState<AuditHistoryEntry[]>([])
   const [siteAuditHistory, setSiteAuditHistory] = useState<AuditHistoryEntry[]>([])
@@ -669,6 +688,88 @@ export const PopupApp: React.FC = () => {
     return getAuditUrlStorageKey(activeTab.url) === getAuditUrlStorageKey(viewedAuditResult.url)
   }, [activeTab?.url, viewedAuditResult?.url])
 
+  const ensureContrastPreviewSession = useCallback(async () => {
+    if (contrastPreviewPortRef.current || !activeTab?.id) return
+    await ensureContentScriptReady(activeTab.id)
+    const port = chrome.tabs.connect(activeTab.id, { name: 'contrast-preview-session' })
+    port.onDisconnect.addListener(() => {
+      if (contrastPreviewPortRef.current === port) {
+        contrastPreviewPortRef.current = null
+        contrastPreviewItemsRef.current.clear()
+      }
+    })
+    contrastPreviewPortRef.current = port
+  }, [activeTab?.id])
+
+  const clearContrastPreviewsOnPage = useCallback(async () => {
+    contrastPreviewItemsRef.current.clear()
+    contrastPreviewWarningRef.current = null
+    const port = contrastPreviewPortRef.current
+    contrastPreviewPortRef.current = null
+
+    try {
+      await sendMessageToActiveTab({ action: 'CLEAR_CONTRAST_PREVIEWS' })
+    } catch {
+      // O encerramento da porta também restaura a página quando a aba ainda está disponível.
+    } finally {
+      port?.disconnect()
+    }
+  }, [sendMessageToActiveTab])
+
+  const syncContrastPreviewsOnPage = useCallback(
+    async (items: ContrastPreviewItem[], showMissingFeedback = false) => {
+      if (isHistoricalView || !canRerunViewedAudit) return null
+      await ensureContrastPreviewSession()
+      items.forEach((item) => contrastPreviewItemsRef.current.set(item.id, item))
+
+      const response = await sendMessageToActiveTab({
+        action: 'SYNC_CONTRAST_PREVIEWS',
+        previews: Array.from(contrastPreviewItemsRef.current.values()),
+      })
+      const result = response?.result as ContrastPreviewResult | undefined
+      const unavailableCount = (result?.missing ?? 0) + (result?.unsupported ?? 0)
+      if (unavailableCount > 0 && showMissingFeedback) {
+        message.warning(t('popup.messages.contrastPreviewPartial', { count: unavailableCount }))
+      }
+      return result ?? null
+    },
+    [canRerunViewedAudit, ensureContrastPreviewSession, isHistoricalView, sendMessageToActiveTab],
+  )
+
+  const handleViolationContrastPreviewChange = useCallback(
+    async (
+      violation: Violation,
+      colors: Pick<
+        NonNullable<Violation['userContrastOverride']>,
+        'foregroundHex' | 'backgroundHex'
+      >,
+    ) => {
+      const item = createContrastPreviewItem(violation, colors)
+      if (!item || isHistoricalView || !canRerunViewedAudit) return
+
+      try {
+        const result = await syncContrastPreviewsOnPage([item])
+        const unavailableCount = (result?.missing ?? 0) + (result?.unsupported ?? 0)
+        if (unavailableCount > 0 && contrastPreviewWarningRef.current !== item.id) {
+          contrastPreviewWarningRef.current = item.id
+          message.warning(t('popup.messages.contrastPreviewUnavailable'))
+        }
+      } catch (error) {
+        console.error('Erro ao aplicar prévia de contraste:', error)
+      }
+    },
+    [canRerunViewedAudit, isHistoricalView, syncContrastPreviewsOnPage],
+  )
+
+  useEffect(
+    () => () => {
+      contrastPreviewPortRef.current?.disconnect()
+      contrastPreviewPortRef.current = null
+      contrastPreviewItemsRef.current.clear()
+    },
+    [activeTab?.id],
+  )
+
   const persistPopupState = useCallback(
     async (patch: Partial<PopupStoredState>) => {
       const stateUrl = viewedAuditResult?.url || activeTab?.url
@@ -788,6 +889,7 @@ export const PopupApp: React.FC = () => {
   const handleRunAudit = useCallback(async () => {
     setLoading(true)
     try {
+      await clearContrastPreviewsOnPage()
       await clearHighlightsOnPage(false)
       const result = await runAccessibilityAudit({ includeRecommendations, includeHumanReview })
       const tab = await getActiveTab()
@@ -849,6 +951,7 @@ export const PopupApp: React.FC = () => {
       setLoading(false)
     }
   }, [
+    clearContrastPreviewsOnPage,
     clearHighlightsOnPage,
     includeHumanReview,
     includeRecommendations,
@@ -1691,8 +1794,23 @@ export const PopupApp: React.FC = () => {
       }
 
       message.success(t('popup.messages.bulkContrastApplied', { count: affectedCount }))
+      const previewItems = updatedResult.violations
+        .filter(
+          (currentViolation) =>
+            Boolean(currentViolation.contrastDetails) &&
+            areSimilarViolations(currentViolation, violation),
+        )
+        .map((currentViolation) => createContrastPreviewItem(currentViolation, override))
+        .filter((item): item is ContrastPreviewItem => Boolean(item))
+      await syncContrastPreviewsOnPage(previewItems, true)
     },
-    [activeTab?.id, persistWithQuotaHandling, syncAuditResultUpdate, viewedAuditResult],
+    [
+      activeTab?.id,
+      persistWithQuotaHandling,
+      syncAuditResultUpdate,
+      syncContrastPreviewsOnPage,
+      viewedAuditResult,
+    ],
   )
 
   const handleResolveQuotaIssue = useCallback(
@@ -1855,6 +1973,10 @@ export const PopupApp: React.FC = () => {
             onViolationNoteChange={handleViolationNoteChange}
             onViolationContrastOverrideChange={handleViolationContrastOverrideChange}
             onBulkViolationContrastOverrideChange={handleBulkViolationContrastOverrideChange}
+            onViolationContrastPreviewChange={handleViolationContrastPreviewChange}
+            onContrastPreviewEnd={() => {
+              void clearContrastPreviewsOnPage()
+            }}
           />
         ),
       },
@@ -1907,6 +2029,8 @@ export const PopupApp: React.FC = () => {
     handleViolationNoteChange,
     handleViolationContrastOverrideChange,
     handleBulkViolationContrastOverrideChange,
+    handleViolationContrastPreviewChange,
+    clearContrastPreviewsOnPage,
     activeTab?.title,
     auditHistory,
     siteAuditHistory,

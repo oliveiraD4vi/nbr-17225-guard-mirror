@@ -46,6 +46,11 @@ import {
 } from '@/utils/audit-triage'
 import '../styles/violations-list.css'
 
+type ContrastPreviewColors = Pick<
+  NonNullable<Violation['userContrastOverride']>,
+  'foregroundHex' | 'backgroundHex'
+>
+
 export type ViolationsListMode = 'requirements' | 'recommendations' | 'review' | 'ignored'
 
 export interface ViolationsListState {
@@ -73,6 +78,8 @@ interface ViolationsListProps {
     violation: Violation,
     override: NonNullable<Violation['userContrastOverride']>,
   ) => void
+  onViolationContrastPreviewChange?: (violation: Violation, colors: ContrastPreviewColors) => void
+  onContrastPreviewEnd?: () => void
 }
 
 interface ViolationGroup {
@@ -402,6 +409,8 @@ function renderViolationGroups(
     violation: Violation,
     override: NonNullable<Violation['userContrastOverride']>,
   ) => void,
+  onViolationContrastPreviewChange?: (violation: Violation, colors: ContrastPreviewColors) => void,
+  onContrastPreviewEnd?: () => void,
 ): React.ReactNode {
   if (violations.length === 0) {
     return <Empty description={t('violations.emptyCategory')} />
@@ -509,6 +518,8 @@ function renderViolationGroups(
                   onViolationNoteChange={onViolationNoteChange}
                   onViolationContrastOverrideChange={onViolationContrastOverrideChange}
                   onBulkViolationContrastOverrideChange={onBulkViolationContrastOverrideChange}
+                  onViolationContrastPreviewChange={onViolationContrastPreviewChange}
+                  onContrastPreviewEnd={onContrastPreviewEnd}
                   pinned
                 />
               ))}
@@ -567,6 +578,8 @@ function renderReviewSections(
     violation: Violation,
     override: NonNullable<Violation['userContrastOverride']>,
   ) => void,
+  onViolationContrastPreviewChange?: (violation: Violation, colors: ContrastPreviewColors) => void,
+  onContrastPreviewEnd?: () => void,
 ): React.ReactNode {
   if (violations.length === 0) {
     return <Empty description={t('violations.emptyCategory')} />
@@ -617,6 +630,8 @@ function renderReviewSections(
               onViolationNoteChange,
               onViolationContrastOverrideChange,
               onBulkViolationContrastOverrideChange,
+              onViolationContrastPreviewChange,
+              onContrastPreviewEnd,
             )
           ) : (
             <Empty
@@ -647,6 +662,8 @@ interface ViolationCardProps {
     violation: Violation,
     override: NonNullable<Violation['userContrastOverride']>,
   ) => void
+  onViolationContrastPreviewChange?: (violation: Violation, colors: ContrastPreviewColors) => void
+  onContrastPreviewEnd?: () => void
   similarActionableCount: number
   similarContrastOverrideCount: number
   pinned?: boolean
@@ -666,6 +683,8 @@ const ViolationCard: React.FC<ViolationCardProps> = React.memo(
     onViolationNoteChange,
     onViolationContrastOverrideChange,
     onBulkViolationContrastOverrideChange,
+    onViolationContrastPreviewChange,
+    onContrastPreviewEnd,
     pinned = false,
   }) => {
     const [isNotesOpen, setIsNotesOpen] = React.useState(false)
@@ -689,6 +708,7 @@ const ViolationCard: React.FC<ViolationCardProps> = React.memo(
         violation.contrastDetails?.backgroundHex ||
         '#ffffff',
     )
+    const contrastPreviewActiveRef = React.useRef(false)
 
     React.useEffect(() => {
       setNoteDraft(violation.userNote || '')
@@ -706,6 +726,27 @@ const ViolationCard: React.FC<ViolationCardProps> = React.memo(
           '#ffffff',
       )
     }, [violation.contrastDetails, violation.id, violation.userContrastOverride])
+
+    React.useEffect(() => {
+      if (!isContrastModalOpen || !violation.contrastDetails) return
+      const previewTimeout = window.setTimeout(() => {
+        onViolationContrastPreviewChange?.(violation, { foregroundHex, backgroundHex })
+      }, 90)
+      return () => window.clearTimeout(previewTimeout)
+    }, [
+      backgroundHex,
+      foregroundHex,
+      isContrastModalOpen,
+      onViolationContrastPreviewChange,
+      violation,
+    ])
+
+    React.useEffect(
+      () => () => {
+        if (contrastPreviewActiveRef.current) onContrastPreviewEnd?.()
+      },
+      [onContrastPreviewEnd],
+    )
 
     React.useEffect(() => {
       setIsApplyingFindingDecision(false)
@@ -806,6 +847,16 @@ const ViolationCard: React.FC<ViolationCardProps> = React.memo(
       },
       [onBulkViolationContrastOverrideChange, violation],
     )
+    const handleOpenContrastModal = React.useCallback((event: React.MouseEvent<HTMLElement>) => {
+      event.stopPropagation()
+      contrastPreviewActiveRef.current = true
+      setIsContrastModalOpen(true)
+    }, [])
+    const handleCloseContrastModal = React.useCallback(() => {
+      contrastPreviewActiveRef.current = false
+      setIsContrastModalOpen(false)
+      onContrastPreviewEnd?.()
+    }, [onContrastPreviewEnd])
     const topicCategory = React.useMemo(
       () => getRuleTopicCategory(violation.ruleId),
       [violation.ruleId],
@@ -1121,13 +1172,7 @@ const ViolationCard: React.FC<ViolationCardProps> = React.memo(
                         })}
                       </Button>
                     )}
-                  <Button
-                    icon={<BgColorsOutlined />}
-                    onClick={(event) => {
-                      event.stopPropagation()
-                      setIsContrastModalOpen(true)
-                    }}
-                  >
+                  <Button icon={<BgColorsOutlined />} onClick={handleOpenContrastModal}>
                     {t('violations.contrastBoard')}
                   </Button>
                 </Space>
@@ -1341,7 +1386,7 @@ const ViolationCard: React.FC<ViolationCardProps> = React.memo(
                 open={isContrastModalOpen}
                 title={t('violations.contrastBoardTitle')}
                 footer={null}
-                onCancel={() => setIsContrastModalOpen(false)}
+                onCancel={handleCloseContrastModal}
                 width={400}
                 className="contrast-board-modal"
                 destroyOnHidden
@@ -1356,6 +1401,9 @@ const ViolationCard: React.FC<ViolationCardProps> = React.memo(
                 >
                   <p className="contrast-board-description">
                     {t('violations.contrastBoardDescription')}
+                  </p>
+                  <p className="contrast-board-page-preview-note">
+                    {t('violations.contrastPagePreviewNote')}
                   </p>
 
                   <div className="contrast-board-grid">
@@ -1499,6 +1547,8 @@ export const ViolationsList: React.FC<ViolationsListProps> = React.memo(
     onViolationNoteChange,
     onViolationContrastOverrideChange,
     onBulkViolationContrastOverrideChange,
+    onViolationContrastPreviewChange,
+    onContrastPreviewEnd,
   }) => {
     const [selectedCategory, setSelectedCategory] = React.useState<'all' | RuleTopicCategory>(
       state?.selectedCategory ?? 'all',
@@ -1653,6 +1703,8 @@ export const ViolationsList: React.FC<ViolationsListProps> = React.memo(
           onViolationNoteChange,
           onViolationContrastOverrideChange,
           onBulkViolationContrastOverrideChange,
+          onViolationContrastPreviewChange,
+          onContrastPreviewEnd,
         )
       }
 
@@ -1668,6 +1720,8 @@ export const ViolationsList: React.FC<ViolationsListProps> = React.memo(
           onViolationNoteChange,
           onViolationContrastOverrideChange,
           onBulkViolationContrastOverrideChange,
+          onViolationContrastPreviewChange,
+          onContrastPreviewEnd,
         )
       }
 
@@ -1682,6 +1736,8 @@ export const ViolationsList: React.FC<ViolationsListProps> = React.memo(
           onViolationNoteChange,
           onViolationContrastOverrideChange,
           onBulkViolationContrastOverrideChange,
+          onViolationContrastPreviewChange,
+          onContrastPreviewEnd,
         )
       }
 
@@ -1696,6 +1752,8 @@ export const ViolationsList: React.FC<ViolationsListProps> = React.memo(
         onViolationNoteChange,
         onViolationContrastOverrideChange,
         onBulkViolationContrastOverrideChange,
+        onViolationContrastPreviewChange,
+        onContrastPreviewEnd,
       )
     }, [
       filteredIgnoredViolations,
@@ -1705,10 +1763,12 @@ export const ViolationsList: React.FC<ViolationsListProps> = React.memo(
       listState,
       onBulkFindingStatusChange,
       onBulkViolationContrastOverrideChange,
+      onContrastPreviewEnd,
       onFindingStatusChange,
       onSelectViolation,
       updateListState,
       onViolationContrastOverrideChange,
+      onViolationContrastPreviewChange,
       onViolationNoteChange,
       effectiveSelectedListMode,
       showHumanReview,

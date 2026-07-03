@@ -2,6 +2,8 @@ import { t } from './i18n'
 import { getRunnableRules } from './rules'
 import type {
   AuditResult,
+  ContrastPreviewItem,
+  ContrastPreviewResult,
   ManualFindingElementDraft,
   Violation,
   VisionSimulationFilter,
@@ -11,8 +13,16 @@ import {
   getElementSelector,
   getVisibleText,
   isGuardInjectedElement,
+  rgbToHex,
 } from './utils'
 import { MANUAL_FINDING_SELECTION_HOST_ID } from './utils/manual-findings'
+import {
+  applyInlinePreviewStyle,
+  captureInlineStyle,
+  getContrastPreviewProperties,
+  type InlineStyleSnapshot,
+  restoreInlineStyle,
+} from './utils/contrast-preview'
 
 const contentScope = globalThis as typeof globalThis & {
   __nbrGuardContentLoaded?: boolean
@@ -33,6 +43,14 @@ if (contentScope.__nbrGuardContentLoaded) {
   let manualSelectionHost: HTMLDivElement | null = null
   let manualSelectionHoverBox: HTMLDivElement | null = null
   let manualSelectionTarget: HTMLElement | null = null
+  const contrastPreviewOriginalStyles = new Map<HTMLElement, Map<string, InlineStyleSnapshot>>()
+
+  chrome.runtime.onConnect.addListener((port) => {
+    if (port.name !== 'contrast-preview-session') return
+    port.onDisconnect.addListener(clearContrastPreviews)
+  })
+
+  window.addEventListener('pagehide', clearContrastPreviews)
 
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     console.log('[Guardião NBR 17225] Mensagem recebida:', request.action)
@@ -66,6 +84,15 @@ if (contentScope.__nbrGuardContentLoaded) {
 
       case 'CLEAR_HIGHLIGHTS':
         clearHighlights()
+        sendResponse({ status: 'OK' })
+        break
+
+      case 'SYNC_CONTRAST_PREVIEWS':
+        sendResponse({ status: 'OK', result: syncContrastPreviews(request.previews) })
+        break
+
+      case 'CLEAR_CONTRAST_PREVIEWS':
+        clearContrastPreviews()
         sendResponse({ status: 'OK' })
         break
 
@@ -113,6 +140,7 @@ if (contentScope.__nbrGuardContentLoaded) {
     includeHumanReview: boolean,
   ): Promise<AuditResult> {
     await ensureDocumentReady()
+    clearContrastPreviews()
     clearHighlights()
     await waitForAuditStability()
 
@@ -414,6 +442,98 @@ if (contentScope.__nbrGuardContentLoaded) {
   function clearHighlights() {
     const highlights = document.querySelectorAll('[id^="nbr-highlight-"]')
     highlights.forEach((highlight) => highlight.remove())
+  }
+
+  function rememberContrastPreviewStyle(element: HTMLElement, property: string) {
+    let originalStyles = contrastPreviewOriginalStyles.get(element)
+    if (!originalStyles) {
+      originalStyles = new Map()
+      contrastPreviewOriginalStyles.set(element, originalStyles)
+    }
+    if (originalStyles.has(property)) return
+
+    originalStyles.set(property, captureInlineStyle(element.style, property))
+  }
+
+  function setContrastPreviewStyle(element: HTMLElement, property: string, value: string) {
+    rememberContrastPreviewStyle(element, property)
+    applyInlinePreviewStyle(element.style, property, value)
+  }
+
+  function getGraphicForegroundProperty(element: HTMLElement, expectedHex: string): string | null {
+    const style = window.getComputedStyle(element)
+    const properties = ['fill', 'stroke', 'color'] as const
+    const normalizedExpected = expectedHex.toLowerCase()
+
+    const exactProperty = properties.find((property) => {
+      const value = style.getPropertyValue(property)
+      if (!value || value === 'none' || value === 'transparent') return false
+      return rgbToHex(value).toLowerCase() === normalizedExpected
+    })
+    if (exactProperty) return exactProperty
+
+    return (
+      properties.find((property) => {
+        const value = style.getPropertyValue(property)
+        return Boolean(value && value !== 'none' && value !== 'transparent')
+      }) ?? null
+    )
+  }
+
+  function applyContrastPreview(element: HTMLElement, preview: ContrastPreviewItem): boolean {
+    if (isGuardInjectedElement(element)) return false
+
+    const graphicProperty =
+      preview.context === 'graphic'
+        ? getGraphicForegroundProperty(element, preview.foregroundHex)
+        : undefined
+    const properties = getContrastPreviewProperties(preview.context, graphicProperty)
+    if (!properties) return false
+
+    setContrastPreviewStyle(element, properties.foreground, preview.foregroundHex)
+    setContrastPreviewStyle(element, properties.background, preview.backgroundHex)
+    return true
+  }
+
+  function syncContrastPreviews(
+    previews: ContrastPreviewItem[] | undefined,
+  ): ContrastPreviewResult {
+    clearContrastPreviews()
+    const result: ContrastPreviewResult = { applied: 0, missing: 0, unsupported: 0 }
+
+    for (const preview of previews ?? []) {
+      if (!preview?.selector) {
+        result.missing += 1
+        continue
+      }
+
+      let element: HTMLElement | null = null
+      try {
+        element = document.querySelector<HTMLElement>(preview.selector)
+      } catch {
+        result.missing += 1
+        continue
+      }
+
+      if (!element) {
+        result.missing += 1
+        continue
+      }
+
+      if (applyContrastPreview(element, preview)) result.applied += 1
+      else result.unsupported += 1
+    }
+
+    return result
+  }
+
+  function clearContrastPreviews() {
+    contrastPreviewOriginalStyles.forEach((properties, element) => {
+      properties.forEach((original, property) => {
+        restoreInlineStyle(element.style, property, original)
+      })
+    })
+    contrastPreviewOriginalStyles.clear()
   }
 
   function startManualFindingSelection() {

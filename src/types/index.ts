@@ -25,6 +25,20 @@ export type IgnoreReason =
   | 'other'
 export type ContrastContext = 'text' | 'component' | 'graphic' | 'focus'
 
+export interface ContrastPreviewItem {
+  id: string
+  selector: string
+  context: ContrastContext
+  foregroundHex: string
+  backgroundHex: string
+}
+
+export interface ContrastPreviewResult {
+  applied: number
+  missing: number
+  unsupported: number
+}
+
 export function isFullyAutomatedCategory(category: AutomationCategory): boolean {
   return category === AUTOMATION_CATEGORIES.fully
 }

@@ -198,7 +198,9 @@
       "manualFindingSaveUnavailable": "Execute uma auditoria atual antes de salvar o achado manual.",
       "manualFindingRuleMissing": "Selecione uma regra NBR válida para o achado manual.",
       "bulkFindingsIgnored": "{{count}} achado(s) semelhante(s) ignorado(s).",
-      "bulkContrastApplied": "Ajuste de contraste aplicado a {{count}} achado(s) semelhante(s)."
+      "bulkContrastApplied": "Ajuste de contraste aplicado a {{count}} achado(s) semelhante(s).",
+      "contrastPreviewPartial": "A prévia foi aplicada parcialmente. {{count}} elemento(s) não está(ão) disponível(is) na página.",
+      "contrastPreviewUnavailable": "O elemento desta ocorrência não está disponível para pré-visualização."
     },
     "manualFinding": {
       "title": "Criar achado manual",
@@ -565,6 +567,7 @@
     "contrastCurrentStatusPass": "Atende ao mínimo",
     "contrastCurrentStatusFail": "Abaixo do mínimo",
     "contrastPreview": "Pré-visualização",
+    "contrastPagePreviewNote": "As cores também aparecem temporariamente na página auditada enquanto esta janela estiver aberta. O código-fonte não é alterado.",
     "contrastComparison": "Comparação auxiliar",
     "insertBold": "Inserir destaque em negrito",
     "insertItalic": "Inserir destaque em itálico",

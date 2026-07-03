@@ -845,6 +845,17 @@
   line-height: 1.5;
 }
 
+.contrast-board-page-preview-note {
+  margin: -2px 0 12px;
+  padding: 9px 10px;
+  border: 1px solid var(--guard-color-info-border);
+  border-radius: 6px;
+  background: var(--guard-color-info-soft);
+  color: var(--guard-color-text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 @keyframes review-card-enter {
   from {
     opacity: 0;
