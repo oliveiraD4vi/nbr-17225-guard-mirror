@@ -20,7 +20,10 @@ export default defineConfig({
     (() => {
       const contentWebAccessibleResources = new Set<string>(['content-bootstrap.js'])
 
-      const collectChunkDependencies = (fileName: string, bundle: Record<string, OutputChunkLike>) => {
+      const collectChunkDependencies = (
+        fileName: string,
+        bundle: Record<string, OutputChunkLike>,
+      ) => {
         const stack = [fileName]
 
         while (stack.length > 0) {
@@ -37,8 +40,12 @@ export default defineConfig({
           chunk.dynamicImports?.forEach((importedFile) => {
             if (!contentWebAccessibleResources.has(importedFile)) stack.push(importedFile)
           })
-          chunk.viteMetadata?.importedCss?.forEach((cssFile) => contentWebAccessibleResources.add(cssFile))
-          chunk.viteMetadata?.importedAssets?.forEach((assetFile) => contentWebAccessibleResources.add(assetFile))
+          chunk.viteMetadata?.importedCss?.forEach((cssFile) =>
+            contentWebAccessibleResources.add(cssFile),
+          )
+          chunk.viteMetadata?.importedAssets?.forEach((assetFile) =>
+            contentWebAccessibleResources.add(assetFile),
+          )
         }
       }
 
@@ -57,7 +64,9 @@ export default defineConfig({
 
           manifest.web_accessible_resources = [
             {
-              resources: Array.from(contentWebAccessibleResources).sort((left, right) => left.localeCompare(right)),
+              resources: Array.from(contentWebAccessibleResources).sort((left, right) =>
+                left.localeCompare(right),
+              ),
               matches: ['<all_urls>'],
             },
           ]

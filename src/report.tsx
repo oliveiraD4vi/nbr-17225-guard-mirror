@@ -278,7 +278,10 @@ export const ReportApp: React.FC = () => {
   }, [])
 
   const scoreData = auditResult ? getAuditScoreData(auditResult) : null
-  const sections = React.useMemo(() => (auditResult ? buildSections(auditResult) : []), [auditResult])
+  const sections = React.useMemo(
+    () => (auditResult ? buildSections(auditResult) : []),
+    [auditResult],
+  )
 
   return (
     <Layout className="report-app">
@@ -292,7 +295,11 @@ export const ReportApp: React.FC = () => {
             <Button icon={<PrinterOutlined />} onClick={() => window.print()}>
               {t('shared.actions.print')}
             </Button>
-            <Button type="primary" icon={<DownloadOutlined />} onClick={() => downloadJson(auditResult)}>
+            <Button
+              type="primary"
+              icon={<DownloadOutlined />}
+              onClick={() => downloadJson(auditResult)}
+            >
               {t('shared.actions.exportJson')}
             </Button>
           </Space>

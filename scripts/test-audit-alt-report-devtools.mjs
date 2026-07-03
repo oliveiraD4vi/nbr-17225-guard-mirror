@@ -198,10 +198,7 @@ const inheritedResult = inheritViolationStateFromHistory(
   ],
 )
 
-assert.equal(
-  inheritedResult.violations[0].alternativeTextReview.currentSource,
-  'aria-label',
-)
+assert.equal(inheritedResult.violations[0].alternativeTextReview.currentSource, 'aria-label')
 assert.equal(inheritedResult.violations[0].alternativeTextReview.currentText, 'Foto do produto')
 assert.equal(
   inheritedResult.violations[0].alternativeTextReview.proposedText,
