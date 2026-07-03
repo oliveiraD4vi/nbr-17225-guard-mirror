@@ -3,13 +3,14 @@
  */
 import { t } from '@/i18n'
 import { getNormativeRuleType } from '@/normative'
-import type { AuditHistoryEntry, AuditResult } from '@/types'
+import type { AuditHistoryEntry, AuditResult, Violation } from '@/types'
 import {
   compactAuditResultForStorage,
   dedupeAndSortAuditHistory,
   getDisplayAuditResult,
   getAuditSiteStorageKey,
   getAuditUrlStorageKey,
+  getViolationIdentityKey,
   hydrateAuditResult,
   inheritViolationStateFromHistory,
 } from '@/utils/audit-history'
@@ -27,6 +28,18 @@ export class AuditStorageQuotaError extends Error {
 interface RunAuditOptions {
   includeRecommendations?: boolean
   includeHumanReview?: boolean
+}
+
+export interface ManualFindingSelectorCandidate {
+  id: string
+  selector: string
+}
+
+export interface ResolvedManualFindingSelector extends ManualFindingSelectorCandidate {
+  tagName?: string
+  snippet: string
+  accessibleName?: string
+  visibleText?: string
 }
 
 export interface AuditStorageDiagnostics {
@@ -196,6 +209,98 @@ function isImportedViolationCandidate(value: unknown): value is Record<string, u
   )
 }
 
+export function getManualFindingReapplyCandidates(
+  historyEntries: AuditHistoryEntry[],
+): Violation[] {
+  const candidates = new Map<string, Violation>()
+
+  dedupeAndSortAuditHistory(historyEntries, Number.MAX_SAFE_INTEGER).forEach((entry) => {
+    entry.violations.map(normalizeViolationFindingState).forEach((violation) => {
+      if (violation.findingOrigin !== 'manual' || !violation.elementSelector) return
+
+      const key = getViolationIdentityKey(violation)
+      if (!candidates.has(key)) {
+        candidates.set(key, violation)
+      }
+    })
+  })
+
+  return Array.from(candidates.values())
+}
+
+export function mergeResolvedManualFindings(
+  result: AuditResult,
+  manualFindings: Violation[],
+  resolvedSelectors: ResolvedManualFindingSelector[],
+): AuditResult {
+  if (manualFindings.length === 0 || resolvedSelectors.length === 0) return result
+
+  const resolvedById = new Map(resolvedSelectors.map((resolved) => [resolved.id, resolved]))
+  const existingKeys = new Set(result.violations.map(getViolationIdentityKey))
+  const restoredViolations = manualFindings.flatMap((violation) => {
+    const resolved = resolvedById.get(violation.id)
+    if (!resolved) return []
+
+    const key = getViolationIdentityKey(violation)
+    if (existingKeys.has(key)) return []
+
+    existingKeys.add(key)
+    return [
+      normalizeViolationFindingState({
+        ...violation,
+        snippet: resolved.snippet || violation.snippet,
+        elementSelector: resolved.selector || violation.elementSelector,
+        elementTagName: resolved.tagName || violation.elementTagName,
+        elementAccessibleName: resolved.accessibleName || violation.elementAccessibleName,
+        elementVisibleText: resolved.visibleText || violation.elementVisibleText,
+        inheritedFromHistory: true,
+      }),
+    ]
+  })
+
+  if (restoredViolations.length === 0) return result
+
+  return hydrateAuditResult({
+    ...result,
+    violations: [...result.violations, ...restoredViolations],
+  })
+}
+
+async function reapplyManualFindingsFromHistory(
+  result: AuditResult,
+  historyEntries: AuditHistoryEntry[],
+  tabId: number,
+): Promise<AuditResult> {
+  const manualFindings = getManualFindingReapplyCandidates(historyEntries)
+  if (manualFindings.length === 0) return result
+
+  try {
+    await ensureContentScriptReady(tabId)
+    const response = await chrome.tabs.sendMessage(tabId, {
+      action: 'RESOLVE_MANUAL_FINDING_SELECTORS',
+      candidates: manualFindings.map(
+        (violation): ManualFindingSelectorCandidate => ({
+          id: violation.id,
+          selector: violation.elementSelector!,
+        }),
+      ),
+    })
+
+    if (response?.error) {
+      throw new Error(response.error)
+    }
+
+    return mergeResolvedManualFindings(
+      result,
+      manualFindings,
+      (response?.resolved ?? []) as ResolvedManualFindingSelector[],
+    )
+  } catch (error) {
+    console.warn('[Guardião NBR 17225] Não foi possível reaplicar achados manuais:', error)
+    return result
+  }
+}
+
 export function parseImportedAuditReport(payload: unknown): AuditHistoryEntry {
   if (!isRecord(payload)) {
     throw new Error(t('engine.invalidImportReport'))
@@ -207,9 +312,7 @@ export function parseImportedAuditReport(payload: unknown): AuditHistoryEntry {
   }
 
   const timestamp =
-    typeof candidate.timestamp === 'number'
-      ? candidate.timestamp
-      : Number(candidate.timestamp)
+    typeof candidate.timestamp === 'number' ? candidate.timestamp : Number(candidate.timestamp)
 
   if (
     typeof candidate.url !== 'string' ||
@@ -264,8 +367,13 @@ export async function saveAuditResult(result: AuditResult, tabId?: number): Prom
     const currentHistory = (history[urlKey] ?? []).map(
       (entry) => normalizeAuditResult(entry) as AuditHistoryEntry,
     )
-    const normalizedResult = inheritViolationStateFromHistory(
+    const resultWithManualFindings = await reapplyManualFindingsFromHistory(
       normalizeAuditResult(result)!,
+      currentHistory,
+      resolvedTabId,
+    )
+    const normalizedResult = inheritViolationStateFromHistory(
+      resultWithManualFindings,
       currentHistory,
     )
     const historyEntry: AuditHistoryEntry = normalizedResult as AuditHistoryEntry
@@ -305,7 +413,9 @@ export async function getAuditResult(
     const resolvedTabId = tabId ?? (await getActiveTab()).id
     const data = await chrome.storage.local.get('auditResultsByTab')
     const auditResultsByTab = data.auditResultsByTab as Record<string, AuditResult> | undefined
-    const result = normalizeAuditResult(auditResultsByTab?.[getTabStorageKey(resolvedTabId)] || null)
+    const result = normalizeAuditResult(
+      auditResultsByTab?.[getTabStorageKey(resolvedTabId)] || null,
+    )
     if (
       result &&
       currentUrl &&
@@ -388,11 +498,12 @@ export async function getAuditHistoryForSite(url?: string): Promise<AuditHistory
 
     const latestEntriesByUrl = Object.entries(auditHistoryByUrl)
       .filter(([urlKey]) => urlKey !== currentUrlKey && getAuditSiteStorageKey(urlKey) === siteKey)
-      .map(([, entries]) =>
-        dedupeAndSortAuditHistory(
-          entries.map((entry) => normalizeAuditResult(entry) as AuditHistoryEntry),
-          1,
-        )[0],
+      .map(
+        ([, entries]) =>
+          dedupeAndSortAuditHistory(
+            entries.map((entry) => normalizeAuditResult(entry) as AuditHistoryEntry),
+            1,
+          )[0],
       )
       .filter((entry): entry is AuditHistoryEntry => Boolean(entry))
       .sort((left, right) => right.timestamp - left.timestamp)
@@ -444,10 +555,7 @@ export async function updateStoredAuditResult(
     if (!normalizedResult) return
 
     const resolvedTabId = tabId ?? (await getActiveTab()).id
-    const data = await chrome.storage.local.get([
-      'auditResultsByTab',
-      'auditHistoryByUrl',
-    ])
+    const data = await chrome.storage.local.get(['auditResultsByTab', 'auditHistoryByUrl'])
     const auditResultsByTab = {
       ...(data.auditResultsByTab as Record<string, AuditResult> | undefined),
     }
@@ -500,10 +608,7 @@ export async function clearAuditHistoryForUrl(url: string): Promise<AuditHistory
 }
 
 export async function compactAuditStorage(preserveTabId?: number): Promise<void> {
-  const data = await chrome.storage.local.get([
-    'auditResultsByTab',
-    'auditHistoryByUrl',
-  ])
+  const data = await chrome.storage.local.get(['auditResultsByTab', 'auditHistoryByUrl'])
   const currentTabKey = preserveTabId ? getTabStorageKey(preserveTabId) : null
   const auditResultsByTab = {
     ...(data.auditResultsByTab as Record<string, AuditResult> | undefined),
@@ -580,7 +685,8 @@ export async function getAuditStorageDiagnostics(
     chrome.storage.local.getBytesInUse(null),
   ])
 
-  const auditResultsByTab = (data.auditResultsByTab as Record<string, AuditResult> | undefined) ?? {}
+  const auditResultsByTab =
+    (data.auditResultsByTab as Record<string, AuditResult> | undefined) ?? {}
   const auditHistoryByUrl =
     (data.auditHistoryByUrl as Record<string, AuditHistoryEntry[]> | undefined) ?? {}
   const urlCount = Object.keys(auditHistoryByUrl).length

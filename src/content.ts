@@ -89,6 +89,13 @@ if (contentScope.__nbrGuardContentLoaded) {
         sendResponse({ status: 'OK' })
         break
 
+      case 'RESOLVE_MANUAL_FINDING_SELECTORS':
+        sendResponse({
+          status: 'OK',
+          resolved: resolveManualFindingSelectors(request.candidates),
+        })
+        break
+
       default:
         sendResponse({ status: 'UNKNOWN_ACTION' })
     }
@@ -599,6 +606,15 @@ if (contentScope.__nbrGuardContentLoaded) {
 
   function createManualFindingDraft(element: HTMLElement): ManualFindingElementDraft {
     return {
+      ...createManualFindingElementSnapshot(element),
+      url: window.location.href,
+      pageTitle: document.title || undefined,
+      selectedAt: Date.now(),
+    }
+  }
+
+  function createManualFindingElementSnapshot(element: HTMLElement) {
+    return {
       selector: getElementSelector(element),
       tagName: element.tagName.toLowerCase(),
       snippet: compactManualFindingText(
@@ -607,10 +623,29 @@ if (contentScope.__nbrGuardContentLoaded) {
       ),
       accessibleName: compactManualFindingText(getAccessibleName(element), 300) || undefined,
       visibleText: compactManualFindingText(getVisibleText(element), 300) || undefined,
-      url: window.location.href,
-      pageTitle: document.title || undefined,
-      selectedAt: Date.now(),
     }
+  }
+
+  function resolveManualFindingSelectors(
+    candidates: unknown,
+  ): Array<ReturnType<typeof createManualFindingElementSnapshot> & { id: string }> {
+    if (!Array.isArray(candidates)) return []
+
+    return candidates.flatMap((candidate) => {
+      if (!candidate || typeof candidate !== 'object') return []
+
+      const { id, selector } = candidate as { id?: unknown; selector?: unknown }
+      if (typeof id !== 'string' || typeof selector !== 'string' || !selector.trim()) return []
+
+      try {
+        const element = document.querySelector(selector)
+        if (!(element instanceof HTMLElement) || isGuardInjectedElement(element)) return []
+
+        return [{ id, ...createManualFindingElementSnapshot(element) }]
+      } catch {
+        return []
+      }
+    })
   }
 
   function applyVisionFilter(filter: VisionSimulationFilter) {
