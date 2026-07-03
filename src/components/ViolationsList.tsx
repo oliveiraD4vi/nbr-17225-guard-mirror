@@ -842,14 +842,7 @@ const ViolationCard: React.FC<ViolationCardProps> = React.memo(
           void onFindingStatusChange?.(violation, { status: nextStatus })
         }, REVIEW_STATUS_TRANSITION_MS)
       },
-      [
-        isApplyingFindingDecision,
-        onFindingStatusChange,
-        violation,
-        violation.findingStatus,
-        violation.ignoreNote,
-        violation.ignoreReason,
-      ],
+      [isApplyingFindingDecision, onFindingStatusChange, violation],
     )
 
     const handleConfirmIgnore = React.useCallback(() => {
