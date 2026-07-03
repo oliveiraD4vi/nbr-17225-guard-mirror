@@ -17,7 +17,6 @@ import {
 import {
   BoldOutlined,
   BgColorsOutlined,
-  CheckCircleOutlined,
   ClearOutlined,
   CloseCircleOutlined,
   CopyOutlined,
@@ -142,21 +141,6 @@ function getFindingStatusTagColor(status: FindingStatus): string {
 function getFindingActionOptions(
   currentStatus: FindingStatus,
 ): Array<{ icon: React.ReactNode; label: string; targetStatus: FindingStatus }> {
-  if (currentStatus === 'confirmed') {
-    return [
-      {
-        icon: <UndoOutlined />,
-        label: t('violations.findingActionReopen'),
-        targetStatus: 'open',
-      },
-      {
-        icon: <CloseCircleOutlined />,
-        label: t('violations.findingActionIgnore'),
-        targetStatus: 'ignored',
-      },
-    ]
-  }
-
   if (currentStatus === 'ignored') {
     return [
       {
@@ -164,38 +148,16 @@ function getFindingActionOptions(
         label: t('violations.findingActionReopen'),
         targetStatus: 'open',
       },
-      {
-        icon: <CheckCircleOutlined />,
-        label: t('violations.findingActionConfirm'),
-        targetStatus: 'confirmed',
-      },
     ]
   }
 
   return [
-    {
-      icon: <CheckCircleOutlined />,
-      label: t('violations.findingActionConfirm'),
-      targetStatus: 'confirmed',
-    },
     {
       icon: <CloseCircleOutlined />,
       label: t('violations.findingActionIgnore'),
       targetStatus: 'ignored',
     },
   ]
-}
-
-function getFindingTransitionTitle(targetStatus: FindingStatus): string {
-  if (targetStatus === 'confirmed') return t('violations.findingConfirmConfirmedTitle')
-  if (targetStatus === 'ignored') return t('violations.findingConfirmIgnoredTitle')
-  return t('violations.findingConfirmOpenTitle')
-}
-
-function getFindingTransitionDescription(targetStatus: FindingStatus): string {
-  if (targetStatus === 'confirmed') return t('violations.findingConfirmConfirmedDescription')
-  if (targetStatus === 'ignored') return t('violations.findingConfirmIgnoredDescription')
-  return t('violations.findingConfirmOpenDescription')
 }
 
 function getIgnoreReasonOptions(): Array<{ label: string; value: IgnoreReason }> {
@@ -665,9 +627,6 @@ const ViolationCard: React.FC<ViolationCardProps> = React.memo(
   }) => {
     const [isNotesOpen, setIsNotesOpen] = React.useState(false)
     const [isContrastModalOpen, setIsContrastModalOpen] = React.useState(false)
-    const [pendingFindingStatus, setPendingFindingStatus] = React.useState<FindingStatus | null>(
-      null,
-    )
     const [isIgnoreModalOpen, setIsIgnoreModalOpen] = React.useState(false)
     const [ignoreReason, setIgnoreReason] = React.useState<IgnoreReason | undefined>(
       violation.ignoreReason,
@@ -705,7 +664,6 @@ const ViolationCard: React.FC<ViolationCardProps> = React.memo(
     }, [violation.contrastDetails, violation.id, violation.userContrastOverride])
 
     React.useEffect(() => {
-      setPendingFindingStatus(null)
       setIsApplyingFindingDecision(false)
       setIsIgnoreModalOpen(false)
       setIgnoreReason(violation.ignoreReason)
@@ -803,9 +761,6 @@ const ViolationCard: React.FC<ViolationCardProps> = React.memo(
       () => getFindingActionOptions(violation.findingStatus),
       [violation.findingStatus],
     )
-    const findingTransitionTargetStatus = pendingFindingStatus ?? violation.findingStatus
-    const isFindingDecisionPending =
-      pendingFindingStatus !== null && pendingFindingStatus !== violation.findingStatus
 
     const handleRequestFindingStatusChange = React.useCallback(
       (event: React.MouseEvent<HTMLElement>, nextStatus: FindingStatus) => {
@@ -820,36 +775,19 @@ const ViolationCard: React.FC<ViolationCardProps> = React.memo(
           return
         }
 
-        setPendingFindingStatus(nextStatus)
+        setIsApplyingFindingDecision(true)
+        window.setTimeout(() => {
+          void onFindingStatusChange?.(violation, { status: nextStatus })
+        }, REVIEW_STATUS_TRANSITION_MS)
       },
       [
         isApplyingFindingDecision,
+        onFindingStatusChange,
+        violation,
         violation.findingStatus,
         violation.ignoreNote,
         violation.ignoreReason,
       ],
-    )
-
-    const handleCancelFindingStatusChange = React.useCallback(
-      (event: React.MouseEvent<HTMLElement>) => {
-        event.stopPropagation()
-        if (isApplyingFindingDecision) return
-        setPendingFindingStatus(null)
-      },
-      [isApplyingFindingDecision],
-    )
-
-    const handleConfirmFindingStatusChange = React.useCallback(
-      async (event: React.MouseEvent<HTMLElement>) => {
-        event.stopPropagation()
-        if (!pendingFindingStatus || pendingFindingStatus === violation.findingStatus) return
-
-        setIsApplyingFindingDecision(true)
-        window.setTimeout(() => {
-          void onFindingStatusChange?.(violation, { status: pendingFindingStatus })
-        }, REVIEW_STATUS_TRANSITION_MS)
-      },
-      [onFindingStatusChange, pendingFindingStatus, violation],
     )
 
     const handleConfirmIgnore = React.useCallback(() => {
@@ -881,8 +819,6 @@ const ViolationCard: React.FC<ViolationCardProps> = React.memo(
       : null
 
     const triageIsEditable = Boolean(onFindingStatusChange)
-    const showTriageCard =
-      triageIsEditable || isIgnoredFinding(violation) || isConfirmedFinding(violation)
 
     const findingOriginLabel =
       violation.findingOrigin === 'manual'
@@ -899,69 +835,17 @@ const ViolationCard: React.FC<ViolationCardProps> = React.memo(
       pinned ? 'is-pinned' : '',
       `finding-state-${violation.findingStatus}`,
       isApplyingFindingDecision ? 'is-review-transitioning' : '',
-      isApplyingFindingDecision
-        ? `is-review-transitioning-to-${findingTransitionTargetStatus}`
-        : '',
     ]
       .filter(Boolean)
       .join(' ')
 
-    const triageControls = triageIsEditable ? (
+    const findingActionsBar = triageIsEditable ? (
       <div
-        className="violation-human-review-controls"
+        className="violation-finding-actions"
         onClick={(event) => event.stopPropagation()}
         onMouseDown={(event) => event.stopPropagation()}
       >
-        <Space wrap size={8}>
-          {findingActions.map((action) => (
-            <Button
-              key={action.targetStatus}
-              icon={action.icon}
-              loading={
-                isApplyingFindingDecision && findingTransitionTargetStatus === action.targetStatus
-              }
-              size="small"
-              type={
-                pendingFindingStatus === action.targetStatus ||
-                violation.findingStatus === action.targetStatus
-                  ? 'primary'
-                  : 'default'
-              }
-              onClick={(event) => handleRequestFindingStatusChange(event, action.targetStatus)}
-            >
-              {action.label}
-            </Button>
-          ))}
-        </Space>
-        {isFindingDecisionPending && (
-          <div className="violation-human-review-confirmation" aria-live="polite">
-            <div className="violation-human-review-confirmation-copy">
-              <strong>{getFindingTransitionTitle(pendingFindingStatus)}</strong>
-              <p>{getFindingTransitionDescription(pendingFindingStatus)}</p>
-            </div>
-            <Space wrap size={8}>
-              <Button size="small" onClick={handleCancelFindingStatusChange}>
-                {t('violations.reviewConfirmCancel')}
-              </Button>
-              <Button size="small" type="primary" onClick={handleConfirmFindingStatusChange}>
-                {t('violations.reviewConfirmApply')}
-              </Button>
-            </Space>
-          </div>
-        )}
-        {isApplyingFindingDecision && (
-          <span className="violation-human-review-transition-note" aria-live="polite">
-            {t('violations.findingTransitionApplying')}
-          </span>
-        )}
-      </div>
-    ) : null
-
-    const triageCard = showTriageCard ? (
-      <div className="violation-human-review-card">
-        <strong>{t('violations.findingTriageTitle')}</strong>
-        <p>{t('violations.findingTriageDescription')}</p>
-        <Space wrap size={8}>
+        <Space wrap size={8} className="violation-finding-state-tags">
           {violation.inheritedFromHistory && <Tag color="blue">{t('shared.states.inherited')}</Tag>}
           <Tag color="blue">{findingOriginLabel}</Tag>
           <Tag color={getFindingStatusTagColor(violation.findingStatus)}>
@@ -978,7 +862,25 @@ const ViolationCard: React.FC<ViolationCardProps> = React.memo(
             {violation.ignoreNote && <p>{violation.ignoreNote}</p>}
           </div>
         )}
-        {triageControls}
+        <Space wrap size={8}>
+          {findingActions.map((action) => (
+            <Button
+              key={action.targetStatus}
+              icon={action.icon}
+              loading={isApplyingFindingDecision}
+              size="small"
+              type={action.targetStatus === 'ignored' ? 'default' : 'primary'}
+              onClick={(event) => handleRequestFindingStatusChange(event, action.targetStatus)}
+            >
+              {action.label}
+            </Button>
+          ))}
+        </Space>
+        {isApplyingFindingDecision && (
+          <span className="violation-human-review-transition-note" aria-live="polite">
+            {t('violations.findingTransitionApplying')}
+          </span>
+        )}
       </div>
     ) : null
 
@@ -1016,7 +918,7 @@ const ViolationCard: React.FC<ViolationCardProps> = React.memo(
 
         {isOpen && (
           <div className="violation-item-content">
-            {triageCard}
+            {findingActionsBar}
 
             <div className="violation-element-card">
               <strong>{t('shared.labels.affectedElement')}</strong>

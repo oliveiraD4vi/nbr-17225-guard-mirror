@@ -325,7 +325,6 @@
 
 .violation-element-card,
 .violation-detected-signal,
-.violation-human-review-card,
 .violation-contrast-helper,
 .violation-suggestion,
 .violation-remediation {
@@ -338,29 +337,9 @@
   background: var(--guard-color-surface-muted);
 }
 
-.violation-human-review-card {
-  background: var(--guard-color-warning-soft);
-  border-color: var(--guard-color-warning-accent);
-}
-
 .violation-detected-signal {
   background: var(--guard-color-info-soft);
   border-color: var(--guard-color-info-border);
-}
-
-.violation-human-review-card p {
-  margin: 0;
-  font-size: 13px;
-  line-height: 1.6;
-  color: #9a3412;
-}
-
-.violation-human-review-card .ant-tag {
-  margin-top: 10px;
-}
-
-.violation-human-review-card .ant-tag + .ant-tag {
-  margin-left: 8px;
 }
 
 .violation-ignore-summary {
@@ -388,42 +367,20 @@
   line-height: 1.5;
 }
 
-.violation-human-review-controls {
+.violation-finding-actions {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 10px;
-}
-
-.violation-human-review-confirmation {
-  display: flex;
-  align-items: flex-end;
+  flex-wrap: wrap;
+  align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
   padding: 10px 12px;
-  border: 1px solid rgba(217, 119, 6, 0.2);
+  border: 1px solid var(--guard-color-border-soft);
   border-radius: 8px;
-  background: rgba(255, 251, 235, 0.9);
+  background: var(--guard-color-surface-muted);
 }
 
-.violation-human-review-confirmation-copy {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+.violation-finding-state-tags {
   min-width: 0;
-}
-
-.violation-human-review-confirmation-copy strong {
-  color: #92400e;
-  font-size: 12px;
-  text-transform: uppercase;
-}
-
-.violation-human-review-confirmation-copy p {
-  margin: 0;
-  color: #9a3412;
-  font-size: 12px;
-  line-height: 1.5;
 }
 
 .violation-human-review-transition-note {
@@ -955,8 +912,9 @@
   .violation-group-header,
   .violation-section-header,
   .violation-contrast-helper,
-  .violation-human-review-confirmation {
+  .violation-finding-actions {
     flex-direction: column;
+    align-items: flex-start;
   }
 
   .violation-group-meta {
