@@ -78,8 +78,5 @@ export function isPendingHumanReviewFinding(violation: Violation): boolean {
 
 export function shouldCountFindingAsFailure(violation: Violation): boolean {
   if (isIgnoredFinding(violation)) return false
-  if (violation.requiresHumanReview || violation.findingOrigin === 'manual') {
-    return isConfirmedFinding(violation)
-  }
   return isOpenFinding(violation) || isConfirmedFinding(violation)
 }
