@@ -50,13 +50,13 @@
       "total": "Total",
       "requirements": "Requisitos",
       "recommendations": "Recomendações",
-      "humanReview": "Verificação humana"
+      "humanReview": "Revisão contextual"
     },
     "states": {
       "automaticDetection": "Detecção automática",
-      "humanConfirmation": "Confirmação humana",
-      "reviewPending": "Revisão pendente",
-      "reviewComplete": "Revisão concluída",
+      "humanConfirmation": "Revisão contextual",
+      "reviewPending": "Revisão contextual aberta",
+      "reviewComplete": "Sem revisão contextual aberta",
       "moreRecent": "Mais recente",
       "currentlyViewing": "Em visualização",
       "currentInFocus": "Atual em foco",
@@ -80,9 +80,9 @@
       "none": "Não automatizável"
     },
     "review": {
-      "needsConfirmation": "Precisa de confirmação humana",
+      "needsConfirmation": "Requer avaliação contextual",
       "confirmedNeedsFix": "Confirmado e precisa de correção",
-      "dismissed": "Descartado na revisão humana"
+      "dismissed": "Ignorado na auditoria"
     },
     "findings": {
       "automaticOpen": "Achado automático aberto",
@@ -91,7 +91,7 @@
       "ignored": "Ignorado nesta auditoria",
       "manualOpen": "Achado manual aberto",
       "manualOrigin": "Origem manual",
-      "needsConfirmation": "Precisa de confirmação humana"
+      "needsConfirmation": "Revisão contextual recomendada"
     },
     "counts": {
       "audits": "{{count}} auditoria(s)",
@@ -101,10 +101,10 @@
       "priorityPoints": "{{count}} ponto(s) prioritário(s)",
       "annotations": "{{count}} anotações",
       "confirmed": "{{count}} confirmados",
-      "dismissed": "{{count}} descartados",
+      "dismissed": "{{count}} ignorados",
       "ignored": "{{count}} ignorados",
-      "pending": "{{count}} pendentes",
-      "humanConfirmations": "{{count}} confirmações humanas"
+      "pending": "{{count}} abertos para revisão",
+      "humanConfirmations": "{{count}} decisões contextuais"
     },
     "exports": {
       "auditFilePrefix": "nbr-17225-audit",
@@ -281,23 +281,23 @@
       "exportStateChangedFindings": "Mudanças de estado",
       "exportNotes": "Itens com anotação",
       "exportConfirmedFindings": "Achados confirmados",
-      "exportCompletedReview": "Triagem concluída",
-      "exportPendingReview": "Revisão humana pendente",
-      "exportConfirmedReview": "Confirmados manualmente",
+      "exportCompletedReview": "Itens com decisão registrada",
+      "exportPendingReview": "Revisão contextual aberta",
+      "exportConfirmedReview": "Registrados como problema",
       "exportDismissedReview": "Ignorados",
       "exportIgnoredFindings": "Ignorados",
-      "exportPendingReviewItems": "Pendentes de revisão",
+      "exportPendingReviewItems": "Abertos para revisão",
       "newProblems": "Novos problemas",
       "resolvedProblems": "Problemas resolvidos",
       "persistentProblems": "Problemas persistentes",
       "stateChangedFindings": "Mudanças de estado",
       "emptyCurrentUrl": "Nenhuma auditoria anterior encontrada para esta URL",
-      "emptyPending": "Nenhuma auditoria com revisão humana pendente",
-      "emptyCompleted": "Nenhuma auditoria com revisão humana concluída",
+      "emptyPending": "Nenhuma auditoria com revisão contextual aberta",
+      "emptyCompleted": "Nenhuma auditoria sem revisão contextual aberta",
       "otherPagesTitle": "Outras páginas neste site",
       "otherPagesEmpty": "Nenhuma outra página auditada neste site",
-      "sectionPending": "Revisão pendente",
-      "sectionCompleted": "Revisão concluída",
+      "sectionPending": "Com revisão contextual aberta",
+      "sectionCompleted": "Sem revisão contextual aberta",
       "deleteModalTitle": "Excluir auditoria do histórico",
       "deleteModalDescription": "Esta exclusão remove apenas este registro da lista de histórico da URL. A ação não pode ser desfeita.",
       "deleteConfirm": "Excluir do histórico",
@@ -414,27 +414,8 @@
   },
   "summaryExport": {
     "title": "Resumo da auditoria",
-    "url": "URL",
-    "auditedAt": "Auditado em",
-    "scope": "Escopo",
     "scopeRequirementsOnly": "Somente requisitos",
-    "scopeWithRecommendations": "Requisitos e recomendações",
-    "scoreTitle": "Nota e composição",
-    "generalScore": "Nota geral",
-    "requirementScore": "Nota de requisitos",
-    "recommendationScore": "Nota de recomendações",
-    "humanReviewScore": "Conclusão da revisão humana",
-    "baseScore": "Nota calculada",
-    "volumeScoreCap": "Teto por volume desativado",
-    "scoredViolationCount": "Regras com falha consideradas",
-    "notAudited": "Não auditada neste escopo",
-    "countsTitle": "Contadores",
-    "confirmed": "Confirmados manualmente",
-    "dismissed": "Descartados manualmente",
-    "pending": "Pendentes de revisão",
-    "mainFindingsTitle": "Principais achados",
-    "noFindings": "Nenhum achado registrado neste escopo.",
-    "footer": "Resumo gerado pelo Guardião NBR 17225 para revisão básica dos achados."
+    "scopeWithRecommendations": "Requisitos e recomendações"
   },
   "violations": {
     "emptyCategory": "Nenhum item nesta categoria",
@@ -559,15 +540,15 @@
     "noteUpdatedAt": "Atualizada em {{date}}",
     "tabRequirements": "Requisitos ({{count}})",
     "tabRecommendations": "Recomendações ({{count}})",
-    "tabReview": "Verificação humana ({{count}})",
+    "tabReview": "Revisão contextual ({{count}})",
     "tabIgnored": "Ignorados ({{count}})",
     "reviewSections": {
-      "pending": "Pendentes de decisão",
-      "pendingDescription": "Itens que ainda precisam de confirmação manual no contexto real da página.",
-      "confirmed": "Confirmados como problema",
-      "confirmedDescription": "Itens que já foram revisados e continuam exigindo correção.",
-      "dismissed": "Descartados na revisão humana",
-      "dismissedDescription": "Itens que não se confirmaram como problema, mas continuam disponíveis para reavaliação."
+      "pending": "Abertos para revisão",
+      "pendingDescription": "Itens em que uma avaliação contextual pode justificar ignorar o achado, sem exigir confirmação para que ele conte como falha.",
+      "confirmed": "Registrados como problema",
+      "confirmedDescription": "Achados manuais ou migrados que permanecem registrados como problema.",
+      "dismissed": "Ignorados na auditoria",
+      "dismissedDescription": "Itens ignorados continuam disponíveis para reavaliação."
     },
     "contrastUserOverrideSaved": "Correção do usuário salva",
     "contrastSavedAt": "Correção salva em {{date}}",
