@@ -290,8 +290,10 @@ const humanPendingAudit = createAuditResult({
 })
 const humanPendingScore = getAuditScoreData(humanPendingAudit)
 
-assert.equal(humanPendingScore.violatedRequirementRules, 0)
+assert.equal(humanPendingScore.violatedRequirementRules, 1)
+assert.equal(humanPendingScore.activeOccurrenceCount, 1)
 assert.equal(humanPendingScore.pendingHumanReviewItems, 1)
+assert.equal(humanPendingScore.isProvisional, false)
 
 const humanConfirmedAudit = createAuditResult({
   violations: [confirmedHuman],
