@@ -258,7 +258,7 @@ export function getAuditScoreData(result: AuditResult): AuditScoreData {
     includesRecommendations,
     includesHumanReview,
     weights,
-    isProvisional: pendingHumanReviewItems > 0,
+    isProvisional: false,
     totalRequirementWeight,
     failedRequirementWeight,
     totalRecommendationWeight,

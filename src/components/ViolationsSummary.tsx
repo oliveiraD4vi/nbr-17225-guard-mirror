@@ -15,11 +15,6 @@ import {
 import { PROJECT_SCORE_URL } from '@/config/links'
 import { t } from '@/i18n'
 import type { AuditResult } from '@/types'
-import {
-  getConfirmedFindingCount,
-  getIgnoredFindingCount,
-  getPendingHumanReviewCount,
-} from '@/utils/audit-comparison'
 import { getAuditScoreData } from '@/utils/audit-score'
 import { SummarySkeleton } from './LoadingSkeletons'
 import '../styles/violations-summary.css'
@@ -44,7 +39,6 @@ export const ViolationsSummary: React.FC<ViolationsSummaryProps> = React.memo(
     onDownloadSummary,
     onOpenViolations,
     onRerunAudit,
-    showHumanReview = true,
   }) => {
     if (loading) {
       return <SummarySkeleton />
@@ -58,9 +52,7 @@ export const ViolationsSummary: React.FC<ViolationsSummaryProps> = React.memo(
     const auditScore = getAuditScoreData(result)
     const reviewBase = reviewSourceResult ?? result
     const auditScopeNumbers = getAuditScoreData(reviewBase)
-    const confirmedFindings = getConfirmedFindingCount(reviewBase)
-    const ignoredFindings = getIgnoredFindingCount(reviewBase)
-    const pendingReviews = showHumanReview ? getPendingHumanReviewCount(reviewBase) : 0
+    const ignoredFindings = auditScopeNumbers.ignoredFindingCount
     const scoreTone =
       auditScore.score >= 90 ? 'good' : auditScore.score >= 70 ? 'medium' : 'critical'
     const nextStep =
@@ -71,26 +63,19 @@ export const ViolationsSummary: React.FC<ViolationsSummaryProps> = React.memo(
             title: t('summary.nextStepRequirementsTitle'),
             description: t('summary.nextStepRequirementsDescription'),
           }
-        : showHumanReview && pendingReviews > 0
+        : result.warnings > 0
           ? {
-              tone: 'review',
+              tone: 'warning',
               icon: <WarningOutlined />,
-              title: t('summary.nextStepHumanReviewTitle'),
-              description: t('summary.nextStepHumanReviewDescription'),
+              title: t('summary.nextStepRecommendationsTitle'),
+              description: t('summary.nextStepRecommendationsDescription'),
             }
-          : result.warnings > 0
-            ? {
-                tone: 'warning',
-                icon: <WarningOutlined />,
-                title: t('summary.nextStepRecommendationsTitle'),
-                description: t('summary.nextStepRecommendationsDescription'),
-              }
-            : {
-                tone: 'success',
-                icon: <CheckCircleOutlined />,
-                title: t('summary.nextStepClearTitle'),
-                description: t('summary.nextStepClearDescription'),
-              }
+          : {
+              tone: 'success',
+              icon: <CheckCircleOutlined />,
+              title: t('summary.nextStepClearTitle'),
+              description: t('summary.nextStepClearDescription'),
+            }
 
     const downloadItems = [
       {
@@ -106,61 +91,47 @@ export const ViolationsSummary: React.FC<ViolationsSummaryProps> = React.memo(
         onClick: onDownloadSummary,
       },
     ].filter((item) => Boolean(item.onClick))
-    const scoreFactItems = [
+    const scorePrimaryItems = [
       {
-        key: 'requirement-rules',
-        label: t('summary.scorePanelRequirementRules'),
-        value: auditScore.totalRequirementRules,
-      },
-      {
-        key: 'failed-requirements',
-        label: t('summary.scorePanelFailedRequirements'),
-        value: auditScore.violatedRequirementRules,
-      },
-      {
-        key: 'recommendation-rules',
-        label: t('summary.scorePanelRecommendationRules'),
-        value: auditScore.totalRecommendationRules,
-      },
-      {
-        key: 'failed-recommendations',
-        label: t('summary.scorePanelFailedRecommendations'),
-        value: auditScore.violatedRecommendationRules,
+        key: 'active-occurrences',
+        label: t('summary.scorePanelActionableFindings'),
+        value: auditScopeNumbers.activeOccurrenceCount,
+        tone: 'critical',
       },
       {
         key: 'problem-types',
         label: t('summary.scorePanelProblemTypes'),
-        value: auditScore.problemTypeCount,
+        value: auditScopeNumbers.problemTypeCount,
+        tone: 'info',
+      },
+      {
+        key: 'failed-requirements',
+        label: t('summary.scorePanelFailedRequirements'),
+        value: auditScopeNumbers.violatedRequirementRules,
+        tone: 'warning',
+      },
+      {
+        key: 'ignored-findings',
+        label: t('summary.scorePanelIgnoredFindingsShort'),
+        value: ignoredFindings,
+        tone: 'muted',
+      },
+    ]
+    const scoreSecondaryItems = [
+      {
+        key: 'requirement-rules',
+        label: t('summary.scorePanelRequirementRules'),
+        value: auditScopeNumbers.totalRequirementRules,
+      },
+      {
+        key: 'recommendation-rules',
+        label: t('summary.scorePanelRecommendationRules'),
+        value: auditScopeNumbers.totalRecommendationRules,
       },
       {
         key: 'occurrences',
         label: t('summary.scorePanelOccurrences'),
         value: auditScopeNumbers.totalOccurrenceCount,
-      },
-      {
-        key: 'active-occurrences',
-        label: t('summary.scorePanelActionableOccurrences'),
-        value: auditScopeNumbers.activeOccurrenceCount,
-      },
-      {
-        key: 'automatic-findings',
-        label: t('summary.scorePanelAutomaticFindings'),
-        value: auditScopeNumbers.automaticFindingCount,
-      },
-      {
-        key: 'confirmed-findings',
-        label: t('summary.scorePanelConfirmedFindings'),
-        value: confirmedFindings,
-      },
-      {
-        key: 'ignored-findings',
-        label: t('summary.scorePanelIgnoredFindings'),
-        value: ignoredFindings,
-      },
-      {
-        key: 'human-review',
-        label: t('summary.scorePanelHumanReview'),
-        value: `${auditScopeNumbers.completedHumanReviewItems}/${auditScopeNumbers.totalHumanReviewItems}`,
       },
     ]
     const scoreFormula = auditScore.includesRecommendations
@@ -264,14 +235,6 @@ export const ViolationsSummary: React.FC<ViolationsSummaryProps> = React.memo(
                   })}
                 </Tag>
               )}
-              {showHumanReview && auditScore.pendingHumanReviewItems > 0 && (
-                <Tag color="gold">
-                  {t('summary.pendingHumanReviewScore', {
-                    count: auditScore.pendingHumanReviewItems,
-                  })}
-                </Tag>
-              )}
-              {auditScore.isProvisional && <Tag color="gold">{t('summary.provisionalScore')}</Tag>}
             </div>
           </div>
 
@@ -280,12 +243,19 @@ export const ViolationsSummary: React.FC<ViolationsSummaryProps> = React.memo(
               <h3>{t('summary.scorePanelTitle')}</h3>
               <p>{t('summary.scorePanelDescription')}</p>
             </div>
-            <div className="summary-score-fact-grid">
-              {scoreFactItems.map((item) => (
-                <div className="summary-score-fact" key={item.key}>
+            <div className="summary-score-metrics">
+              {scorePrimaryItems.map((item) => (
+                <div className={`summary-score-metric is-${item.tone}`} key={item.key}>
                   <span>{item.label}</span>
                   <strong>{item.value}</strong>
                 </div>
+              ))}
+            </div>
+            <div className="summary-score-details">
+              {scoreSecondaryItems.map((item) => (
+                <span key={item.key}>
+                  <strong>{item.value}</strong> {item.label}
+                </span>
               ))}
             </div>
             <p className="summary-score-formula">{scoreFormula}</p>
@@ -309,46 +279,9 @@ export const ViolationsSummary: React.FC<ViolationsSummaryProps> = React.memo(
                 <strong>{result.warnings}</strong>
                 <small>{t('summary.recommendationsReview')}</small>
               </div>
-              {showHumanReview && (
-                <div className="summary-stat-card is-review">
-                  <span className="summary-stat-label">{t('shared.labels.humanReview')}</span>
-                  <strong>{result.humanReviewItems}</strong>
-                  <small>{t('summary.itemsToConfirm')}</small>
-                </div>
-              )}
             </div>
             <p className="summary-scope-note">{t('summary.normativeScopeNote')}</p>
           </div>
-
-          {showHumanReview && (
-            <div className="summary-review-progress">
-              <div className="summary-review-progress-header">
-                <h3>{t('summary.humanReviewProgress')}</h3>
-                <Tag color={pendingReviews > 0 ? 'gold' : 'green'}>
-                  {pendingReviews > 0
-                    ? t('summary.pendingReviewBadge')
-                    : t('summary.completedReviewBadge')}
-                </Tag>
-              </div>
-              <div className="summary-review-progress-grid">
-                <div className="summary-review-card is-confirmed">
-                  <span className="summary-stat-label">{t('summary.confirmed')}</span>
-                  <strong>{confirmedFindings}</strong>
-                  <small>{t('summary.confirmedDescription')}</small>
-                </div>
-                <div className="summary-review-card is-dismissed">
-                  <span className="summary-stat-label">{t('summary.ignored')}</span>
-                  <strong>{ignoredFindings}</strong>
-                  <small>{t('summary.ignoredDescription')}</small>
-                </div>
-                <div className="summary-review-card is-pending">
-                  <span className="summary-stat-label">{t('summary.pending')}</span>
-                  <strong>{pendingReviews}</strong>
-                  <small>{t('summary.pendingDescription')}</small>
-                </div>
-              </div>
-            </div>
-          )}
 
           <div className={`summary-next-step is-${nextStep.tone}`}>
             <button className="summary-next-step-button" type="button" onClick={onOpenViolations}>

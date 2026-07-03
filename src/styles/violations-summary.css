@@ -248,24 +248,24 @@
   line-height: 1.5;
 }
 
-.summary-score-fact-grid {
+.summary-score-metrics {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
 }
 
-.summary-score-fact {
+.summary-score-metric {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  min-height: 86px;
-  padding: 12px;
+  min-height: 74px;
+  padding: 10px 12px;
   border: 1px solid var(--guard-color-border);
   border-radius: 8px;
   background: var(--guard-color-surface);
 }
 
-.summary-score-fact span {
+.summary-score-metric span {
   color: var(--guard-color-text-muted);
   font-size: 11px;
   font-weight: 700;
@@ -273,10 +273,47 @@
   text-transform: uppercase;
 }
 
-.summary-score-fact strong {
+.summary-score-metric strong {
   color: var(--guard-color-text-primary);
   font-size: 24px;
   line-height: 1;
+}
+
+.summary-score-metric.is-critical {
+  border-color: var(--guard-color-danger-border);
+  background: var(--guard-color-danger-bg);
+}
+
+.summary-score-metric.is-warning {
+  border-color: var(--guard-color-warning-border);
+  background: var(--guard-color-warning-bg);
+}
+
+.summary-score-metric.is-info {
+  border-color: var(--guard-color-info-border);
+  background: var(--guard-color-info-bg);
+}
+
+.summary-score-metric.is-muted {
+  background: var(--guard-color-surface);
+}
+
+.summary-score-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  color: var(--guard-color-text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.summary-score-details span {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.summary-score-details strong {
+  color: var(--guard-color-text-primary);
 }
 
 .summary-total-wrapper {
@@ -292,7 +329,7 @@
 
 .summary-total-wrapper > .summary-stat-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -342,68 +379,6 @@
 
 .summary-stat-card.is-warning {
   background: var(--guard-color-warning-soft);
-}
-
-.summary-stat-card.is-review {
-  background: var(--guard-color-warning-bg);
-}
-
-.summary-review-progress {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-bottom: 18px;
-}
-
-.summary-review-progress-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.summary-review-progress-header h3 {
-  margin: 0;
-  font-size: 15px;
-  color: var(--guard-color-text-primary);
-}
-
-.summary-review-progress-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.summary-review-card {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 16px;
-  border-radius: 8px;
-  border: 1px solid var(--guard-color-border);
-}
-
-.summary-review-card strong {
-  font-size: 28px;
-  line-height: 1;
-  color: var(--guard-color-text-primary);
-}
-
-.summary-review-card small {
-  color: var(--guard-color-text-muted);
-  font-size: 12px;
-}
-
-.summary-review-card.is-confirmed {
-  background: var(--guard-color-danger-bg);
-}
-
-.summary-review-card.is-dismissed {
-  background: var(--guard-color-surface-muted);
-}
-
-.summary-review-card.is-pending {
-  background: var(--guard-color-warning-bg);
 }
 
 .summary-next-step {
@@ -469,13 +444,11 @@
   color: var(--guard-color-danger-text);
 }
 
-.summary-next-step.is-warning,
-.summary-next-step.is-review {
+.summary-next-step.is-warning {
   background: var(--guard-color-warning-bg);
 }
 
-.summary-next-step.is-warning .summary-next-step-icon,
-.summary-next-step.is-review .summary-next-step-icon {
+.summary-next-step.is-warning .summary-next-step-icon {
   background: #fef3c7;
   color: var(--guard-color-warning-text);
 }
@@ -510,8 +483,7 @@
 
 @media (max-width: 640px) {
   .summary-hero,
-  .summary-score-card,
-  .summary-review-progress-header {
+  .summary-score-card {
     flex-direction: column;
     align-items: stretch;
   }
@@ -520,9 +492,8 @@
     align-items: flex-start;
   }
 
-  .summary-score-fact-grid,
-  .summary-stat-grid,
-  .summary-review-progress-grid {
+  .summary-score-metrics,
+  .summary-stat-grid {
     grid-template-columns: 1fr;
   }
 }
