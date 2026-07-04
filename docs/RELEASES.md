@@ -36,7 +36,7 @@ git tag -a v1.1.0-beta.4 -m "Release v1.1.0-beta.4"
 Para a rodada atual da linha V1 Farol Beta, use:
 
 ```bash
-git tag -a v1.1.1-beta.5 -m "Release v1.1.1-beta.5"
+git tag -a v1.1.2-beta.6 -m "Release v1.1.2-beta.6"
 ```
 
 ## Atualização dos usuários

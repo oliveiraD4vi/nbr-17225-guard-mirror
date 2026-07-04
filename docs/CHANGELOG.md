@@ -6,6 +6,8 @@ O formato segue, de forma simples, a ideia de "Keep a Changelog" e versionamento
 
 ## [Unreleased]
 
+## [1.1.2-beta.6] - 2026-07-04
+
 ### Changed
 
 - o painel DevTools passa a ser a superfície principal de auditoria e revisão;
