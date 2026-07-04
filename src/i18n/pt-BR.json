@@ -155,6 +155,17 @@
       "version": "{{version}}",
       "descriptionA": "O Guardião V1 Farol Beta organiza violações automáticas e manuais pela nomenclatura da ABNT NBR 17225: requisitos, recomendações e itens que dependem de revisão contextual.",
       "descriptionB": "Use a verificação na aba atual para gerar um diagnóstico por URL, destacar elementos da página, manter histórico local e reimportar relatórios JSON quando precisar continuar a revisão em outro ambiente.",
+      "capabilities": {
+        "title": "Recursos do painel",
+        "auditTitle": "Auditoria na página inspecionada",
+        "auditDescription": "Executa regras e relaciona cada violação ao elemento e à referência normativa.",
+        "reviewTitle": "Revisão e histórico",
+        "reviewDescription": "Preserva decisões, anotações e comparações entre execuções da mesma URL.",
+        "reportTitle": "Relatórios reutilizáveis",
+        "reportDescription": "Abre snapshots para impressão e permite exportar os dados em formatos estruturados."
+      },
+      "privacyTitle": "Dados sob seu controle",
+      "privacyDescription": "Auditorias e preferências permanecem no armazenamento local do navegador. O Guardião não envia resultados para serviços externos.",
       "links": {
         "label": "Links do projeto",
         "projectPage": "Página do Projeto",

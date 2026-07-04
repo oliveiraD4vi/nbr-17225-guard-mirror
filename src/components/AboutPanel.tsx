@@ -3,8 +3,10 @@ import { Button, Space } from 'antd'
 import {
   ArrowLeftOutlined,
   FileSearchOutlined,
+  FileTextOutlined,
   GithubOutlined,
   GlobalOutlined,
+  HistoryOutlined,
   PlayCircleOutlined,
   SafetyCertificateOutlined,
   UploadOutlined,
@@ -30,13 +32,50 @@ export const AboutPanel: React.FC<AboutPanelProps> = React.memo(
   ({ hasAudit, loading, onBack, onImport, onStart }) => (
     <div className="empty-state empty-state-with-about">
       <div className="about-card">
-        <span className="about-eyebrow">{t('popup.about.eyebrow')}</span>
-        <h2>{t('popup.about.title')}</h2>
-        <span className="about-version">
-          {t('popup.about.version').replace('{{version}}', APP_VERSION_LABEL)}
-        </span>
-        <p>{t('popup.about.descriptionA')}</p>
-        <p>{t('popup.about.descriptionB')}</p>
+        <div className="about-overview">
+          <div className="about-intro">
+            <span className="about-eyebrow">{t('popup.about.eyebrow')}</span>
+            <h2>{t('popup.about.title')}</h2>
+            <span className="about-version">
+              {t('popup.about.version').replace('{{version}}', APP_VERSION_LABEL)}
+            </span>
+            <p>{t('popup.about.descriptionA')}</p>
+            <p>{t('popup.about.descriptionB')}</p>
+          </div>
+          <section className="about-capabilities" aria-labelledby="about-capabilities-title">
+            <h3 id="about-capabilities-title">{t('popup.about.capabilities.title')}</h3>
+            <div className="about-capabilities-list">
+              <div className="about-capability">
+                <FileSearchOutlined aria-hidden="true" />
+                <div>
+                  <strong>{t('popup.about.capabilities.auditTitle')}</strong>
+                  <span>{t('popup.about.capabilities.auditDescription')}</span>
+                </div>
+              </div>
+              <div className="about-capability">
+                <HistoryOutlined aria-hidden="true" />
+                <div>
+                  <strong>{t('popup.about.capabilities.reviewTitle')}</strong>
+                  <span>{t('popup.about.capabilities.reviewDescription')}</span>
+                </div>
+              </div>
+              <div className="about-capability">
+                <FileTextOutlined aria-hidden="true" />
+                <div>
+                  <strong>{t('popup.about.capabilities.reportTitle')}</strong>
+                  <span>{t('popup.about.capabilities.reportDescription')}</span>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+        <aside className="about-privacy-note">
+          <SafetyCertificateOutlined aria-hidden="true" />
+          <div>
+            <strong>{t('popup.about.privacyTitle')}</strong>
+            <span>{t('popup.about.privacyDescription')}</span>
+          </div>
+        </aside>
         <div className="about-links-grid" aria-label={t('popup.about.links.label')}>
           <Button
             href={PROJECT_PAGE_URL}
@@ -72,7 +111,7 @@ export const AboutPanel: React.FC<AboutPanelProps> = React.memo(
           </Button>
         </div>
       </div>
-      <Space>
+      <Space className="about-actions">
         {hasAudit && (
           <Button icon={<ArrowLeftOutlined />} onClick={onBack}>
             {t('popup.about.backToAudit')}
