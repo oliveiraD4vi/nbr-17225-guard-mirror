@@ -149,10 +149,10 @@ Esses itens devem ser tratados como backlog para contribuições futuras, e não
 
 | Funcionalidade                                  | Status       | Código                                                                      |
 | ----------------------------------------------- | ------------ | --------------------------------------------------------------------------- |
-| Destaque visual de problemas                    | Implementada | `src/content.ts`, `src/components/PopupApp.tsx`                             |
+| Destaque visual de problemas                    | Implementada | `src/content.ts`, `src/components/AuditWorkspaceApp.tsx`                    |
 | Painel de detalhes e sugestões contextualizadas | Implementada | `src/components/ViolationsList.tsx`, `src/components/ViolationsSummary.tsx` |
 | Simulação de visão                              | Implementada | `src/components/VisionSimulator.tsx`, `src/content.ts`                      |
-| Exportação simplificada de relatórios           | Implementada | `src/components/PopupApp.tsx`, `src/report.tsx`                             |
+| Exportação simplificada de relatórios           | Implementada | `src/components/AuditWorkspaceApp.tsx`, `src/report.tsx`                    |
 
 ## Verificação Individual
 

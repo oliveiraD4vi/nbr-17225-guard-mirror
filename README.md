@@ -32,14 +32,14 @@ O Guardião NBR 17225 executa auditorias diretamente na página inspecionada e o
 - possibilidade de ignorar qualquer achado, sem transformar confirmação manual em etapa obrigatória;
 - motivo obrigatório ao ignorar, com nota complementar opcional;
 - achados ignorados permanecem no histórico, nas comparações e nas exportações, mas ficam fora da nota e dos números acionáveis;
-- seção dedicada aos itens ignorados, com ação para reabrir;
+- drawer de itens ignorados, acessível pelo filtro de achados e com ação para reabrir;
 - anotações por item e decisões de triagem reaproveitadas entre auditorias equivalentes.
 
 ### Histórico e comparação
 
 - histórico compacto de auditorias por URL;
 - herança de decisões de triagem, anotações, correções de contraste e propostas de texto alternativo entre auditorias equivalentes;
-- exclusão de entradas do histórico com confirmação explícita no popup;
+- exclusão de entradas do histórico com confirmação explícita no painel DevTools;
 - comparação entre auditorias salvas, com indicadores de evolução, regressão e estabilidade;
 - importação de relatórios JSON exportados pela própria extensão para retomar a análise em outro navegador ou computador;
 - exportação da auditoria em JSON e CSV;
@@ -62,7 +62,8 @@ O Guardião NBR 17225 executa auditorias diretamente na página inspecionada e o
 - feedback visual para a nota, com leitura rápida de risco;
 - contadores acionáveis que excluem achados ignorados sem apagar seu registro;
 - relatório detalhado em página dedicada, com snapshot imprimível da auditoria visualizada;
-- painel do Chrome DevTools para usar a extensão junto da página inspecionada;
+- painel do Chrome DevTools como superfície principal para auditar e revisar a página inspecionada;
+- popup enxuto com orientação de acesso ao DevTools e atalho para o relatório da auditoria atual;
 - exportação de resumo simples da auditoria diretamente pela aba de resumo.
 
 ### Simulador de percepção visual
@@ -91,7 +92,7 @@ O Guardião NBR 17225 executa auditorias diretamente na página inspecionada e o
 - persistência enxuta do histórico, removendo dados derivados e reconstruindo agrupamentos na leitura sem descartar decisões de triagem, anotações ou correções de contraste;
 - aviso preventivo quando o armazenamento local se aproxima do limite, com leitura de uso atual, ação de compactação e orientação sobre retenção local;
 - importação de relatórios como caminho de continuidade quando o armazenamento local não for suficiente para reter todo o histórico indefinidamente;
-- opções de recuperação no popup:
+- opções de recuperação no painel DevTools:
   - limpar o histórico da URL atual;
   - excluir a auditoria mais antiga;
   - compactar o armazenamento;
@@ -167,7 +168,7 @@ Essa página usa a matriz `docs/RULES_NORMATIVE_MATRIX.md` como fonte e não sub
 
 Comece com o escopo padrão `Somente requisitos`. Isso reduz ruído inicial e ajuda a priorizar não conformidades diretas.
 
-O uso normal continua disponível pelo popup da extensão. Para uma revisão mais longa, abra o Chrome DevTools e use o painel `Guardião NBR 17225`, que audita a página inspecionada sem depender da largura do popup.
+Abra o Chrome DevTools e use o painel `Guardião NBR 17225`. A auditoria, a triagem, o histórico e as propostas de correção ficam nessa superfície, junto da página inspecionada. O popup orienta esse acesso e permite abrir o relatório da auditoria atual.
 
 ### 2. Revisar a aba de violações
 
@@ -193,7 +194,7 @@ Ative o escopo `Requisitos e recomendações` quando a base obrigatória já est
 
 Use `Abrir relatório` para gerar uma nova aba com snapshot da auditoria visualizada, adequada para leitura e impressão. Quando a auditoria precisar continuar em outro ambiente, exporte o relatório em JSON e depois use a importação pela aba de histórico ou pela tela inicial. Se a URL importada for a mesma da aba atual, o relatório volta pronto para comparação.
 
-Se o popup avisar que o armazenamento local está em atenção, compacte o histórico e exporte os relatórios que precisarem de retenção de longo prazo.
+Se o painel DevTools avisar que o armazenamento local está em atenção, compacte o histórico e exporte os relatórios que precisarem de retenção de longo prazo.
 
 ### 6. Usar o simulador de percepção visual
 

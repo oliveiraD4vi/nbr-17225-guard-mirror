@@ -12,6 +12,6 @@ Este diretório concentra a documentação complementar da extensão Guardião N
 - `CONTRIBUTING.md`: guia de contribuição.
 - `CHANGELOG.md`: histórico de mudanças.
 
-Recursos como painel DevTools, relatório em nova aba, triagem, textos alternativos e prévia de contraste são documentados no `../README.md` e no `CHANGELOG.md`.
+O fluxo principal de auditoria no DevTools, o popup de orientação, o relatório em nova aba, a triagem, os textos alternativos e a prévia de contraste são documentados no `../README.md` e no `CHANGELOG.md`.
 
 O `../README.md` permanece como entrada principal do projeto.

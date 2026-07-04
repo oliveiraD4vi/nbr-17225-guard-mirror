@@ -84,7 +84,7 @@ As funcionalidades agregadas do produto já estão cobertas e distribuídas na d
 
 | Funcionalidade                                  | Status       | Implementação                                                                |
 | ----------------------------------------------- | ------------ | ---------------------------------------------------------------------------- |
-| Destaque visual de problemas                    | Implementada | `src/content.ts` e popup                                                     |
+| Destaque visual de problemas                    | Implementada | `src/content.ts` e painel DevTools                                           |
 | Painel de detalhes e sugestões contextualizadas | Implementada | `src/components/ViolationsList.tsx` e `src/components/ViolationsSummary.tsx` |
 | Simulação de visão                              | Implementada | `src/components/VisionSimulator.tsx` e filtros injetados pelo content script |
 | Exportação simplificada de relatórios           | Implementada | JSON, CSV e página de relatório                                              |

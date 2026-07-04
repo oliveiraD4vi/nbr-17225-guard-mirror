@@ -6,6 +6,19 @@ O formato segue, de forma simples, a ideia de "Keep a Changelog" e versionamento
 
 ## [Unreleased]
 
+### Changed
+
+- o painel DevTools passa a ser a superfície principal de auditoria e revisão;
+- o popup passa a orientar a abertura do DevTools e a oferecer somente o relatório da auditoria atual;
+- achados ignorados saem das abas principais e ficam em um drawer filtrável;
+- a barra de ações do DevTools usa botões compactos e destaca a abertura do relatório;
+- popup, DevTools e relatório passam a compartilhar a mesma configuração visual do Ant Design.
+
+### Fixed
+
+- leitura de identificadores do DOM deixa de falhar quando um formulário possui campo chamado `id`;
+- texto e ícone do botão primário de exportação JSON ficam legíveis no relatório.
+
 ## [1.1.1-beta.5] - 2026-07-03
 
 ### Added
