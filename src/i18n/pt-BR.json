@@ -566,8 +566,7 @@
     "reviewSections": {
       "pending": "Abertos para revisão",
       "pendingDescription": "Itens em que uma avaliação contextual pode justificar ignorar a violação, sem exigir confirmação para que ela conte como falha.",
-      "confirmed": "Registrados como problema",
-      "confirmedDescription": "Violações manuais ou migradas que permanecem registradas como problema.",
+      "empty": "Nenhum item aberto para revisão contextual.",
       "dismissed": "Ignorados na auditoria",
       "dismissedDescription": "Itens ignorados continuam disponíveis para reavaliação."
     },

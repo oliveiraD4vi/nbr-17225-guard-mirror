@@ -640,62 +640,37 @@ function renderReviewSections(
   }
 
   const pendingViolations = violations.filter(isPendingHumanReviewFinding)
-  const confirmedViolations = violations.filter(isConfirmedFinding)
 
-  const sections = [
-    {
-      key: 'pending',
-      title: t('violations.reviewSections.pending'),
-      description: t('violations.reviewSections.pendingDescription'),
-      count: pendingViolations.length,
-      colorClassName: 'is-pending',
-      violations: pendingViolations,
-    },
-    {
-      key: 'confirmed',
-      title: t('violations.reviewSections.confirmed'),
-      description: t('violations.reviewSections.confirmedDescription'),
-      count: confirmedViolations.length,
-      colorClassName: 'is-confirmed',
-      violations: confirmedViolations,
-    },
-  ]
+  if (pendingViolations.length === 0) {
+    return <Empty description={t('violations.reviewSections.empty')} />
+  }
 
   return (
     <div className="review-sections">
-      {sections.map((section) => (
-        <section key={section.key} className={`review-section ${section.colorClassName}`}>
-          <div className="review-section-header">
-            <div>
-              <strong>{section.title}</strong>
-              <p>{section.description}</p>
-            </div>
-            <Tag>{t('shared.counts.items', { count: section.count })}</Tag>
+      <section className="review-section is-pending">
+        <div className="review-section-header">
+          <div>
+            <strong>{t('violations.reviewSections.pending')}</strong>
+            <p>{t('violations.reviewSections.pendingDescription')}</p>
           </div>
-          {section.count > 0 ? (
-            renderViolationGroups(
-              section.violations,
-              state,
-              onStateChange,
-              `review-${section.key}`,
-              onSelectViolation,
-              onFindingStatusChange,
-              onBulkFindingStatusChange,
-              onViolationNoteChange,
-              onViolationAlternativeTextReviewChange,
-              onViolationContrastOverrideChange,
-              onBulkViolationContrastOverrideChange,
-              onViolationContrastPreviewChange,
-              onContrastPreviewEnd,
-            )
-          ) : (
-            <Empty
-              description={t('violations.emptyCategory')}
-              image={Empty.PRESENTED_IMAGE_SIMPLE}
-            />
-          )}
-        </section>
-      ))}
+          <Tag>{t('shared.counts.items', { count: pendingViolations.length })}</Tag>
+        </div>
+        {renderViolationGroups(
+          pendingViolations,
+          state,
+          onStateChange,
+          'review-pending',
+          onSelectViolation,
+          onFindingStatusChange,
+          onBulkFindingStatusChange,
+          onViolationNoteChange,
+          onViolationAlternativeTextReviewChange,
+          onViolationContrastOverrideChange,
+          onBulkViolationContrastOverrideChange,
+          onViolationContrastPreviewChange,
+          onContrastPreviewEnd,
+        )}
+      </section>
     </div>
   )
 }
@@ -1762,10 +1737,7 @@ export const ViolationsList: React.FC<ViolationsListProps> = React.memo(
       [visibleViolations],
     )
     const reviewViolations = React.useMemo(
-      () =>
-        sortedViolations.filter(
-          (violation) => violation.requiresHumanReview && !isIgnoredFinding(violation),
-        ),
+      () => sortedViolations.filter(isPendingHumanReviewFinding),
       [sortedViolations],
     )
     const ignoredViolations = React.useMemo(

@@ -75,11 +75,6 @@
   background: var(--guard-color-warning-bg);
 }
 
-.review-section.is-confirmed {
-  border-color: var(--guard-color-danger-border);
-  background: var(--guard-color-danger-bg);
-}
-
 .review-section.is-dismissed {
   border-color: var(--guard-color-border-strong);
   background: var(--guard-color-surface-muted);
