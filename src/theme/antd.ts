@@ -28,7 +28,6 @@ export function createGuardAntTheme(): ThemeConfig {
     components: {
       Button: {
         defaultBg: resolveGuardToken('--guard-color-surface', '#ffffff'),
-        defaultBorderColor: resolveGuardToken('--guard-color-border', '#e2e8f0'),
         defaultColor: resolveGuardToken('--guard-color-text-primary', '#0f172a'),
         colorPrimary: resolveGuardToken('--guard-color-primary', '#0f766e'),
         colorPrimaryHover: resolveGuardToken('--guard-color-primary-strong', '#115e59'),
@@ -38,7 +37,6 @@ export function createGuardAntTheme(): ThemeConfig {
       Tag: {
         defaultBg: resolveGuardToken('--guard-color-surface', '#ffffff'),
         defaultColor: resolveGuardToken('--guard-color-text-primary', '#0f172a'),
-        defaultBorderColor: resolveGuardToken('--guard-color-border', '#e2e8f0'),
       },
       Tooltip: {
         colorBgSpotlight: resolveGuardToken('--guard-color-tooltip-bg', '#0f172a'),
