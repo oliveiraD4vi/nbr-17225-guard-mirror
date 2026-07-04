@@ -664,7 +664,7 @@ if (contentScope.__nbrGuardContentLoaded) {
         draft,
       })
       .catch((error: unknown) => {
-        console.error('[Guardião NBR 17225] Erro ao salvar rascunho do achado manual:', error)
+        console.error('[Guardião NBR 17225] Erro ao salvar rascunho da violação manual:', error)
       })
   }
 

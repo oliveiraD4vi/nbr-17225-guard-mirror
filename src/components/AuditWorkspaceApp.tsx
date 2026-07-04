@@ -1279,7 +1279,7 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
       await sendMessageToActiveTab({ action: 'START_MANUAL_FINDING_SELECTION' })
       message.info(t('popup.messages.manualFindingSelectionStarted'))
     } catch (error) {
-      console.error('Erro ao iniciar seleção de achado manual:', error)
+      console.error('Erro ao iniciar seleção de violação manual:', error)
       message.error(t('popup.messages.manualFindingSelectionError'))
     }
   }, [isHistoricalView, sendMessageToActiveTab])
@@ -1378,7 +1378,7 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
         return
       }
 
-      console.error('Erro ao salvar achado manual:', error)
+      console.error('Erro ao salvar violação manual:', error)
       message.error(t('popup.messages.manualFindingSaveError'))
     } finally {
       setManualFindingSaving(false)

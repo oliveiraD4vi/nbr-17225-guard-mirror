@@ -317,7 +317,7 @@ async function reapplyManualFindingsFromHistory(
       (response?.resolved ?? []) as ResolvedManualFindingSelector[],
     )
   } catch (error) {
-    console.warn('[Guardião NBR 17225] Não foi possível reaplicar achados manuais:', error)
+    console.warn('[Guardião NBR 17225] Não foi possível reaplicar violações manuais:', error)
     return result
   }
 }
