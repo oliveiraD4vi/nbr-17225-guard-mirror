@@ -4,8 +4,8 @@ O Guardião NBR 17225 usa versionamento semântico para a extensão e nomes curt
 
 ## Versão Atual
 
-Produto: `1.1.3-beta.7`
-Manifest Chrome: `1.1.3`
+Produto: `1.1.4-beta.8`
+Manifest Chrome: `1.1.4`
 
 | Versão         | Nome          | Escopo                                                                                                                 |
 | -------------- | ------------- | ---------------------------------------------------------------------------------------------------------------------- |
@@ -13,6 +13,7 @@ Manifest Chrome: `1.1.3`
 | `1.1.1-beta.5` | V1 Farol Beta | Propostas de texto alternativo, relatório em nova aba com snapshot e painel DevTools.                                  |
 | `1.1.2-beta.6` | V1 Farol Beta | DevTools como superfície principal, popup de orientação, ignorados em drawer e correções de interface.                 |
 | `1.1.3-beta.7` | V1 Farol Beta | Correção do acesso ao armazenamento local pelo painel DevTools.                                                        |
+| `1.1.4-beta.8` | V1 Farol Beta | Vocabulário público refinado, revisão contextual simplificada e comparação técnica separada das decisões de triagem.   |
 
 Regra executada na Beta significa regra habilitada para avaliação assistida. Não significa regra final.
 

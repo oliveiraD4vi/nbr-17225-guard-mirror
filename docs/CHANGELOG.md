@@ -6,6 +6,8 @@ O formato segue, de forma simples, a ideia de "Keep a Changelog" e versionamento
 
 ## [Unreleased]
 
+## [1.1.4-beta.8] - 2026-07-04
+
 ### Added
 
 - comparação detalhada por violação, elemento, decisão de triagem e registro de revisão alterado.
