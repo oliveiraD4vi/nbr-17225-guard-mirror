@@ -6,6 +6,11 @@ O formato segue, de forma simples, a ideia de "Keep a Changelog" e versionamento
 
 ## [Unreleased]
 
+### Fixed
+
+- painel DevTools passa a acessar o armazenamento local pelo service worker quando `chrome.storage` não está disponível em seu contexto;
+- atualização de rascunhos de achados manuais deixa de depender de `chrome.storage.onChanged` no painel DevTools.
+
 ## [1.1.2-beta.6] - 2026-07-04
 
 ### Changed

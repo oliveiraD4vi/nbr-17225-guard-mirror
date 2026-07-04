@@ -88,6 +88,7 @@ O Guardião NBR 17225 executa auditorias diretamente na página inspecionada e o
 
 ### Resiliência de armazenamento
 
+- acesso ao armazenamento mediado pelo service worker quando a API não está exposta diretamente no painel DevTools;
 - tratamento orientado para `QuotaExceeded` no `chrome.storage.local`;
 - persistência enxuta do histórico, removendo dados derivados e reconstruindo agrupamentos na leitura sem descartar decisões de triagem, anotações ou correções de contraste;
 - aviso preventivo quando o armazenamento local se aproxima do limite, com leitura de uso atual, ação de compactação e orientação sobre retenção local;
