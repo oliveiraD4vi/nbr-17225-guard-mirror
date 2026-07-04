@@ -1,5 +1,5 @@
 import type { AuditResult, Violation } from '@/types'
-import { getViolationIdentityKey, getVisibleAuditViolations } from '@/utils/audit-history'
+import { getViolationIdentityKey } from '@/utils/audit-history'
 import {
   isConfirmedFinding,
   isIgnoredFinding,
@@ -7,20 +7,51 @@ import {
   normalizeViolationFindingState,
 } from '@/utils/audit-triage'
 
+export type ComparisonTechnicalTrend = 'improvement' | 'regression' | 'mixed' | 'unchanged'
+export type ComparisonScopeExclusion = 'recommendations' | 'contextual'
+export type AuditTriageChangeKind = 'ignored' | 'reopened' | 'triage_updated' | 'status_updated'
+export type AuditReviewChangeField =
+  | 'user_note'
+  | 'alternative_text'
+  | 'contrast'
+  | 'violation_content'
+
+export interface AuditComparisonScope {
+  mode: 'equivalent' | 'partial'
+  includeRecommendations: boolean
+  includeHumanReview: boolean
+  excluded: ComparisonScopeExclusion[]
+}
+
 export interface AuditStateChange {
   baseline: Violation
   target: Violation
+  kind: AuditTriageChangeKind
+}
+
+export interface AuditReviewChange {
+  baseline: Violation
+  target: Violation
+  changedFields: AuditReviewChangeField[]
 }
 
 export interface AuditComparisonSummary {
+  comparisonSchemaVersion: 2
   baselineId: string
   targetId: string
   baselineTimestamp: number
   targetTimestamp: number
+  comparisonScope: AuditComparisonScope
+  technicalTrend: ComparisonTechnicalTrend
   newViolations: Violation[]
+  noLongerDetectedViolations: Violation[]
   resolvedViolations: Violation[]
   persistentViolations: Violation[]
   stateChangedViolations: AuditStateChange[]
+  ignoredSinceBaseline: AuditStateChange[]
+  reopenedSinceBaseline: AuditStateChange[]
+  triageUpdatedViolations: AuditStateChange[]
+  reviewChangedViolations: AuditReviewChange[]
   baselineOpenCount: number
   targetOpenCount: number
   baselineNoteCount: number
@@ -51,14 +82,126 @@ function getViolationsByKey(violations: Violation[]): Map<string, Violation> {
   return new Map(violations.map((violation) => [getViolationIdentityKey(violation), violation]))
 }
 
+function getComparisonScope(baseline: AuditResult, target: AuditResult): AuditComparisonScope {
+  const includeRecommendations = baseline.includeRecommendations && target.includeRecommendations
+  const includeHumanReview = baseline.includeHumanReview && target.includeHumanReview
+  const excluded: ComparisonScopeExclusion[] = []
+
+  if (baseline.includeRecommendations !== target.includeRecommendations) {
+    excluded.push('recommendations')
+  }
+  if (baseline.includeHumanReview !== target.includeHumanReview) {
+    excluded.push('contextual')
+  }
+
+  return {
+    mode: excluded.length > 0 ? 'partial' : 'equivalent',
+    includeRecommendations,
+    includeHumanReview,
+    excluded,
+  }
+}
+
+function isWithinComparisonScope(violation: Violation, scope: AuditComparisonScope): boolean {
+  if (violation.normativeType === 'Recomendação' && !scope.includeRecommendations) return false
+  if (violation.requiresHumanReview && !scope.includeHumanReview) return false
+  return true
+}
+
+function getAuditNoteCountFromViolations(violations: Violation[]): number {
+  return violations.filter((violation) => Boolean(violation.userNote?.trim())).length
+}
+
+function getAlternativeTextReviewCountFromViolations(violations: Violation[]): number {
+  return violations.filter((violation) =>
+    Boolean(violation.alternativeTextReview?.proposedText?.trim()),
+  ).length
+}
+
+function getTechnicalTrend(
+  newViolations: Violation[],
+  noLongerDetectedViolations: Violation[],
+): ComparisonTechnicalTrend {
+  if (newViolations.length > 0 && noLongerDetectedViolations.length > 0) return 'mixed'
+  if (newViolations.length > 0) return 'regression'
+  if (noLongerDetectedViolations.length > 0) return 'improvement'
+  return 'unchanged'
+}
+
+function getTriageChange(baseline: Violation, target: Violation): AuditStateChange | null {
+  const statusChanged = baseline.findingStatus !== target.findingStatus
+  const reasonChanged = baseline.ignoreReason !== target.ignoreReason
+  const noteChanged = (baseline.ignoreNote || '') !== (target.ignoreNote || '')
+
+  if (!statusChanged && !reasonChanged && !noteChanged) return null
+
+  let kind: AuditTriageChangeKind = statusChanged ? 'status_updated' : 'triage_updated'
+  if (!isIgnoredFinding(baseline) && isIgnoredFinding(target)) kind = 'ignored'
+  if (isIgnoredFinding(baseline) && !isIgnoredFinding(target)) kind = 'reopened'
+
+  return { baseline, target, kind }
+}
+
+function serializedValue(value: unknown): string {
+  return JSON.stringify(value ?? null)
+}
+
+function getReviewChangedFields(baseline: Violation, target: Violation): AuditReviewChangeField[] {
+  const changedFields: AuditReviewChangeField[] = []
+
+  if ((baseline.userNote || '') !== (target.userNote || '')) changedFields.push('user_note')
+  const baselineAlternativeText = baseline.alternativeTextReview
+    ? {
+        currentText: baseline.alternativeTextReview.currentText,
+        currentSource: baseline.alternativeTextReview.currentSource,
+        proposedText: baseline.alternativeTextReview.proposedText,
+        targetAttribute: baseline.alternativeTextReview.targetAttribute,
+      }
+    : null
+  const targetAlternativeText = target.alternativeTextReview
+    ? {
+        currentText: target.alternativeTextReview.currentText,
+        currentSource: target.alternativeTextReview.currentSource,
+        proposedText: target.alternativeTextReview.proposedText,
+        targetAttribute: target.alternativeTextReview.targetAttribute,
+      }
+    : null
+  if (serializedValue(baselineAlternativeText) !== serializedValue(targetAlternativeText)) {
+    changedFields.push('alternative_text')
+  }
+  const baselineContrast = baseline.userContrastOverride
+    ? {
+        foregroundHex: baseline.userContrastOverride.foregroundHex,
+        backgroundHex: baseline.userContrastOverride.backgroundHex,
+      }
+    : null
+  const targetContrast = target.userContrastOverride
+    ? {
+        foregroundHex: target.userContrastOverride.foregroundHex,
+        backgroundHex: target.userContrastOverride.backgroundHex,
+      }
+    : null
+  if (serializedValue(baselineContrast) !== serializedValue(targetContrast)) {
+    changedFields.push('contrast')
+  }
+  if (
+    baseline.severity !== target.severity ||
+    baseline.message !== target.message ||
+    baseline.suggestion !== target.suggestion ||
+    baseline.remediationAdvice !== target.remediationAdvice
+  ) {
+    changedFields.push('violation_content')
+  }
+
+  return changedFields
+}
+
 export function getAuditNoteCount(result: AuditResult): number {
-  return result.violations.filter((violation) => Boolean(violation.userNote?.trim())).length
+  return getAuditNoteCountFromViolations(result.violations)
 }
 
 export function getAlternativeTextReviewCount(result: AuditResult): number {
-  return result.violations.filter((violation) =>
-    Boolean(violation.alternativeTextReview?.proposedText?.trim()),
-  ).length
+  return getAlternativeTextReviewCountFromViolations(result.violations)
 }
 
 export function getConfirmedFindingCount(result: AuditResult): number {
@@ -86,79 +229,107 @@ export function compareAuditResults(
   baseline: AuditResult,
   target: AuditResult,
 ): AuditComparisonSummary {
-  const baselineViolations = baseline.violations.map(normalizeViolationFindingState)
-  const targetViolations = target.violations.map(normalizeViolationFindingState)
-  const baselineOpenViolations = getVisibleAuditViolations({
-    ...baseline,
-    violations: baselineViolations,
-  })
-  const targetOpenViolations = getVisibleAuditViolations({
-    ...target,
-    violations: targetViolations,
-  })
-
+  const comparisonScope = getComparisonScope(baseline, target)
+  const baselineViolations = baseline.violations
+    .map(normalizeViolationFindingState)
+    .filter((violation) => isWithinComparisonScope(violation, comparisonScope))
+  const targetViolations = target.violations
+    .map(normalizeViolationFindingState)
+    .filter((violation) => isWithinComparisonScope(violation, comparisonScope))
+  const baselineOpenViolations = baselineViolations.filter(
+    (violation) => !isIgnoredFinding(violation),
+  )
+  const targetOpenViolations = targetViolations.filter((violation) => !isIgnoredFinding(violation))
   const baselineAllViolationsByKey = getViolationsByKey(baselineViolations)
   const targetAllViolationsByKey = getViolationsByKey(targetViolations)
   const baselineOpenKeys = new Set(baselineOpenViolations.map(getViolationIdentityKey))
   const baselineAllKeys = new Set(baselineViolations.map(getViolationIdentityKey))
   const targetAllKeys = new Set(targetViolations.map(getViolationIdentityKey))
   const stateChangedViolations: AuditStateChange[] = []
+  const reviewChangedViolations: AuditReviewChange[] = []
 
   baselineAllViolationsByKey.forEach((baselineViolation, key) => {
     const targetViolation = targetAllViolationsByKey.get(key)
     if (!targetViolation) return
 
-    const statusChanged = baselineViolation.findingStatus !== targetViolation.findingStatus
-    const reasonChanged = baselineViolation.ignoreReason !== targetViolation.ignoreReason
-    const noteChanged = (baselineViolation.ignoreNote || '') !== (targetViolation.ignoreNote || '')
+    const triageChange = getTriageChange(baselineViolation, targetViolation)
+    if (triageChange) stateChangedViolations.push(triageChange)
 
-    if (statusChanged || reasonChanged || noteChanged) {
-      stateChangedViolations.push({ baseline: baselineViolation, target: targetViolation })
+    const changedFields = getReviewChangedFields(baselineViolation, targetViolation)
+    if (changedFields.length > 0) {
+      reviewChangedViolations.push({
+        baseline: baselineViolation,
+        target: targetViolation,
+        changedFields,
+      })
     }
   })
 
+  const newViolations = targetOpenViolations.filter(
+    (violation) => !baselineAllKeys.has(getViolationIdentityKey(violation)),
+  )
+  const noLongerDetectedViolations = baselineOpenViolations.filter(
+    (violation) => !targetAllKeys.has(getViolationIdentityKey(violation)),
+  )
+  const persistentViolations = targetOpenViolations.filter((violation) =>
+    baselineOpenKeys.has(getViolationIdentityKey(violation)),
+  )
+  const baselineNoteCount = getAuditNoteCountFromViolations(baselineViolations)
+  const targetNoteCount = getAuditNoteCountFromViolations(targetViolations)
+  const baselineAlternativeTextReviewCount =
+    getAlternativeTextReviewCountFromViolations(baselineViolations)
+  const targetAlternativeTextReviewCount =
+    getAlternativeTextReviewCountFromViolations(targetViolations)
+  const baselineConfirmedReviews = baselineViolations.filter(isConfirmedFinding).length
+  const targetConfirmedReviews = targetViolations.filter(isConfirmedFinding).length
+  const baselineDismissedReviews = baselineViolations.filter(isIgnoredFinding).length
+  const targetDismissedReviews = targetViolations.filter(isIgnoredFinding).length
+  const baselinePendingReviews = baselineViolations.filter(isPendingHumanReviewFinding).length
+  const targetPendingReviews = targetViolations.filter(isPendingHumanReviewFinding).length
+
   return {
+    comparisonSchemaVersion: 2,
     baselineId: baseline.id || '',
     targetId: target.id || '',
     baselineTimestamp: baseline.timestamp,
     targetTimestamp: target.timestamp,
-    newViolations: targetOpenViolations.filter(
-      (violation) => !baselineAllKeys.has(getViolationIdentityKey(violation)),
-    ),
-    resolvedViolations: baselineOpenViolations.filter(
-      (violation) => !targetAllKeys.has(getViolationIdentityKey(violation)),
-    ),
-    persistentViolations: targetOpenViolations.filter((violation) =>
-      baselineOpenKeys.has(getViolationIdentityKey(violation)),
-    ),
+    comparisonScope,
+    technicalTrend: getTechnicalTrend(newViolations, noLongerDetectedViolations),
+    newViolations,
+    noLongerDetectedViolations,
+    resolvedViolations: noLongerDetectedViolations,
+    persistentViolations,
     stateChangedViolations,
+    ignoredSinceBaseline: stateChangedViolations.filter((change) => change.kind === 'ignored'),
+    reopenedSinceBaseline: stateChangedViolations.filter((change) => change.kind === 'reopened'),
+    triageUpdatedViolations: stateChangedViolations.filter(
+      (change) => change.kind === 'triage_updated' || change.kind === 'status_updated',
+    ),
+    reviewChangedViolations,
     baselineOpenCount: baselineOpenViolations.length,
     targetOpenCount: targetOpenViolations.length,
-    baselineNoteCount: getAuditNoteCount(baseline),
-    targetNoteCount: getAuditNoteCount(target),
-    baselineAlternativeTextReviewCount: getAlternativeTextReviewCount(baseline),
-    targetAlternativeTextReviewCount: getAlternativeTextReviewCount(target),
-    baselineConfirmedReviews: getConfirmedFindingCount(baseline),
-    targetConfirmedReviews: getConfirmedFindingCount(target),
-    baselineDismissedReviews: getIgnoredFindingCount(baseline),
-    targetDismissedReviews: getIgnoredFindingCount(target),
-    baselinePendingReviews: getPendingHumanReviewCount(baseline),
-    targetPendingReviews: getPendingHumanReviewCount(target),
+    baselineNoteCount,
+    targetNoteCount,
+    baselineAlternativeTextReviewCount,
+    targetAlternativeTextReviewCount,
+    baselineConfirmedReviews,
+    targetConfirmedReviews,
+    baselineDismissedReviews,
+    targetDismissedReviews,
+    baselinePendingReviews,
+    targetPendingReviews,
     openIssuesDeltaPercentage: getPercentageDelta(
       baselineOpenViolations.length,
       targetOpenViolations.length,
     ),
-    notesDeltaPercentage: getPercentageDelta(
-      getAuditNoteCount(baseline),
-      getAuditNoteCount(target),
-    ),
+    notesDeltaPercentage: getPercentageDelta(baselineNoteCount, targetNoteCount),
     alternativeTextReviewsDeltaPercentage: getPercentageDelta(
-      getAlternativeTextReviewCount(baseline),
-      getAlternativeTextReviewCount(target),
+      baselineAlternativeTextReviewCount,
+      targetAlternativeTextReviewCount,
     ),
     confirmedReviewsDeltaPercentage: getPercentageDelta(
-      getConfirmedFindingCount(baseline),
-      getConfirmedFindingCount(target),
+      baselineConfirmedReviews,
+      targetConfirmedReviews,
     ),
   }
 }

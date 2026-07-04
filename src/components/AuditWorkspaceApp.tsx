@@ -32,6 +32,7 @@ import {
   ReloadOutlined,
   RiseOutlined,
   StopOutlined,
+  SwapOutlined,
   UpOutlined,
 } from '@ant-design/icons'
 import { PopupPanelSkeleton } from './LoadingSkeletons'
@@ -49,7 +50,7 @@ import type {
   Violation,
   VisionSimulationFilter,
 } from '@/types'
-import { compareAuditResults } from '@/utils/audit-comparison'
+import { compareAuditResults, type AuditReviewChangeField } from '@/utils/audit-comparison'
 import { buildAuditSummaryJson, buildExportableAuditResult } from '@/utils/audit-export'
 import {
   clearAuditHistoryForUrl,
@@ -245,33 +246,69 @@ function getPriorityViolations(violations: Violation[]): Violation[] {
 function getComparisonTrend(summary: ReturnType<typeof compareAuditResults> | null) {
   if (!summary) return null
 
-  const delta = summary.targetOpenCount - summary.baselineOpenCount
-  if (delta < 0) {
+  if (summary.technicalTrend === 'improvement') {
     return {
       icon: <RiseOutlined />,
-      label: t('shared.states.improvement'),
+      label: t('popup.history.technicalImprovement'),
       color: 'green' as const,
     }
   }
-  if (delta > 0) {
+  if (summary.technicalTrend === 'regression') {
     return {
       icon: <FallOutlined />,
-      label: t('shared.states.regression'),
+      label: t('popup.history.technicalRegression'),
       color: 'red' as const,
+    }
+  }
+  if (summary.technicalTrend === 'mixed') {
+    return {
+      icon: <SwapOutlined />,
+      label: t('popup.history.technicalMixed'),
+      color: 'gold' as const,
     }
   }
 
   return {
     icon: <MinusOutlined />,
-    label: t('shared.states.stable'),
+    label: t('popup.history.technicalUnchanged'),
     color: 'default' as const,
   }
 }
 
-function getComparisonQuickReadingLabel(label: string): string {
-  if (label === t('shared.states.improvement')) return t('popup.history.quickReadingImprovement')
-  if (label === t('shared.states.regression')) return t('popup.history.quickReadingRegression')
+function getComparisonQuickReadingLabel(
+  trend: ReturnType<typeof compareAuditResults>['technicalTrend'],
+): string {
+  if (trend === 'improvement') return t('popup.history.quickReadingImprovement')
+  if (trend === 'regression') return t('popup.history.quickReadingRegression')
+  if (trend === 'mixed') return t('popup.history.quickReadingMixed')
   return t('popup.history.quickReadingStable')
+}
+
+function getComparisonElementLabel(violation: Violation): string {
+  return (
+    violation.elementAccessibleName ||
+    violation.elementVisibleText ||
+    violation.elementSelector ||
+    violation.elementTagName ||
+    t('popup.history.comparisonUnknownElement')
+  )
+}
+
+function getComparisonStatusLabel(status: Violation['findingStatus']): string {
+  if (status === 'ignored') return t('popup.history.comparisonStatusIgnored')
+  if (status === 'confirmed') return t('popup.history.comparisonStatusRegistered')
+  return t('popup.history.comparisonStatusOpen')
+}
+
+function getComparisonReviewFieldLabel(field: AuditReviewChangeField): string {
+  if (field === 'user_note') return t('popup.history.comparisonFieldNote')
+  if (field === 'alternative_text') return t('popup.history.comparisonFieldAlternativeText')
+  if (field === 'contrast') return t('popup.history.comparisonFieldContrast')
+  return t('popup.history.comparisonFieldContent')
+}
+
+function getComparisonViolationMarkdownLine(violation: Violation): string {
+  return `- NBR ${violation.nbrReference} · ${violation.ruleName} — ${violation.message} — ${getComparisonElementLabel(violation)}`
 }
 
 function getExportTimestampSegment(timestamp = Date.now()): string {
@@ -1492,6 +1529,24 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
       return
     }
 
+    const noChangesLine = `- ${t('popup.history.comparisonNoItems')}`
+    const newViolationLines = comparisonSummary.newViolations.map(
+      getComparisonViolationMarkdownLine,
+    )
+    const noLongerDetectedLines = comparisonSummary.noLongerDetectedViolations.map(
+      getComparisonViolationMarkdownLine,
+    )
+    const persistentViolationLines = comparisonSummary.persistentViolations.map(
+      getComparisonViolationMarkdownLine,
+    )
+    const triageLines = comparisonSummary.stateChangedViolations.map(
+      (change) =>
+        `- NBR ${change.target.nbrReference} · ${change.target.ruleName} — ${getComparisonStatusLabel(change.baseline.findingStatus)} → ${getComparisonStatusLabel(change.target.findingStatus)} — ${getComparisonElementLabel(change.target)}`,
+    )
+    const reviewLines = comparisonSummary.reviewChangedViolations.map(
+      (change) =>
+        `- NBR ${change.target.nbrReference} · ${change.target.ruleName} — ${change.changedFields.map(getComparisonReviewFieldLabel).join(', ')} — ${getComparisonElementLabel(change.target)}`,
+    )
     const lines = [
       `# ${t('popup.history.exportTitle')}`,
       '',
@@ -1500,29 +1555,48 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
       `- ${t('popup.history.exportBaseline')}: ${new Date(comparisonSummary.baselineTimestamp).toLocaleString('pt-BR')}`,
       `- ${t('popup.history.exportTarget')}: ${new Date(comparisonSummary.targetTimestamp).toLocaleString('pt-BR')}`,
       `- ${t('popup.history.exportResult')}: ${comparisonTrend.label}`,
+      `- ${t('popup.history.comparisonScopeLabel')}: ${t(
+        comparisonSummary.comparisonScope.mode === 'partial'
+          ? 'popup.history.comparisonScopePartial'
+          : 'popup.history.comparisonScopeEquivalent',
+      )}`,
       '',
       `## ${t('popup.history.exportIndicatorsTitle')}`,
       '',
       `- ${t('popup.history.exportVisibleItems')}: ${comparisonSummary.baselineOpenCount} -> ${comparisonSummary.targetOpenCount} (${comparisonSummary.openIssuesDeltaPercentage}%)`,
       `- ${t('popup.history.exportNewProblems')}: ${comparisonSummary.newViolations.length}`,
-      `- ${t('popup.history.exportResolvedProblems')}: ${comparisonSummary.resolvedViolations.length}`,
+      `- ${t('popup.history.exportResolvedProblems')}: ${comparisonSummary.noLongerDetectedViolations.length}`,
       `- ${t('popup.history.exportPersistentProblems')}: ${comparisonSummary.persistentViolations.length}`,
       `- ${t('popup.history.exportStateChangedFindings')}: ${comparisonSummary.stateChangedViolations.length}`,
       `- ${t('popup.history.exportNotes')}: ${comparisonSummary.baselineNoteCount} -> ${comparisonSummary.targetNoteCount} (${comparisonSummary.notesDeltaPercentage}%)`,
       `- ${t('popup.history.exportAlternativeTextReviews')}: ${comparisonSummary.baselineAlternativeTextReviewCount} -> ${comparisonSummary.targetAlternativeTextReviewCount} (${comparisonSummary.alternativeTextReviewsDeltaPercentage}%)`,
-      `- ${t('popup.history.exportConfirmedFindings')}: ${comparisonSummary.baselineConfirmedReviews} -> ${comparisonSummary.targetConfirmedReviews} (${comparisonSummary.confirmedReviewsDeltaPercentage}%)`,
-      `- ${t('popup.history.exportCompletedReview')}: ${comparisonSummary.baselineConfirmedReviews + comparisonSummary.baselineDismissedReviews} -> ${comparisonSummary.targetConfirmedReviews + comparisonSummary.targetDismissedReviews}`,
       `- ${t('popup.history.exportPendingReview')}: ${comparisonSummary.baselinePendingReviews} -> ${comparisonSummary.targetPendingReviews}`,
+      '',
+      `## ${t('popup.history.comparisonTechnicalChangesTitle')}`,
+      '',
+      `### ${t('popup.history.comparisonSectionNew', { count: comparisonSummary.newViolations.length })}`,
+      '',
+      ...(newViolationLines.length > 0 ? newViolationLines : [noChangesLine]),
+      '',
+      `### ${t('popup.history.comparisonSectionNotDetected', { count: comparisonSummary.noLongerDetectedViolations.length })}`,
+      '',
+      ...(noLongerDetectedLines.length > 0 ? noLongerDetectedLines : [noChangesLine]),
+      '',
+      `### ${t('popup.history.comparisonSectionPersistent', { count: comparisonSummary.persistentViolations.length })}`,
+      '',
+      ...(persistentViolationLines.length > 0 ? persistentViolationLines : [noChangesLine]),
       '',
       `## ${t('popup.history.exportHumanReviewTitle')}`,
       '',
-      `- ${t('popup.history.exportConfirmedReview')}: ${comparisonSummary.baselineConfirmedReviews} -> ${comparisonSummary.targetConfirmedReviews}`,
-      `- ${t('popup.history.exportIgnoredFindings')}: ${comparisonSummary.baselineDismissedReviews} -> ${comparisonSummary.targetDismissedReviews}`,
-      `- ${t('popup.history.exportPendingReviewItems')}: ${comparisonSummary.baselinePendingReviews} -> ${comparisonSummary.targetPendingReviews}`,
+      ...(triageLines.length > 0 ? triageLines : [noChangesLine]),
+      '',
+      `## ${t('popup.history.comparisonSectionReview', { count: comparisonSummary.reviewChangedViolations.length })}`,
+      '',
+      ...(reviewLines.length > 0 ? reviewLines : [noChangesLine]),
       '',
       `## ${t('popup.history.exportQuickReadingTitle')}`,
       '',
-      getComparisonQuickReadingLabel(comparisonTrend.label),
+      getComparisonQuickReadingLabel(comparisonSummary.technicalTrend),
     ]
 
     const blob = new Blob([lines.join('\n')], { type: 'text/markdown;charset=utf-8' })
@@ -1558,24 +1632,62 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
       return
     }
 
+    const detailRows = [
+      ...comparisonSummary.newViolations.map((violation) => [
+        t('popup.history.comparisonCsv.newProblems'),
+        '',
+        t('popup.history.comparisonStatusOpen'),
+        '',
+        violation.nbrReference,
+        violation.ruleName,
+        getComparisonElementLabel(violation),
+      ]),
+      ...comparisonSummary.noLongerDetectedViolations.map((violation) => [
+        t('popup.history.comparisonCsv.resolvedProblems'),
+        t('popup.history.comparisonStatusOpen'),
+        '',
+        '',
+        violation.nbrReference,
+        violation.ruleName,
+        getComparisonElementLabel(violation),
+      ]),
+      ...comparisonSummary.stateChangedViolations.map((change) => [
+        t('popup.history.comparisonCsv.stateChangedFindings'),
+        getComparisonStatusLabel(change.baseline.findingStatus),
+        getComparisonStatusLabel(change.target.findingStatus),
+        '',
+        change.target.nbrReference,
+        change.target.ruleName,
+        getComparisonElementLabel(change.target),
+      ]),
+      ...comparisonSummary.reviewChangedViolations.map((change) => [
+        t('popup.history.comparisonCsv.reviewChanges'),
+        change.changedFields.map(getComparisonReviewFieldLabel).join('; '),
+        '',
+        '',
+        change.target.nbrReference,
+        change.target.ruleName,
+        getComparisonElementLabel(change.target),
+      ]),
+    ]
     const rows = [
-      [t('popup.history.exportedAt'), new Date().toISOString(), '', ''],
+      [t('popup.history.exportedAt'), new Date().toISOString(), '', '', '', '', ''],
       [
         t('popup.history.comparisonCsv.indicator'),
         t('popup.history.comparisonCsv.baseline'),
         t('popup.history.comparisonCsv.target'),
         t('popup.history.comparisonCsv.deltaPercentage'),
+        t('popup.history.comparisonCsv.nbrReference'),
+        t('popup.history.comparisonCsv.rule'),
+        t('popup.history.comparisonCsv.element'),
       ],
       [
         t('popup.history.comparisonCsv.visibleItems'),
         comparisonSummary.baselineOpenCount,
         comparisonSummary.targetOpenCount,
         comparisonSummary.openIssuesDeltaPercentage,
-      ],
-      [
-        t('popup.history.comparisonCsv.completedHumanReview'),
-        comparisonSummary.baselineConfirmedReviews + comparisonSummary.baselineDismissedReviews,
-        comparisonSummary.targetConfirmedReviews + comparisonSummary.targetDismissedReviews,
+        '',
+        '',
         '',
       ],
       [
@@ -1583,23 +1695,17 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
         comparisonSummary.baselinePendingReviews,
         comparisonSummary.targetPendingReviews,
         '',
-      ],
-      [
-        t('popup.history.comparisonCsv.confirmedHumanReview'),
-        comparisonSummary.baselineConfirmedReviews,
-        comparisonSummary.targetConfirmedReviews,
-        comparisonSummary.confirmedReviewsDeltaPercentage,
+        '',
+        '',
+        '',
       ],
       [
         t('popup.history.comparisonCsv.ignoredFindings'),
         comparisonSummary.baselineDismissedReviews,
         comparisonSummary.targetDismissedReviews,
         '',
-      ],
-      [
-        t('popup.history.comparisonCsv.pendingHumanItems'),
-        comparisonSummary.baselinePendingReviews,
-        comparisonSummary.targetPendingReviews,
+        '',
+        '',
         '',
       ],
       [
@@ -1607,16 +1713,25 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
         comparisonSummary.baselineNoteCount,
         comparisonSummary.targetNoteCount,
         comparisonSummary.notesDeltaPercentage,
+        '',
+        '',
+        '',
       ],
       [
         t('popup.history.comparisonCsv.newProblems'),
         '',
         comparisonSummary.newViolations.length,
         '',
+        '',
+        '',
+        '',
       ],
       [
         t('popup.history.comparisonCsv.resolvedProblems'),
-        comparisonSummary.resolvedViolations.length,
+        comparisonSummary.noLongerDetectedViolations.length,
+        '',
+        '',
+        '',
         '',
         '',
       ],
@@ -1625,13 +1740,20 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
         '',
         comparisonSummary.persistentViolations.length,
         '',
+        '',
+        '',
+        '',
       ],
       [
         t('popup.history.comparisonCsv.stateChangedFindings'),
         '',
         comparisonSummary.stateChangedViolations.length,
         '',
+        '',
+        '',
+        '',
       ],
+      ...detailRows,
     ]
 
     const csv = rows

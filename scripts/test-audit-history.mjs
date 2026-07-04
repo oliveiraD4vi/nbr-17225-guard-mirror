@@ -105,6 +105,8 @@ function createAuditResult(overrides = {}) {
     timestamp: 0,
     url: 'https://example.com',
     pageTitle: 'Página',
+    includeRecommendations: true,
+    includeHumanReview: true,
     totalViolations: violations.length,
     errors: violations.filter((violation) => violation.normativeType === 'Requisito').length,
     warnings: violations.filter((violation) => violation.normativeType === 'Recomendação').length,
