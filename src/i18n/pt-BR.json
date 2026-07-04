@@ -560,6 +560,9 @@
     "tabRecommendations": "Recomendações ({{count}})",
     "tabReview": "Revisão contextual ({{count}})",
     "tabIgnored": "Ignorados ({{count}})",
+    "openIgnored": "Ver ignorados ({{count}})",
+    "ignoredDrawerTitle": "Achados ignorados",
+    "ignoredDrawerDescription": "Estes achados permanecem registrados para rastreabilidade, mas ficam fora da nota e dos números acionáveis.",
     "reviewSections": {
       "pending": "Abertos para revisão",
       "pendingDescription": "Itens em que uma avaliação contextual pode justificar ignorar o achado, sem exigir confirmação para que ele conte como falha.",

@@ -4,6 +4,7 @@ import {
   Card,
   Collapse,
   ColorPicker,
+  Drawer,
   Empty,
   Input,
   Modal,
@@ -21,6 +22,7 @@ import {
   CloseCircleOutlined,
   CopyOutlined,
   DownOutlined,
+  EyeInvisibleOutlined,
   FileTextOutlined,
   InfoCircleOutlined,
   ItalicOutlined,
@@ -56,7 +58,7 @@ type ContrastPreviewColors = Pick<
   'foregroundHex' | 'backgroundHex'
 >
 
-export type ViolationsListMode = 'requirements' | 'recommendations' | 'review' | 'ignored'
+export type ViolationsListMode = 'requirements' | 'recommendations' | 'review'
 
 export interface ViolationsListState {
   openGroupKey?: string
@@ -1743,6 +1745,8 @@ export const ViolationsList: React.FC<ViolationsListProps> = React.memo(
     const [selectedListMode, setSelectedListMode] = React.useState<ViolationsListMode>(
       state?.selectedListMode ?? 'requirements',
     )
+    const [isIgnoredDrawerOpen, setIsIgnoredDrawerOpen] = React.useState(false)
+    const [ignoredListState, setIgnoredListState] = React.useState<ViolationsListState>({})
     const sortedViolations = React.useMemo(() => sortViolations(violations), [violations])
     const visibleViolations = React.useMemo(
       () => sortedViolations.filter(isVisibleInMainLists),
@@ -1827,14 +1831,8 @@ export const ViolationsList: React.FC<ViolationsListProps> = React.memo(
         })
       }
 
-      options.push({
-        label: t('violations.tabIgnored', { count: filteredIgnoredViolations.length }),
-        value: 'ignored',
-      })
-
       return options
     }, [
-      filteredIgnoredViolations.length,
       filteredRecommendationViolations.length,
       filteredRequirementViolations.length,
       filteredReviewViolations.length,
@@ -1867,6 +1865,20 @@ export const ViolationsList: React.FC<ViolationsListProps> = React.memo(
       },
       [listState, onStateChange],
     )
+    const updateIgnoredListState = React.useCallback((patch: Partial<ViolationsListState>) => {
+      setIgnoredListState((currentState) => ({
+        ...currentState,
+        ...patch,
+        openOccurrenceByGroup: {
+          ...(currentState.openOccurrenceByGroup ?? {}),
+          ...(patch.openOccurrenceByGroup ?? {}),
+        },
+        visibleCountByGroup: {
+          ...(currentState.visibleCountByGroup ?? {}),
+          ...(patch.visibleCountByGroup ?? {}),
+        },
+      }))
+    }, [])
 
     React.useEffect(() => {
       setSelectedCategory(state?.selectedCategory ?? 'all')
@@ -1884,24 +1896,6 @@ export const ViolationsList: React.FC<ViolationsListProps> = React.memo(
           listState,
           updateListState,
           'recommendations',
-          onSelectViolation,
-          onFindingStatusChange,
-          onBulkFindingStatusChange,
-          onViolationNoteChange,
-          onViolationAlternativeTextReviewChange,
-          onViolationContrastOverrideChange,
-          onBulkViolationContrastOverrideChange,
-          onViolationContrastPreviewChange,
-          onContrastPreviewEnd,
-        )
-      }
-
-      if (effectiveSelectedListMode === 'ignored') {
-        return renderViolationGroups(
-          filteredIgnoredViolations,
-          listState,
-          updateListState,
-          'ignored',
           onSelectViolation,
           onFindingStatusChange,
           onBulkFindingStatusChange,
@@ -1947,7 +1941,6 @@ export const ViolationsList: React.FC<ViolationsListProps> = React.memo(
         onContrastPreviewEnd,
       )
     }, [
-      filteredIgnoredViolations,
       filteredRecommendationViolations,
       filteredRequirementViolations,
       filteredReviewViolations,
@@ -1965,6 +1958,38 @@ export const ViolationsList: React.FC<ViolationsListProps> = React.memo(
       effectiveSelectedListMode,
       showHumanReview,
     ])
+    const ignoredListContent = React.useMemo(
+      () =>
+        renderViolationGroups(
+          filteredIgnoredViolations,
+          ignoredListState,
+          updateIgnoredListState,
+          'ignored',
+          onSelectViolation,
+          onFindingStatusChange,
+          onBulkFindingStatusChange,
+          onViolationNoteChange,
+          onViolationAlternativeTextReviewChange,
+          onViolationContrastOverrideChange,
+          onBulkViolationContrastOverrideChange,
+          onViolationContrastPreviewChange,
+          onContrastPreviewEnd,
+        ),
+      [
+        filteredIgnoredViolations,
+        ignoredListState,
+        onBulkFindingStatusChange,
+        onBulkViolationContrastOverrideChange,
+        onContrastPreviewEnd,
+        onFindingStatusChange,
+        onSelectViolation,
+        onViolationAlternativeTextReviewChange,
+        onViolationContrastOverrideChange,
+        onViolationContrastPreviewChange,
+        onViolationNoteChange,
+        updateIgnoredListState,
+      ],
+    )
 
     if (!violations || violations.length === 0) {
       return <Empty description={t('violations.emptyAll')} />
@@ -1977,21 +2002,30 @@ export const ViolationsList: React.FC<ViolationsListProps> = React.memo(
             <strong>{t('violations.categoryFilterLabel')}</strong>
             <span>{t('violations.categoryFilterDescription')}</span>
           </div>
-          <Select
-            className="violations-category-select"
-            value={selectedCategory}
-            onChange={(value) => {
-              setSelectedCategory(value)
-              updateListState({ openGroupKey: undefined, selectedCategory: value })
-            }}
-            options={[
-              { value: 'all', label: t('violations.categoryAll') },
-              ...availableCategories.map((category) => ({
-                value: category,
-                label: getRuleTopicLabel(category),
-              })),
-            ]}
-          />
+          <div className="violations-toolbar-actions">
+            <Select
+              className="violations-category-select"
+              value={selectedCategory}
+              onChange={(value) => {
+                setSelectedCategory(value)
+                updateListState({ openGroupKey: undefined, selectedCategory: value })
+              }}
+              options={[
+                { value: 'all', label: t('violations.categoryAll') },
+                ...availableCategories.map((category) => ({
+                  value: category,
+                  label: getRuleTopicLabel(category),
+                })),
+              ]}
+            />
+            <Button
+              icon={<EyeInvisibleOutlined />}
+              disabled={filteredIgnoredViolations.length === 0}
+              onClick={() => setIsIgnoredDrawerOpen(true)}
+            >
+              {t('violations.openIgnored', { count: filteredIgnoredViolations.length })}
+            </Button>
+          </div>
         </div>
         <Segmented
           className="violations-mode-segmented"
@@ -2005,6 +2039,19 @@ export const ViolationsList: React.FC<ViolationsListProps> = React.memo(
           }}
         />
         <div className="violations-mode-content">{listContent}</div>
+        <Drawer
+          className="ignored-findings-drawer"
+          title={t('violations.ignoredDrawerTitle')}
+          width="min(520px, 100vw)"
+          open={isIgnoredDrawerOpen}
+          onClose={() => setIsIgnoredDrawerOpen(false)}
+          destroyOnHidden
+        >
+          <p className="ignored-findings-description">
+            {t('violations.ignoredDrawerDescription')}
+          </p>
+          {ignoredListContent}
+        </Drawer>
       </div>
     )
   },

@@ -31,6 +31,32 @@
   width: 100%;
 }
 
+.violations-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.violations-toolbar-actions .violations-category-select {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.violations-toolbar-actions .ant-btn {
+  flex: 0 0 auto;
+}
+
+.ignored-findings-description {
+  margin: 0 0 16px;
+  color: var(--guard-color-text-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.ignored-findings-drawer .ant-drawer-body {
+  padding: 16px;
+}
+
 .review-sections {
   display: flex;
   flex-direction: column;
@@ -963,6 +989,14 @@
 @media (max-width: 640px) {
   .violations-toolbar {
     grid-template-columns: 1fr;
+  }
+
+  .violations-toolbar-actions {
+    flex-wrap: wrap;
+  }
+
+  .violations-toolbar-actions .ant-btn {
+    width: 100%;
   }
 
   .contrast-board-grid {

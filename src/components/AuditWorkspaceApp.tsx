@@ -171,6 +171,17 @@ function isPopupTabKey(value: unknown): value is PopupTabKey {
   return value === 'summary' || value === 'violations' || value === 'history'
 }
 
+function normalizeStoredViolationsListState(value: unknown): ViolationsListState | undefined {
+  if (!value || typeof value !== 'object') return undefined
+  const storedState = value as ViolationsListState & { selectedListMode?: string }
+  const selectedListMode =
+    storedState.selectedListMode === 'recommendations' || storedState.selectedListMode === 'review'
+      ? storedState.selectedListMode
+      : 'requirements'
+
+  return { ...storedState, selectedListMode }
+}
+
 function getStoredPopupState(rawStateByUrl: unknown, url?: string): PopupStoredState | null {
   if (!url || !rawStateByUrl || typeof rawStateByUrl !== 'object') return null
   const stateByUrl = rawStateByUrl as PopupStateByUrl
@@ -184,6 +195,7 @@ function getStoredPopupState(rawStateByUrl: unknown, url?: string): PopupStoredS
       typeof storedState.selectedHistoryId === 'string' || storedState.selectedHistoryId === null
         ? storedState.selectedHistoryId
         : undefined,
+    violationsListState: normalizeStoredViolationsListState(storedState.violationsListState),
   }
 }
 
