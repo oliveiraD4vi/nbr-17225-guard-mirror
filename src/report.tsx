@@ -12,33 +12,12 @@ import { getAuditScoreData } from './utils/audit-score'
 import { isIgnoredFinding, normalizeViolationFindingState } from './utils/audit-triage'
 import { getReportSnapshot } from './utils/report-snapshots'
 import { APP_VERSION_LABEL } from './version'
+import { createGuardAntTheme } from './theme/antd'
 import './styles/theme.css'
 import './styles/report.css'
 
 const { Header, Content } = Layout
-const cssRoot = document.documentElement
-
-function resolveGuardToken(variableName: string, fallback: string) {
-  const resolved = getComputedStyle(cssRoot).getPropertyValue(variableName).trim()
-  return resolved || fallback
-}
-
-const antThemeTokens = {
-  colorPrimary: resolveGuardToken('--guard-color-primary', '#0f766e'),
-  colorBgBase: resolveGuardToken('--guard-color-page-bg', '#f3f6fb'),
-  colorBgLayout: resolveGuardToken('--guard-color-page-bg', '#f3f6fb'),
-  colorBgContainer: resolveGuardToken('--guard-color-surface', '#ffffff'),
-  colorBgElevated: resolveGuardToken('--guard-color-surface', '#ffffff'),
-  colorBgSpotlight: resolveGuardToken('--guard-color-tooltip-bg', '#0f172a'),
-  colorFillAlter: resolveGuardToken('--guard-color-surface-muted', '#f8fafc'),
-  colorBorder: resolveGuardToken('--guard-color-border', '#e2e8f0'),
-  colorBorderSecondary: resolveGuardToken('--guard-color-border', '#e2e8f0'),
-  colorTextBase: resolveGuardToken('--guard-color-text-primary', '#0f172a'),
-  colorText: resolveGuardToken('--guard-color-text-primary', '#0f172a'),
-  colorTextSecondary: resolveGuardToken('--guard-color-text-secondary', '#475569'),
-  borderRadius: 8,
-  fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
-}
+const antTheme = createGuardAntTheme()
 
 interface ReportSection {
   key: string
@@ -363,9 +342,7 @@ root.render(
   <React.StrictMode>
     <ConfigProvider
       locale={ptBR}
-      theme={{
-        token: antThemeTokens,
-      }}
+      theme={antTheme}
     >
       <ReportApp />
     </ConfigProvider>
