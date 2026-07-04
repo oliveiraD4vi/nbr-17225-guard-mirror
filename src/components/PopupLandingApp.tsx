@@ -96,9 +96,7 @@ export const PopupLandingApp: React.FC = () => {
           ) : auditResult ? (
             <>
               <strong title={pageTitle}>{pageTitle}</strong>
-              <small>
-                {new Date(auditResult.timestamp).toLocaleString('pt-BR')}
-              </small>
+              <small>{new Date(auditResult.timestamp).toLocaleString('pt-BR')}</small>
             </>
           ) : (
             <p>{t('popup.guide.noCurrentAudit')}</p>
