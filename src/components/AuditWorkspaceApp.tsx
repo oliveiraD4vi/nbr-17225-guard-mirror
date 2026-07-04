@@ -76,6 +76,7 @@ import { createManualViolation } from '@/utils'
 import { areSimilarViolations } from '@/utils/audit-bulk-actions'
 import { getAuditUrlStorageKey, hydrateAuditResult } from '@/utils/audit-history'
 import { applyFindingStatusUpdate, type FindingStatusUpdate } from '@/utils/audit-triage'
+import { extensionStorageGet, extensionStorageSet } from '@/utils/extension-storage'
 import {
   getManualFindingDraftTabKey,
   MANUAL_FINDING_DRAFTS_STORAGE_KEY,
@@ -429,7 +430,7 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
       setActiveTab(tab)
       const [result, preferences, history, siteHistory, diagnostics] = await Promise.all([
         getAuditResult(tab.id, tab.url),
-        chrome.storage.local.get([
+        extensionStorageGet([
           'includeRecommendationsPreference',
           'includeHumanReviewPreference',
           popupStateStorageKey,
@@ -557,7 +558,7 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
     async (tabId = activeTab?.id) => {
       if (!tabId) return
 
-      const data = await chrome.storage.local.get(MANUAL_FINDING_DRAFTS_STORAGE_KEY)
+      const data = await extensionStorageGet(MANUAL_FINDING_DRAFTS_STORAGE_KEY)
       const draftsByTab = {
         ...((data[MANUAL_FINDING_DRAFTS_STORAGE_KEY] as
           | Record<string, ManualFindingDraft>
@@ -565,7 +566,7 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
       }
       delete draftsByTab[getManualFindingDraftTabKey(tabId)]
 
-      await chrome.storage.local.set({
+      await extensionStorageSet({
         [MANUAL_FINDING_DRAFTS_STORAGE_KEY]: draftsByTab,
       })
     },
@@ -583,7 +584,7 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
 
   const loadManualFindingDraftForTab = useCallback(
     async (tab: AuditTargetTab) => {
-      const data = await chrome.storage.local.get(MANUAL_FINDING_DRAFTS_STORAGE_KEY)
+      const data = await extensionStorageGet(MANUAL_FINDING_DRAFTS_STORAGE_KEY)
       const rawDraft = (
         data[MANUAL_FINDING_DRAFTS_STORAGE_KEY] as Record<string, ManualFindingDraft> | undefined
       )?.[getManualFindingDraftTabKey(tab.id)]
@@ -613,42 +614,18 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
   }, [activeTab, loadManualFindingDraftForTab])
 
   useEffect(() => {
-    const handleManualFindingDraftChange = (
-      changes: Record<string, chrome.storage.StorageChange>,
-      areaName: string,
-    ) => {
-      if (areaName !== 'local' || !activeTab?.id) return
+    if (!activeTab?.id) return undefined
 
-      const change = changes[MANUAL_FINDING_DRAFTS_STORAGE_KEY]
-      if (!change) return
-
-      const rawDraft = (change.newValue as Record<string, ManualFindingDraft> | undefined)?.[
-        getManualFindingDraftTabKey(activeTab.id)
-      ]
-      const draft = sanitizeManualFindingDraft(rawDraft, activeTab.id)
-
-      if (!draft) {
-        setManualFindingDraft(null)
-        setIsManualFindingModalOpen(false)
+    const handleManualFindingDraftChange = (request: { action?: string; tabId?: number }) => {
+      if (request.action !== 'MANUAL_FINDING_DRAFT_CHANGED' || request.tabId !== activeTab.id) {
         return
       }
-
-      if (
-        activeTab.url &&
-        getAuditUrlStorageKey(draft.url) !== getAuditUrlStorageKey(activeTab.url)
-      ) {
-        void clearManualFindingDraftForTab(activeTab.id)
-        setManualFindingDraft(null)
-        setIsManualFindingModalOpen(false)
-        return
-      }
-
-      openManualFindingDraft(draft)
+      void loadManualFindingDraftForTab(activeTab)
     }
 
-    chrome.storage.onChanged.addListener(handleManualFindingDraftChange)
-    return () => chrome.storage.onChanged.removeListener(handleManualFindingDraftChange)
-  }, [activeTab?.id, activeTab?.url, clearManualFindingDraftForTab, openManualFindingDraft])
+    chrome.runtime.onMessage.addListener(handleManualFindingDraftChange)
+    return () => chrome.runtime.onMessage.removeListener(handleManualFindingDraftChange)
+  }, [activeTab, loadManualFindingDraftForTab])
 
   const viewedAuditResult = useMemo(() => {
     if (!selectedHistoryId) return auditResult
@@ -782,7 +759,7 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
       setPopupStoredState((currentState) => mergePopupStoredState(currentState, patch))
 
       try {
-        const stored = await chrome.storage.local.get(popupStateStorageKey)
+        const stored = await extensionStorageGet(popupStateStorageKey)
         const currentStateByUrl =
           stored[popupStateStorageKey] && typeof stored[popupStateStorageKey] === 'object'
             ? ({ ...(stored[popupStateStorageKey] as PopupStateByUrl) } as PopupStateByUrl)
@@ -793,7 +770,7 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
           patch,
         )
 
-        await chrome.storage.local.set({
+        await extensionStorageSet({
           [popupStateStorageKey]: limitPopupStateByUrl(currentStateByUrl),
         })
       } catch (error) {
@@ -987,7 +964,7 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
   const handleRecommendationsToggle = useCallback(
     async (checked: boolean) => {
       setIncludeRecommendations(checked)
-      await chrome.storage.local.set({ includeRecommendationsPreference: checked })
+      await extensionStorageSet({ includeRecommendationsPreference: checked })
 
       if (!checked || isHistoricalView || !auditResult || auditResult.includeRecommendations) {
         return
@@ -1030,7 +1007,7 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
       } catch (error) {
         console.error('Erro ao incluir recomendações:', error)
         setIncludeRecommendations(false)
-        await chrome.storage.local.set({ includeRecommendationsPreference: false })
+        await extensionStorageSet({ includeRecommendationsPreference: false })
         message.error(t('popup.messages.recommendationsLoadError'))
       } finally {
         setLoading(false)
@@ -1051,7 +1028,7 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
   const handleHumanReviewToggle = useCallback(
     async (checked: boolean) => {
       setIncludeHumanReview(checked)
-      await chrome.storage.local.set({ includeHumanReviewPreference: checked })
+      await extensionStorageSet({ includeHumanReviewPreference: checked })
 
       if (
         !checked ||
@@ -1094,7 +1071,7 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
       } catch (error) {
         console.error('Erro ao incluir itens não automatizáveis:', error)
         setIncludeHumanReview(false)
-        await chrome.storage.local.set({ includeHumanReviewPreference: false })
+        await extensionStorageSet({ includeHumanReviewPreference: false })
         message.error(t('popup.messages.humanReviewLoadError'))
       } finally {
         setLoading(false)
@@ -1268,7 +1245,7 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
 
   const handleFilterChange = useCallback(
     async (filter: VisionSimulationFilter) => {
-      await chrome.storage.local.set({ visionFilter: filter })
+      await extensionStorageSet({ visionFilter: filter })
       if (!activeTab?.id) return
       try {
         await ensureContentScriptReady(activeTab.id)

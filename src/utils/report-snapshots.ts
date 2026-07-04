@@ -1,5 +1,6 @@
 import type { AuditReportSnapshot, AuditResult } from '@/types'
 import { compactAuditResultForStorage, hydrateAuditResult } from '@/utils/audit-history'
+import { extensionStorageGet, extensionStorageSet } from '@/utils/extension-storage'
 
 export const REPORT_SNAPSHOTS_STORAGE_KEY = 'reportSnapshotsById'
 const REPORT_SNAPSHOT_TTL_MS = 6 * 60 * 60 * 1000
@@ -27,7 +28,7 @@ function cleanupSnapshots(
 
 export async function saveReportSnapshot(result: AuditResult): Promise<AuditReportSnapshot> {
   const now = Date.now()
-  const data = await chrome.storage.local.get(REPORT_SNAPSHOTS_STORAGE_KEY)
+  const data = await extensionStorageGet(REPORT_SNAPSHOTS_STORAGE_KEY)
   const snapshotsById = cleanupSnapshots(
     (data[REPORT_SNAPSHOTS_STORAGE_KEY] as Record<string, AuditReportSnapshot> | undefined) ?? {},
     now,
@@ -38,7 +39,7 @@ export async function saveReportSnapshot(result: AuditResult): Promise<AuditRepo
     auditResult: compactAuditResultForStorage(hydrateAuditResult(result)),
   }
 
-  await chrome.storage.local.set({
+  await extensionStorageSet({
     [REPORT_SNAPSHOTS_STORAGE_KEY]: cleanupSnapshots(
       {
         ...snapshotsById,
@@ -52,14 +53,14 @@ export async function saveReportSnapshot(result: AuditResult): Promise<AuditRepo
 }
 
 export async function getReportSnapshot(snapshotId: string): Promise<AuditResult | null> {
-  const data = await chrome.storage.local.get(REPORT_SNAPSHOTS_STORAGE_KEY)
+  const data = await extensionStorageGet(REPORT_SNAPSHOTS_STORAGE_KEY)
   const snapshotsById =
     (data[REPORT_SNAPSHOTS_STORAGE_KEY] as Record<string, AuditReportSnapshot> | undefined) ?? {}
   const cleanedSnapshotsById = cleanupSnapshots(snapshotsById)
   const snapshot = cleanedSnapshotsById[snapshotId]
 
   if (Object.keys(cleanedSnapshotsById).length !== Object.keys(snapshotsById).length) {
-    await chrome.storage.local.set({ [REPORT_SNAPSHOTS_STORAGE_KEY]: cleanedSnapshotsById })
+    await extensionStorageSet({ [REPORT_SNAPSHOTS_STORAGE_KEY]: cleanedSnapshotsById })
   }
 
   return snapshot ? hydrateAuditResult(snapshot.auditResult) : null

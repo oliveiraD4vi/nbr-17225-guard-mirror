@@ -11,17 +11,20 @@ async function loadAuditEngineModule() {
   const historySourcePath = path.resolve('src/utils/audit-history.ts')
   const triageSourcePath = path.resolve('src/utils/audit-triage.ts')
   const normativeSourcePath = path.resolve('src/normative.ts')
+  const extensionStorageSourcePath = path.resolve('src/utils/extension-storage.ts')
 
   const engineSource = (await fs.readFile(engineSourcePath, 'utf8'))
     .replace("from '@/i18n'", "from './i18n.mjs'")
     .replace("from '@/normative'", "from './normative.mjs'")
     .replace("from '@/utils/audit-history'", "from './audit-history.mjs'")
     .replace("from '@/utils/audit-triage'", "from './audit-triage.mjs'")
+    .replace("from '@/utils/extension-storage'", "from './extension-storage.mjs'")
   const historySource = (await fs.readFile(historySourcePath, 'utf8'))
     .replace("from '@/normative'", "from './normative.mjs'")
     .replace("from '@/utils/audit-triage'", "from './audit-triage.mjs'")
   const triageSource = await fs.readFile(triageSourcePath, 'utf8')
   const normativeSource = await fs.readFile(normativeSourcePath, 'utf8')
+  const extensionStorageSource = await fs.readFile(extensionStorageSourcePath, 'utf8')
   const i18nSource = `
 export function t(key) {
   const messages = {
@@ -56,18 +59,24 @@ export function t(key) {
     ...transpileOptions,
     fileName: normativeSourcePath,
   }).outputText
+  const transpiledExtensionStorage = ts.transpileModule(extensionStorageSource, {
+    ...transpileOptions,
+    fileName: extensionStorageSourcePath,
+  }).outputText
 
   const engineFile = path.join(tempDir, 'audit-engine.mjs')
   const historyFile = path.join(tempDir, 'audit-history.mjs')
   const triageFile = path.join(tempDir, 'audit-triage.mjs')
   const normativeFile = path.join(tempDir, 'normative.mjs')
   const i18nFile = path.join(tempDir, 'i18n.mjs')
+  const extensionStorageFile = path.join(tempDir, 'extension-storage.mjs')
 
   await fs.writeFile(engineFile, transpiledEngine, 'utf8')
   await fs.writeFile(historyFile, transpiledHistory, 'utf8')
   await fs.writeFile(triageFile, transpiledTriage, 'utf8')
   await fs.writeFile(normativeFile, transpiledNormative, 'utf8')
   await fs.writeFile(i18nFile, i18nSource, 'utf8')
+  await fs.writeFile(extensionStorageFile, transpiledExtensionStorage, 'utf8')
 
   try {
     return await import(pathToFileURL(engineFile).href)

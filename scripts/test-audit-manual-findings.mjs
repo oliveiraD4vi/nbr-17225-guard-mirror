@@ -14,6 +14,7 @@ async function loadManualFindingModules() {
     auditHistory: path.resolve('src/utils/audit-history.ts'),
     auditScore: path.resolve('src/utils/audit-score.ts'),
     auditTriage: path.resolve('src/utils/audit-triage.ts'),
+    extensionStorage: path.resolve('src/utils/extension-storage.ts'),
     manualFindings: path.resolve('src/utils/manual-findings.ts'),
     normative: path.resolve('src/normative.ts'),
     types: path.resolve('src/types/index.ts'),
@@ -27,7 +28,8 @@ async function loadManualFindingModules() {
       .replaceAll("from '@/i18n'", "from './i18n.mjs'")
       .replaceAll("from '@/normative'", "from './normative.mjs'")
       .replaceAll("from '@/utils/audit-history'", "from './audit-history.mjs'")
-      .replaceAll("from '@/utils/audit-triage'", "from './audit-triage.mjs'"),
+      .replaceAll("from '@/utils/audit-triage'", "from './audit-triage.mjs'")
+      .replaceAll("from '@/utils/extension-storage'", "from './extension-storage.mjs'"),
     auditExport: (await fs.readFile(sourcePaths.auditExport, 'utf8'))
       .replaceAll("from '@/i18n'", "from './i18n.mjs'")
       .replaceAll("from '@/utils/audit-comparison'", "from './audit-comparison.mjs'")
@@ -41,6 +43,7 @@ async function loadManualFindingModules() {
       .replaceAll("from '@/rules'", "from './rules.mjs'")
       .replaceAll("from '@/utils/audit-triage'", "from './audit-triage.mjs'"),
     auditTriage: await fs.readFile(sourcePaths.auditTriage, 'utf8'),
+    extensionStorage: await fs.readFile(sourcePaths.extensionStorage, 'utf8'),
     manualFindings: (await fs.readFile(sourcePaths.manualFindings, 'utf8')).replaceAll(
       "from '@/types'",
       "from './types.mjs'",
@@ -118,6 +121,7 @@ export function getRunnableRules(includeRecommendations, includeHumanReview) {
     ['audit-history.mjs', sources.auditHistory, sourcePaths.auditHistory],
     ['audit-score.mjs', sources.auditScore, sourcePaths.auditScore],
     ['audit-triage.mjs', sources.auditTriage, sourcePaths.auditTriage],
+    ['extension-storage.mjs', sources.extensionStorage, sourcePaths.extensionStorage],
     ['manual-findings.mjs', sources.manualFindings, sourcePaths.manualFindings],
     ['normative.mjs', sources.normative, sourcePaths.normative],
     ['types.mjs', sources.types, sourcePaths.types],
@@ -329,10 +333,7 @@ const duplicateAudit = mergeResolvedManualFindings(
 
 assert.equal(duplicateAudit.violations.length, 1)
 
-const popupSource = await fs.readFile(
-  path.resolve('src/components/AuditWorkspaceApp.tsx'),
-  'utf8',
-)
+const popupSource = await fs.readFile(path.resolve('src/components/AuditWorkspaceApp.tsx'), 'utf8')
 const contentSource = await fs.readFile(path.resolve('src/content.ts'), 'utf8')
 
 assert.match(popupSource, /popup\.manualFinding\.validation\.rule/)

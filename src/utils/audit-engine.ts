@@ -15,6 +15,12 @@ import {
   inheritViolationStateFromHistory,
 } from '@/utils/audit-history'
 import { normalizeViolationFindingState } from '@/utils/audit-triage'
+import {
+  extensionStorageGet,
+  extensionStorageGetBytesInUse,
+  extensionStorageGetQuotaBytes,
+  extensionStorageSet,
+} from '@/utils/extension-storage'
 
 export class AuditStorageQuotaError extends Error {
   readonly code = 'quota_exceeded'
@@ -199,8 +205,8 @@ function throwIfQuotaExceeded(error: unknown): never {
   throw error
 }
 
-function getStorageQuotaBytes(): number {
-  const configuredQuota = chrome.storage.local.QUOTA_BYTES
+async function getStorageQuotaBytes(): Promise<number> {
+  const configuredQuota = await extensionStorageGetQuotaBytes()
   return typeof configuredQuota === 'number' && configuredQuota > 0
     ? configuredQuota
     : FALLBACK_STORAGE_QUOTA_BYTES
@@ -352,14 +358,14 @@ export function parseImportedAuditReport(payload: unknown): AuditHistoryEntry {
 export async function resetAuditCache(): Promise<void> {
   try {
     const activeTab = await getActiveTab()
-    const data = await chrome.storage.local.get('auditResultsByTab')
+    const data = await extensionStorageGet('auditResultsByTab')
     const auditResultsByTab = {
       ...(data.auditResultsByTab as Record<string, AuditResult> | undefined),
     }
 
     delete auditResultsByTab[getTabStorageKey(activeTab.id)]
 
-    await chrome.storage.local.set({
+    await extensionStorageSet({
       auditResultsByTab,
     })
 
@@ -375,7 +381,7 @@ export async function resetAuditCache(): Promise<void> {
 export async function saveAuditResult(result: AuditResult, tabId?: number): Promise<AuditResult> {
   try {
     const resolvedTabId = tabId ?? (await getActiveTab()).id
-    const data = await chrome.storage.local.get(['auditResultsByTab', 'auditHistoryByUrl'])
+    const data = await extensionStorageGet(['auditResultsByTab', 'auditHistoryByUrl'])
     const urlKey = getAuditUrlStorageKey(result.url)
     const history =
       (data.auditHistoryByUrl as Record<string, AuditHistoryEntry[]> | undefined) ?? {}
@@ -403,7 +409,7 @@ export async function saveAuditResult(result: AuditResult, tabId?: number): Prom
       ),
     }
 
-    await chrome.storage.local.set({
+    await extensionStorageSet({
       auditResultsByTab,
       auditHistoryByUrl,
     })
@@ -426,7 +432,7 @@ export async function getAuditResult(
 ): Promise<AuditResult | null> {
   try {
     const resolvedTabId = tabId ?? (await getActiveTab()).id
-    const data = await chrome.storage.local.get('auditResultsByTab')
+    const data = await extensionStorageGet('auditResultsByTab')
     const auditResultsByTab = data.auditResultsByTab as Record<string, AuditResult> | undefined
     const result = normalizeAuditResult(
       auditResultsByTab?.[getTabStorageKey(resolvedTabId)] || null,
@@ -450,7 +456,7 @@ export async function deleteAuditHistoryEntry(
   historyId: string,
 ): Promise<AuditHistoryEntry[]> {
   try {
-    const data = await chrome.storage.local.get('auditHistoryByUrl')
+    const data = await extensionStorageGet('auditHistoryByUrl')
     const auditHistoryByUrl = {
       ...((data.auditHistoryByUrl as Record<string, AuditHistoryEntry[]> | undefined) ?? {}),
     }
@@ -462,7 +468,7 @@ export async function deleteAuditHistoryEntry(
       compactAuditResultForStorage(normalizeAuditResult(entry) as AuditHistoryEntry),
     )
 
-    await chrome.storage.local.set({ auditHistoryByUrl })
+    await extensionStorageSet({ auditHistoryByUrl })
     return dedupeAndSortAuditHistory(
       auditHistoryByUrl[urlKey].map((entry) => normalizeAuditResult(entry) as AuditHistoryEntry),
     )
@@ -485,7 +491,7 @@ export async function getAuditHistoryForUrl(url?: string): Promise<AuditHistoryE
     const resolvedUrl = url ?? (await getActiveTab()).url
     if (!resolvedUrl) return []
 
-    const data = await chrome.storage.local.get('auditHistoryByUrl')
+    const data = await extensionStorageGet('auditHistoryByUrl')
     const auditHistoryByUrl = data.auditHistoryByUrl as
       | Record<string, AuditHistoryEntry[]>
       | undefined
@@ -507,7 +513,7 @@ export async function getAuditHistoryForSite(url?: string): Promise<AuditHistory
 
     const currentUrlKey = getAuditUrlStorageKey(resolvedUrl)
     const siteKey = getAuditSiteStorageKey(resolvedUrl)
-    const data = await chrome.storage.local.get('auditHistoryByUrl')
+    const data = await extensionStorageGet('auditHistoryByUrl')
     const auditHistoryByUrl =
       (data.auditHistoryByUrl as Record<string, AuditHistoryEntry[]> | undefined) ?? {}
 
@@ -535,7 +541,7 @@ export async function importAuditReportToHistory(
   importedResult: AuditResult,
 ): Promise<{ entry: AuditHistoryEntry; history: AuditHistoryEntry[]; urlKey: string }> {
   try {
-    const data = await chrome.storage.local.get('auditHistoryByUrl')
+    const data = await extensionStorageGet('auditHistoryByUrl')
     const auditHistoryByUrl = {
       ...((data.auditHistoryByUrl as Record<string, AuditHistoryEntry[]> | undefined) ?? {}),
     }
@@ -551,7 +557,7 @@ export async function importAuditReportToHistory(
 
     auditHistoryByUrl[urlKey] = history.map((entry) => compactAuditResultForStorage(entry))
 
-    await chrome.storage.local.set({ auditHistoryByUrl })
+    await extensionStorageSet({ auditHistoryByUrl })
 
     return { entry: normalizedEntry, history, urlKey }
   } catch (error) {
@@ -570,7 +576,7 @@ export async function updateStoredAuditResult(
     if (!normalizedResult) return
 
     const resolvedTabId = tabId ?? (await getActiveTab()).id
-    const data = await chrome.storage.local.get(['auditResultsByTab', 'auditHistoryByUrl'])
+    const data = await extensionStorageGet(['auditResultsByTab', 'auditHistoryByUrl'])
     const auditResultsByTab = {
       ...(data.auditResultsByTab as Record<string, AuditResult> | undefined),
     }
@@ -596,7 +602,7 @@ export async function updateStoredAuditResult(
       ),
     )
 
-    await chrome.storage.local.set({
+    await extensionStorageSet({
       auditResultsByTab,
       auditHistoryByUrl,
     })
@@ -611,19 +617,19 @@ export function isAuditStorageQuotaError(error: unknown): error is AuditStorageQ
 }
 
 export async function clearAuditHistoryForUrl(url: string): Promise<AuditHistoryEntry[]> {
-  const data = await chrome.storage.local.get('auditHistoryByUrl')
+  const data = await extensionStorageGet('auditHistoryByUrl')
   const auditHistoryByUrl = {
     ...((data.auditHistoryByUrl as Record<string, AuditHistoryEntry[]> | undefined) ?? {}),
   }
   const urlKey = getAuditUrlStorageKey(url)
   delete auditHistoryByUrl[urlKey]
 
-  await chrome.storage.local.set({ auditHistoryByUrl })
+  await extensionStorageSet({ auditHistoryByUrl })
   return []
 }
 
 export async function compactAuditStorage(preserveTabId?: number): Promise<void> {
-  const data = await chrome.storage.local.get(['auditResultsByTab', 'auditHistoryByUrl'])
+  const data = await extensionStorageGet(['auditResultsByTab', 'auditHistoryByUrl'])
   const currentTabKey = preserveTabId ? getTabStorageKey(preserveTabId) : null
   const auditResultsByTab = {
     ...(data.auditResultsByTab as Record<string, AuditResult> | undefined),
@@ -650,14 +656,14 @@ export async function compactAuditStorage(preserveTabId?: number): Promise<void>
       .filter(([, entries]) => entries.length > 0),
   )
 
-  await chrome.storage.local.set({
+  await extensionStorageSet({
     auditResultsByTab: compactedResultsByTab,
     auditHistoryByUrl: compactedHistory,
   })
 }
 
 export async function deleteOldestAuditHistoryEntry(): Promise<boolean> {
-  const data = await chrome.storage.local.get('auditHistoryByUrl')
+  const data = await extensionStorageGet('auditHistoryByUrl')
   const auditHistoryByUrl = {
     ...((data.auditHistoryByUrl as Record<string, AuditHistoryEntry[]> | undefined) ?? {}),
   }
@@ -688,16 +694,17 @@ export async function deleteOldestAuditHistoryEntry(): Promise<boolean> {
     delete auditHistoryByUrl[oldestUrlKey]
   }
 
-  await chrome.storage.local.set({ auditHistoryByUrl })
+  await extensionStorageSet({ auditHistoryByUrl })
   return true
 }
 
 export async function getAuditStorageDiagnostics(
   currentUrl?: string,
 ): Promise<AuditStorageDiagnostics> {
-  const [data, usedBytes] = await Promise.all([
-    chrome.storage.local.get(['auditResultsByTab', 'auditHistoryByUrl']),
-    chrome.storage.local.getBytesInUse(null),
+  const [data, usedBytes, quotaBytes] = await Promise.all([
+    extensionStorageGet(['auditResultsByTab', 'auditHistoryByUrl']),
+    extensionStorageGetBytesInUse(null),
+    getStorageQuotaBytes(),
   ])
 
   const auditResultsByTab =
@@ -712,7 +719,6 @@ export async function getAuditStorageDiagnostics(
   const currentUrlEntryCount = currentUrl
     ? (auditHistoryByUrl[getAuditUrlStorageKey(currentUrl)] ?? []).length
     : 0
-  const quotaBytes = getStorageQuotaBytes()
   const usageRatio = quotaBytes > 0 ? usedBytes / quotaBytes : 0
   const level =
     usageRatio >= STORAGE_CRITICAL_RATIO

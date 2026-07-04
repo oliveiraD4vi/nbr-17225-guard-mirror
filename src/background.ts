@@ -22,6 +22,27 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   console.log(`[${t('shared.brand.name')}] ${t('background.message')}`, request.action)
 
   switch (request.action) {
+    case 'STORAGE_LOCAL_GET':
+      chrome.storage.local
+        .get(request.keys ?? null)
+        .then((data) => sendResponse({ data }))
+        .catch((error: unknown) => sendResponse({ error: getErrorMessage(error) }))
+      return true
+    case 'STORAGE_LOCAL_SET':
+      chrome.storage.local
+        .set(request.items ?? {})
+        .then(() => sendResponse({ data: true }))
+        .catch((error: unknown) => sendResponse({ error: getErrorMessage(error) }))
+      return true
+    case 'STORAGE_LOCAL_GET_BYTES_IN_USE':
+      chrome.storage.local
+        .getBytesInUse(request.keys ?? null)
+        .then((data) => sendResponse({ data }))
+        .catch((error: unknown) => sendResponse({ error: getErrorMessage(error) }))
+      return true
+    case 'STORAGE_LOCAL_GET_QUOTA_BYTES':
+      sendResponse({ data: chrome.storage.local.QUOTA_BYTES })
+      return true
     case 'OPEN_REPORT':
       openDetailedReport(request.auditResult)
         .then((snapshotId) => sendResponse({ status: 'OK', snapshotId }))
@@ -67,6 +88,16 @@ async function openDetailedReport(rawAuditResult: AuditResult | undefined): Prom
   return snapshot.id
 }
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Falha ao acessar o armazenamento local.'
+}
+
+function notifyManualFindingDraftChanged(tabId: number): void {
+  void chrome.runtime
+    .sendMessage({ action: 'MANUAL_FINDING_DRAFT_CHANGED', tabId })
+    .catch(() => undefined)
+}
+
 async function storeManualFindingDraft(
   rawDraft: Partial<ManualFindingDraft> | undefined,
   tabId?: number,
@@ -91,6 +122,7 @@ async function storeManualFindingDraft(
   await chrome.storage.local.set({
     [MANUAL_FINDING_DRAFTS_STORAGE_KEY]: draftsByTab,
   })
+  notifyManualFindingDraftChanged(tabId)
 }
 
 async function clearManualFindingDraft(tabId?: number): Promise<void> {
@@ -107,6 +139,7 @@ async function clearManualFindingDraft(tabId?: number): Promise<void> {
   await chrome.storage.local.set({
     [MANUAL_FINDING_DRAFTS_STORAGE_KEY]: draftsByTab,
   })
+  notifyManualFindingDraftChanged(tabId)
 }
 
 console.log(`[${t('shared.brand.name')}] ${t('background.loaded')}`)
