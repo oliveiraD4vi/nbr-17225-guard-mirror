@@ -265,6 +265,11 @@ const workspaceSource = await fs.readFile(
   'utf8',
 )
 const popupSource = await fs.readFile(path.resolve('src/components/PopupLandingApp.tsx'), 'utf8')
+const violationsListSource = await fs.readFile(
+  path.resolve('src/components/ViolationsList.tsx'),
+  'utf8',
+)
+const themeSource = await fs.readFile(path.resolve('src/theme/antd.ts'), 'utf8')
 
 assert.equal(manifest.devtools_page, 'src/devtools.html')
 assert.match(viteConfig, /devtoolsPanel/)
@@ -275,6 +280,12 @@ assert.match(devtoolsPanelAppSource, /AuditWorkspaceApp/)
 assert.match(devtoolsPanelAppSource, /targetTab=\{targetTab\}/)
 assert.doesNotMatch(popupSource, /AuditWorkspaceApp/)
 assert.match(popupSource, /getAuditResult\(tab\.id, tab\.url\)/)
+assert.match(popupSource, /action: 'OPEN_REPORT'/)
 assert.doesNotMatch(workspaceSource, /surface\?: 'popup' \| 'devtools'/)
+assert.match(workspaceSource, /normalizeStoredViolationsListState/)
+assert.match(violationsListSource, /<Drawer/)
+assert.match(violationsListSource, /violations\.openIgnored/)
+assert.doesNotMatch(violationsListSource, /value: 'ignored'/)
+assert.match(themeSource, /primaryColor: '#ffffff'/)
 
 console.log('Alternative text, report snapshot and DevTools checks passed.')
