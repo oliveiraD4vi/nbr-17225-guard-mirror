@@ -2008,16 +2008,16 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
         onClick: handleExportCSV,
       },
       {
-        key: 'report',
-        label: t('shared.actions.openReport'),
-        icon: <FileTextOutlined />,
-        onClick: handleOpenReport,
-      },
-      {
         key: 'json',
         label: t('shared.actions.exportJson'),
         icon: <DownloadOutlined />,
         onClick: handleExportJSON,
+      },
+      {
+        key: 'report',
+        label: t('shared.actions.openReport'),
+        icon: <FileTextOutlined />,
+        onClick: handleOpenReport,
         type: 'primary' as const,
       },
     ]
@@ -2695,23 +2695,31 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
       {!showAboutView && (
         <Footer className="popup-footer">
           {footerActions.length > 0 && (
-            <div className="footer-actions-grid">
-              {footerActions.map((action, index) => {
-                const lastIndex = footerActions.length - 1
-                const remainder = footerActions.length % 3
-                const shouldSpanTwo = remainder === 2 && index === lastIndex
-                const shouldSpanThree = remainder === 1 && index === lastIndex
-
-                return (
+            <div className="footer-actions-toolbar">
+              <div className="footer-icon-actions">
+                {footerActions
+                  .filter((action) => action.key !== 'report')
+                  .map((action) => (
+                    <Tooltip key={action.key} title={action.label}>
+                      <Button
+                        className="footer-icon-action"
+                        type="text"
+                        shape="circle"
+                        icon={action.icon}
+                        aria-label={action.label}
+                        onClick={action.onClick}
+                        loading={action.loading}
+                        disabled={action.disabled}
+                      />
+                    </Tooltip>
+                  ))}
+              </div>
+              {footerActions
+                .filter((action) => action.key === 'report')
+                .map((action) => (
                   <Button
                     key={action.key}
-                    className={[
-                      'footer-action',
-                      shouldSpanTwo ? 'footer-action-span-2' : '',
-                      shouldSpanThree ? 'footer-action-span-3' : '',
-                    ]
-                      .filter(Boolean)
-                      .join(' ')}
+                    className="footer-report-action"
                     type={action.type}
                     icon={action.icon}
                     onClick={action.onClick}
@@ -2720,8 +2728,7 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
                   >
                     {action.label}
                   </Button>
-                )
-              })}
+                ))}
             </div>
           )}
         </Footer>
