@@ -9,6 +9,7 @@ import {
   createViolation,
   getAccessibleName,
   getAssociatedDescriptionText,
+  getElementIdAttribute,
   getFocusableElements,
   getVisibleText,
   isElementFullyInViewport,
@@ -260,7 +261,7 @@ export const additionalContentPersistentRule: Rule = {
     document
       .querySelectorAll<HTMLElement>('[role="tooltip"], [aria-describedby]')
       .forEach((element) => {
-        if (element.getAttribute('role') === 'tooltip' && !element.id) {
+        if (element.getAttribute('role') === 'tooltip' && !getElementIdAttribute(element)) {
           violations.push(
             createViolation(additionalContentPersistentRule, {
               element,

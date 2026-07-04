@@ -7,6 +7,7 @@ import {
   getAssociatedLabelText,
   getContrastRatio,
   getEffectiveBackgroundColor,
+  getElementIdAttribute,
   getElementLanguage,
   getFocusableElements,
   getVisibleText,
@@ -133,7 +134,11 @@ export const predictableFieldLabelRule: Rule = {
         HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
       >(formFieldsSelector)
       .forEach((field) => {
-        const key = (field.getAttribute('autocomplete') || field.name || field.id || '')
+        const key = (
+          field.getAttribute('autocomplete') ||
+          field.name ||
+          getElementIdAttribute(field)
+        )
           .trim()
           .toLowerCase()
         const label = getAssociatedLabelText(field).trim().toLowerCase()
@@ -219,7 +224,7 @@ export const predictableHelpTextRule: Rule = {
         })
         .map((field) => field as unknown as HTMLElement),
       (field) =>
-        `Campo "${getAssociatedLabelText(field as HTMLInputElement) || field.getAttribute('name') || field.id}" sem texto de ajuda associado.`,
+        `Campo "${getAssociatedLabelText(field as HTMLInputElement) || field.getAttribute('name') || getElementIdAttribute(field)}" sem texto de ajuda associado.`,
       t('rules.contentFormsMedia.predictableHelpText.suggestion'),
       t('rules.contentFormsMedia.predictableHelpText.remediation'),
       'predictable-help',

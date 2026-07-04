@@ -70,15 +70,25 @@ export function escapeHtml(str: string): string {
 }
 
 /**
+ * Lê o atributo id sem depender de propriedades nomeadas do DOM.
+ * Campos com name="id" podem sobrescrever element.id em formulários.
+ */
+export function getElementIdAttribute(element: Element): string {
+  return element.getAttribute('id')?.trim() ?? ''
+}
+
+/**
  * Obtém o seletor CSS de um elemento
  */
 export function getElementSelector(element: HTMLElement): string {
-  if (element.id) return `#${CSS.escape(element.id)}`
+  const ownId = getElementIdAttribute(element)
+  if (ownId) return `#${CSS.escape(ownId)}`
 
   const names: string[] = []
   while (element.parentElement) {
-    if (element.id) {
-      names.unshift(`#${CSS.escape(element.id)}`)
+    const currentId = getElementIdAttribute(element)
+    if (currentId) {
+      names.unshift(`#${CSS.escape(currentId)}`)
       break
     } else {
       if (element === element.ownerDocument.documentElement) {
@@ -106,7 +116,7 @@ export function isGuardInjectedElement(element: Element | null): boolean {
   if (!element) return false
   if (!(element instanceof HTMLElement || element instanceof SVGElement)) return false
 
-  const ownId = element.id || ''
+  const ownId = getElementIdAttribute(element)
   if (
     ownId === VISION_FILTER_HOST_ID ||
     ownId === MANUAL_FINDING_SELECTION_HOST_ID ||

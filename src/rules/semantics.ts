@@ -4,6 +4,7 @@ import {
   createViolation,
   getAccessibleName,
   getAssociatedLabelText,
+  getElementIdAttribute,
   isElementVisible,
 } from '@/utils'
 
@@ -201,7 +202,7 @@ export const identifiablePurposeRule: Rule = {
       if (field.getAttribute('autocomplete')?.trim()) return
 
       const context =
-        `${getAssociatedLabelText(field)} ${field.name} ${field.id} ${field.placeholder}`.trim()
+        `${getAssociatedLabelText(field)} ${field.name} ${getElementIdAttribute(field)} ${field.placeholder}`.trim()
       const expectedPurpose = autocompletePurposeByPattern.find(([pattern]) =>
         pattern.test(context),
       )?.[1]

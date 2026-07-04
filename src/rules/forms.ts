@@ -4,6 +4,7 @@ import {
   createViolation,
   getAssociatedDescriptionText,
   getAssociatedLabelText,
+  getElementIdAttribute,
   getVisibleText,
   isElementVisible,
 } from '@/utils'
@@ -21,8 +22,11 @@ function getVisibleFieldLabelText(
       .trim()
   }
 
-  if (field.id) {
-    const explicitLabel = document.querySelector<HTMLElement>(`label[for="${CSS.escape(field.id)}"]`)
+  const fieldId = getElementIdAttribute(field)
+  if (fieldId) {
+    const explicitLabel = document.querySelector<HTMLElement>(
+      `label[for="${CSS.escape(fieldId)}"]`,
+    )
     const explicitLabelText = explicitLabel ? getVisibleText(explicitLabel).trim() : ''
     if (explicitLabelText) return explicitLabelText
   }
@@ -224,7 +228,7 @@ export const dataTypeRule: Rule = {
         return
 
       const label =
-        `${getAssociatedLabelText(field)} ${field.name} ${field.id} ${field.placeholder}`.toLowerCase()
+        `${getAssociatedLabelText(field)} ${field.name} ${getElementIdAttribute(field)} ${field.placeholder}`.toLowerCase()
       const autocomplete = field.getAttribute('autocomplete')?.toLowerCase() || ''
       const inputMode = field.getAttribute('inputmode')?.toLowerCase() || ''
       const expectedType =
