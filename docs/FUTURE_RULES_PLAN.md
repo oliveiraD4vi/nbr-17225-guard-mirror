@@ -182,7 +182,7 @@ Direção técnica:
 ## Critérios para aceitar novas regras
 
 - cada regra deve ter entrada no catálogo i18n;
-- a implementação deve declarar claramente se o achado é automático ou exige confirmação humana;
-- regras com heurística frágil devem preferir poucos achados de alta confiança;
+- a implementação deve declarar claramente se a violação é automática ou exige revisão contextual;
+- regras com heurística frágil devem preferir poucas violações de alta confiança;
 - a matriz normativa e a página pública de rastreabilidade devem ser atualizadas no mesmo lote;
 - `pnpm verify:rules`, `pnpm type-check`, `pnpm test` e `pnpm build` devem passar.

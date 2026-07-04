@@ -6,12 +6,24 @@ O formato segue, de forma simples, a ideia de "Keep a Changelog" e versionamento
 
 ## [Unreleased]
 
+### Added
+
+- comparação detalhada por violação, elemento, decisão de triagem e registro de revisão alterado.
+
+### Changed
+
+- revisão contextual passa a listar somente itens abertos;
+- comparação usa o escopo comum entre auditorias e separa mudança técnica de triagem;
+- interface e documentação adotam “violação” e “item encontrado” conforme o contexto;
+- cabeçalho e barra de ações do DevTools ficam mais compactos;
+- página Sobre passa a apresentar recursos, privacidade local e links em layout responsivo.
+
 ## [1.1.3-beta.7] - 2026-07-04
 
 ### Fixed
 
 - painel DevTools passa a acessar o armazenamento local pelo service worker quando `chrome.storage` não está disponível em seu contexto;
-- atualização de rascunhos de achados manuais deixa de depender de `chrome.storage.onChanged` no painel DevTools.
+- atualização de rascunhos de violações manuais deixa de depender de `chrome.storage.onChanged` no painel DevTools.
 
 ## [1.1.2-beta.6] - 2026-07-04
 
@@ -19,7 +31,7 @@ O formato segue, de forma simples, a ideia de "Keep a Changelog" e versionamento
 
 - o painel DevTools passa a ser a superfície principal de auditoria e revisão;
 - o popup passa a orientar a abertura do DevTools e a oferecer somente o relatório da auditoria atual;
-- achados ignorados saem das abas principais e ficam em um drawer filtrável;
+- violações ignoradas saem das abas principais e ficam em um drawer filtrável;
 - a barra de ações do DevTools usa botões compactos e destaca a abertura do relatório;
 - popup, DevTools e relatório passam a compartilhar a mesma configuração visual do Ant Design.
 
@@ -32,7 +44,7 @@ O formato segue, de forma simples, a ideia de "Keep a Changelog" e versionamento
 
 ### Added
 
-- propostas editáveis de texto alternativo em achados de imagem e mapa de imagem;
+- propostas editáveis de texto alternativo em violações de imagem e mapa de imagem;
 - relatório em nova aba com snapshot temporário, layout de impressão e exportação JSON;
 - painel do Chrome DevTools para auditar a página inspecionada sem trocar o fluxo do popup.
 
@@ -45,9 +57,9 @@ O formato segue, de forma simples, a ideia de "Keep a Changelog" e versionamento
 
 ### Added
 
-- modelo persistente de achados com origem automática ou manual e estados aberto, confirmado e ignorado;
-- possibilidade de ignorar qualquer achado com motivo obrigatório e reabri-lo posteriormente;
-- seleção de elementos na página para criação manual de achados vinculados à NBR;
+- modelo persistente de violações com origem automática ou manual e estados aberto, confirmado e ignorado;
+- possibilidade de ignorar qualquer violação com motivo obrigatório e reabri-la posteriormente;
+- seleção de elementos na página para criação manual de violações vinculadas à NBR;
 - ações em massa para ocorrências semelhantes, incluindo propostas de contraste compatíveis;
 - pré-visualização temporária das cores propostas diretamente na página auditada;
 - validação local e contínua do padrão Conventional Commits.
@@ -56,7 +68,7 @@ O formato segue, de forma simples, a ideia de "Keep a Changelog" e versionamento
 
 - nota geral passa a penalizar cada regra uma única vez, com pesos 2 para erros e 1 para avisos;
 - painel da nota passa a mostrar números absolutos e fica recolhido por padrão;
-- achados abertos contam como falha, enquanto ignorados ficam fora dos números acionáveis;
+- violações abertas contam como falha, enquanto ignoradas ficam fora dos números acionáveis;
 - resumo deixa de repetir título, URL e data e concentra as ações no cabeçalho do card;
 - confirmação deixa de ser uma etapa obrigatória da triagem;
 - simulador passa a usar linguagem orientada à percepção visual e explicita seus limites.
@@ -124,7 +136,7 @@ O formato segue, de forma simples, a ideia de "Keep a Changelog" e versionamento
 - classificação normativa canônica em `src/normative.ts`, baseada na própria ABNT NBR 17225;
 - importação de relatórios JSON exportados pela própria extensão para retomar contexto e comparação em outro navegador ou computador;
 - classificação documental da força heurística em `docs/RULES_HEURISTIC_CLASSIFICATION.md`, com priorização explícita das heurísticas mais fracas;
-- links de regra por achado, abrindo a explicação completa e a rastreabilidade na Página do Projeto.
+- links de regra por violação, abrindo a explicação completa e a rastreabilidade na Página do Projeto.
 - alerta preventivo de pressão no armazenamento local, com leitura de uso e ação de compactação no próprio popup.
 - restauração do ponto de revisão do popup por URL, incluindo aba ativa, histórico selecionado, lista aberta, ocorrência aberta e rolagem.
 

@@ -57,7 +57,7 @@ Para a lista completa dos itens fora do escopo v1 e a estratégia de implementa�
 
 As regras totalmente automatizáveis no catálogo v1 possuem verificação automática no motor. As implementações mais frágeis foram tornadas mais conservadoras para reduzir falso positivo e instabilidade entre execuções, especialmente em regras dependentes de foco, orientação, contraste, idioma e animação.
 
-Quando uma regra catalogada como automatizável só consegue observar indícios, o achado específico pode ser enviado para confirmação humana. Isso preserva o catálogo v1 sem apresentar heurísticas frágeis como conclusões definitivas.
+Quando uma regra catalogada como automatizável só consegue observar indícios, o item específico pode ser enviado para revisão contextual. Isso preserva o catálogo v1 sem apresentar heurísticas frágeis como conclusões definitivas.
 
 5.1.13, 5.2.1, 5.2.2, 5.2.6, 5.3.1, 5.3.5, 5.4.1, 5.4.5, 5.5.1, 5.6.1, 5.6.3, 5.6.5, 5.7.1, 5.7.12, 5.8.1, 5.8.6, 5.8.7, 5.9.1, 5.9.3, 5.9.6, 5.9.7, 5.9.8, 5.10.3, 5.10.4, 5.11.2, 5.11.3, 5.11.4, 5.11.5, 5.11.6, 5.12.1, 5.12.2, 5.12.3, 5.12.4, 5.12.5, 5.12.6, 5.12.8, 5.13.1, 5.13.2, 5.13.3, 5.13.4, 5.13.5, 5.13.8, 5.13.10, 5.13.13, 5.14.7, 5.15.4.
 

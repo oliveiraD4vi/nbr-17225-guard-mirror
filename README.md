@@ -4,7 +4,7 @@ Verificador de acessibilidade para navegadores Chromium, alinhado à V1 Farol Be
 
 ## Visão geral
 
-O Guardião NBR 17225 executa auditorias diretamente na página inspecionada e organiza os achados com referência normativa, severidade, contexto do elemento afetado, triagem opcional e histórico local por URL.
+O Guardião NBR 17225 executa auditorias diretamente na página inspecionada e organiza as violações com referência normativa, severidade, contexto do elemento afetado, triagem opcional e histórico local por URL.
 
 ## Principais capacidades
 
@@ -19,20 +19,20 @@ O Guardião NBR 17225 executa auditorias diretamente na página inspecionada e o
 - grupos de violações por regra, severidade e categoria natural do motor, como `cores`, `formulários`, `cabeçalhos` e `teclado`;
 - filtro por categoria na listagem de violações;
 - leitura curta mais clara nos cards de violação, com resumo orientado por família de regra antes do detalhe técnico;
-- link de regra por achado, abrindo a explicação completa e a rastreabilidade na Página do Projeto;
+- link de regra por violação, abrindo a explicação completa e a rastreabilidade na Página do Projeto;
 - explicação pública por regra, ajudando a entender expectativa normativa, sinal verificado, limite residual e foco de revisão;
 - board auxiliar para regras de contraste, com ajuste em tempo real, pré-visualização temporária na página auditada e restauração exata dos estilos originais;
-- criação de achados manuais a partir da seleção de um elemento na página, vinculados a uma regra da NBR;
+- criação de violações manuais a partir da seleção de um elemento na página, vinculadas a uma regra da NBR;
 - ações em massa para ignorar ocorrências semelhantes e reaplicar propostas de contraste compatíveis.
 
-### Triagem de achados
+### Triagem de violações
 
-- origem explícita para achados automáticos e manuais;
+- origem explícita para violações automáticas e manuais;
 - estados persistidos por item: aberto, confirmado ou ignorado;
-- possibilidade de ignorar qualquer achado, sem transformar confirmação manual em etapa obrigatória;
+- possibilidade de ignorar qualquer violação, sem transformar confirmação manual em etapa obrigatória;
 - motivo obrigatório ao ignorar, com nota complementar opcional;
-- achados ignorados permanecem no histórico, nas comparações e nas exportações, mas ficam fora da nota e dos números acionáveis;
-- drawer de itens ignorados, acessível pelo filtro de achados e com ação para reabrir;
+- violações ignoradas permanecem no histórico, nas comparações e nas exportações, mas ficam fora da nota e dos números acionáveis;
+- drawer de itens ignorados, acessível pelo filtro de violações e com ação para reabrir;
 - anotações por item e decisões de triagem reaproveitadas entre auditorias equivalentes.
 
 ### Histórico e comparação
@@ -41,13 +41,15 @@ O Guardião NBR 17225 executa auditorias diretamente na página inspecionada e o
 - herança de decisões de triagem, anotações, correções de contraste e propostas de texto alternativo entre auditorias equivalentes;
 - exclusão de entradas do histórico com confirmação explícita no painel DevTools;
 - comparação entre auditorias salvas, com indicadores de evolução, regressão e estabilidade;
+- comparação detalhada por escopo comum, separando novas violações, itens não detectados novamente, persistências e decisões de triagem;
+- ignorar ou reabrir uma violação não é tratado como melhoria ou regressão técnica;
 - importação de relatórios JSON exportados pela própria extensão para retomar a análise em outro navegador ou computador;
 - exportação da auditoria em JSON e CSV;
 - exportação de comparações em Markdown, JSON e CSV.
 
 ### Textos alternativos
 
-- leitura comparativa do texto alternativo atual em achados de imagem e mapa de imagem;
+- leitura comparativa do texto alternativo atual em violações de imagem e mapa de imagem;
 - identificação da origem do texto atual, como `alt`, `aria-label`, `aria-labelledby`, `title`, nome acessível ou ausência de texto;
 - proposta editável de texto alternativo, preservada no histórico, na comparação, no relatório e na exportação JSON;
 - a proposta é registro de auditoria e não altera o DOM nem o código-fonte da página.
@@ -57,10 +59,10 @@ O Guardião NBR 17225 executa auditorias diretamente na página inspecionada e o
 - nota geral baseada em regras com falha, com peso 2 para erros e peso 1 para avisos;
 - cada regra penaliza a nota no máximo uma vez, independentemente do número de ocorrências semelhantes;
 - requisitos representam 100% da nota no escopo padrão e 90% quando recomendações são incluídas;
-- painel objetivo com achados acionáveis, tipos de problema, regras obrigatórias com falha, ignorados e volume total de ocorrências;
+- painel objetivo com violações acionáveis, tipos de problema, regras obrigatórias com falha, ignorados e volume total de ocorrências;
 - controles de escopo com linguagem orientada à ação, deixando explícito o que será incluído ou removido da leitura atual;
 - feedback visual para a nota, com leitura rápida de risco;
-- contadores acionáveis que excluem achados ignorados sem apagar seu registro;
+- contadores acionáveis que excluem violações ignoradas sem apagar seu registro;
 - relatório detalhado em página dedicada, com snapshot imprimível da auditoria visualizada;
 - painel do Chrome DevTools como superfície principal para auditar e revisar a página inspecionada;
 - popup enxuto com orientação de acesso ao DevTools e atalho para o relatório da auditoria atual;
@@ -135,7 +137,7 @@ Importante:
 
 - `pnpm verify:rules` valida o motor contra o catálogo implementado atual;
 - regras fora da execução da Beta continuam documentadas, mas não entram na execução nem na nota;
-- a classificação `Requisito` ou `Recomendação` segue a própria ABNT NBR 17225, não o nível WCAG nem a severidade técnica do achado;
+- a classificação `Requisito` ou `Recomendação` segue a própria ABNT NBR 17225, não o nível WCAG nem a severidade técnica da violação;
 - recomendações fora do catálogo implementado seguem registradas como backlog público, sem aumentar o ruído da auditoria padrão.
 
 Consulte também:
@@ -178,14 +180,14 @@ Use:
 - os grupos por regra;
 - o filtro por categoria;
 - a navegação por itens prioritários;
-- os resumos curtos dos cards para leitura rápida do achado;
+- os resumos curtos dos cards para leitura rápida da violação;
 - o link da regra para abrir a explicação completa, os limites e a rastreabilidade em `https://guardiaonbr.com.br/rules.html`;
 - a board de contraste, quando aplicável;
-- a seção de texto alternativo nos achados de imagem, quando aplicável.
+- a seção de texto alternativo nas violações de imagem, quando aplicável.
 
 ### 3. Registrar decisões de triagem
 
-Quando um achado não se aplicar ao contexto, use `Ignorar achado`, informe o motivo e acrescente uma observação quando necessário. Não é preciso confirmar cada item para que ele conte como falha: achados abertos já entram nos números acionáveis, enquanto os ignorados permanecem documentados e podem ser reabertos.
+Quando uma violação não se aplicar ao contexto, use `Ignorar violação`, informe o motivo e acrescente uma observação quando necessário. Não é preciso confirmar cada item para que ele conte como falha: violações abertas já entram nos números acionáveis, enquanto as ignoradas permanecem documentadas e podem ser reabertas.
 
 ### 4. Incluir recomendações
 
@@ -202,7 +204,7 @@ Se o painel DevTools avisar que o armazenamento local está em atenção, compac
 O simulador de percepção visual deve entrar como validação complementar, não como substituto da auditoria automática nem como reprodução completa da experiência de pessoas com deficiência. Um fluxo profissional de uso é:
 
 1. rodar a auditoria de requisitos;
-2. revisar achados de contraste, foco, componentes e leitura;
+2. revisar violações de contraste, foco, componentes e leitura;
 3. ativar o simulador de percepção visual;
 4. inspecionar visualmente:
    - contraste textual;

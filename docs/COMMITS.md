@@ -33,7 +33,7 @@ Regras:
 ## Exemplos
 
 ```text
-feat(auditoria): permite ignorar qualquer achado
+feat(auditoria): permite ignorar qualquer violação
 fix(contraste): preserva cor original ao redefinir proposta
 docs(commits): documenta padrão de mensagens
 ci(commitlint): valida commits em merge requests
@@ -46,7 +46,7 @@ test(historico): cobre comparação com mudança de escopo
 Quando uma alteração exigir migração manual ou quebrar compatibilidade, marque no cabeçalho e detalhe no rodapé:
 
 ```text
-feat(schema)!: versiona modelo de achados
+feat(schema)!: versiona modelo de violações
 
 BREAKING CHANGE: relatórios antigos precisam passar pela rotina de migração ao serem importados.
 ```
