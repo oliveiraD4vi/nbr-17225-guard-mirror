@@ -2676,20 +2676,29 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
               <div className="footer-icon-actions">
                 {footerActions
                   .filter((action) => action.key !== 'report')
-                  .map((action) => (
-                    <Tooltip key={action.key} title={action.label}>
-                      <Button
-                        className="footer-icon-action"
-                        type="text"
-                        shape="circle"
-                        icon={action.icon}
-                        aria-label={action.label}
-                        onClick={action.onClick}
-                        loading={action.loading}
-                        disabled={action.disabled}
-                      />
-                    </Tooltip>
-                  ))}
+                  .map((action) => {
+                    const downloadLabel =
+                      action.key === 'csv' ? 'CSV' : action.key === 'json' ? 'JSON' : null
+
+                    return (
+                      <Tooltip key={action.key} title={action.label}>
+                        <Button
+                          className={
+                            downloadLabel ? 'footer-download-action' : 'footer-icon-action'
+                          }
+                          type="text"
+                          shape={downloadLabel ? undefined : 'circle'}
+                          icon={action.icon}
+                          aria-label={action.label}
+                          onClick={action.onClick}
+                          loading={action.loading}
+                          disabled={action.disabled}
+                        >
+                          {downloadLabel}
+                        </Button>
+                      </Tooltip>
+                    )
+                  })}
               </div>
               {footerActions
                 .filter((action) => action.key === 'report')

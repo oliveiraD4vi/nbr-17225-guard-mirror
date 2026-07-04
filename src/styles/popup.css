@@ -44,7 +44,7 @@
 
 .popup-header .header-content h1 {
   margin: 0;
-  font-size: 24px;
+  font-size: 20px;
   line-height: 1.1;
   font-weight: 700;
 }
@@ -54,7 +54,7 @@
   align-items: center;
   flex-direction: row;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
   justify-content: flex-start;
 }
 
@@ -64,13 +64,13 @@
 
 .header-version-tag {
   color: var(--guard-color-text-muted);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
 }
 
 .header-title-icon {
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   flex: 0 0 auto;
   object-fit: contain;
   border-radius: 4px;
@@ -446,12 +446,14 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 12px;
 }
 
 .footer-icon-actions {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 4px;
   min-width: 0;
 }
@@ -460,7 +462,18 @@
   flex: 0 0 auto;
   width: 36px;
   min-width: 36px;
+  max-width: 36px;
   height: 36px;
+  padding: 0 !important;
+  border-radius: 50% !important;
+}
+
+.footer-download-action {
+  flex: 0 0 auto;
+  min-width: 66px;
+  height: 36px;
+  padding-inline: 10px !important;
+  border-radius: 999px !important;
 }
 
 .footer-report-action {
@@ -708,7 +721,7 @@
 .vision-floating-shell {
   position: fixed;
   right: 1.5rem;
-  bottom: 1.5rem;
+  bottom: 4.5rem;
   z-index: 40;
   display: flex;
   flex-direction: column;
@@ -809,12 +822,17 @@
   }
 
   .footer-icon-actions {
-    justify-content: space-between;
+    justify-content: flex-start;
     width: 100%;
   }
 
   .footer-report-action {
-    width: 100%;
+    width: auto;
+    margin-inline-start: auto;
+  }
+
+  .vision-floating-shell {
+    bottom: 7.25rem;
   }
 }
 
