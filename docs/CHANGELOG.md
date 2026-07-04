@@ -6,6 +6,8 @@ O formato segue, de forma simples, a ideia de "Keep a Changelog" e versionamento
 
 ## [Unreleased]
 
+## [1.1.3-beta.7] - 2026-07-04
+
 ### Fixed
 
 - painel DevTools passa a acessar o armazenamento local pelo service worker quando `chrome.storage` não está disponível em seu contexto;
