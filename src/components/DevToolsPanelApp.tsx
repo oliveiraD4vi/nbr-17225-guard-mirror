@@ -1,6 +1,6 @@
 import React from 'react'
 import { Empty } from 'antd'
-import { PopupApp } from './PopupApp'
+import { AuditWorkspaceApp } from './AuditWorkspaceApp'
 import { t } from '@/i18n'
 import type { AuditTargetTab } from '@/utils/audit-engine'
 
@@ -66,5 +66,5 @@ export const DevToolsPanelApp: React.FC = () => {
     return <Empty className="devtools-empty" description={t('devtools.unavailable')} />
   }
 
-  return <PopupApp surface="devtools" targetTab={targetTab} />
+  return <AuditWorkspaceApp targetTab={targetTab} />
 }

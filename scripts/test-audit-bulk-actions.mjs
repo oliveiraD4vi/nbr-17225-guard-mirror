@@ -154,7 +154,10 @@ assert.equal(
   2,
 )
 
-const popupSource = await fs.readFile(path.resolve('src/components/PopupApp.tsx'), 'utf8')
+const popupSource = await fs.readFile(
+  path.resolve('src/components/AuditWorkspaceApp.tsx'),
+  'utf8',
+)
 const violationsListSource = await fs.readFile(
   path.resolve('src/components/ViolationsList.tsx'),
   'utf8',

@@ -260,15 +260,21 @@ const devtoolsPanelAppSource = await fs.readFile(
   path.resolve('src/components/DevToolsPanelApp.tsx'),
   'utf8',
 )
-const popupSource = await fs.readFile(path.resolve('src/components/PopupApp.tsx'), 'utf8')
+const workspaceSource = await fs.readFile(
+  path.resolve('src/components/AuditWorkspaceApp.tsx'),
+  'utf8',
+)
+const popupSource = await fs.readFile(path.resolve('src/components/PopupLandingApp.tsx'), 'utf8')
 
 assert.equal(manifest.devtools_page, 'src/devtools.html')
 assert.match(viteConfig, /devtoolsPanel/)
 assert.match(devtoolsSource, /chrome\.devtools\.panels\.create/)
 assert.match(devtoolsPanelSource, /DevToolsPanelApp/)
 assert.match(devtoolsPanelAppSource, /chrome\.devtools\?\.inspectedWindow\?\.tabId/)
-assert.match(devtoolsPanelAppSource, /surface="devtools"/)
+assert.match(devtoolsPanelAppSource, /AuditWorkspaceApp/)
 assert.match(devtoolsPanelAppSource, /targetTab=\{targetTab\}/)
-assert.match(popupSource, /surface\?: 'popup' \| 'devtools'/)
+assert.doesNotMatch(popupSource, /AuditWorkspaceApp/)
+assert.match(popupSource, /getAuditResult\(tab\.id, tab\.url\)/)
+assert.doesNotMatch(workspaceSource, /surface\?: 'popup' \| 'devtools'/)
 
 console.log('Alternative text, report snapshot and DevTools checks passed.')

@@ -1,0 +1,152 @@
+.popup-guide-app {
+  width: 420px;
+  min-height: 480px;
+  padding: 20px;
+  background: var(--guard-color-surface);
+  color: var(--guard-color-text-primary);
+}
+
+.popup-guide-header,
+.popup-guide-brand,
+.popup-guide-report > div,
+.popup-guide-footer {
+  display: flex;
+}
+
+.popup-guide-header {
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.popup-guide-brand {
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.popup-guide-brand img {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+}
+
+.popup-guide-brand div,
+.popup-guide-report > div {
+  flex-direction: column;
+  min-width: 0;
+}
+
+.popup-guide-brand strong {
+  font-size: 15px;
+}
+
+.popup-guide-brand span,
+.popup-guide-report span,
+.popup-guide-report small {
+  color: var(--guard-color-text-muted);
+  font-size: 11px;
+}
+
+.popup-guide-intro {
+  padding: 36px 10px 28px;
+  text-align: center;
+}
+
+.popup-guide-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  margin-bottom: 14px;
+  border-radius: 18px;
+  background: var(--guard-color-info-soft);
+  color: var(--guard-color-primary);
+  font-size: 30px;
+}
+
+.popup-guide-eyebrow {
+  margin: 0 0 6px;
+  color: var(--guard-color-primary);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.popup-guide-intro h1 {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.2;
+}
+
+.popup-guide-intro > p:not(.popup-guide-eyebrow, .popup-guide-shortcut) {
+  margin: 10px auto 18px;
+  color: var(--guard-color-text-secondary);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.popup-guide-intro ol {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding-left: 22px;
+  color: var(--guard-color-text-primary);
+  text-align: left;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.popup-guide-shortcut {
+  margin: 16px 0 0;
+  color: var(--guard-color-text-muted);
+  font-size: 11px;
+}
+
+.popup-guide-report {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--guard-color-border);
+  border-radius: 12px;
+  background: var(--guard-color-surface-muted);
+}
+
+.popup-guide-report > div {
+  gap: 4px;
+}
+
+.popup-guide-report strong,
+.popup-guide-report p {
+  margin: 0;
+  overflow: hidden;
+  color: var(--guard-color-text-primary);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.popup-guide-report p {
+  color: var(--guard-color-text-secondary);
+  white-space: normal;
+}
+
+.popup-guide-footer {
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 24px;
+  padding-top: 14px;
+  font-size: 11px;
+}
+
+.popup-guide-footer a {
+  color: var(--guard-color-primary);
+}
+
+.popup-guide-footer span {
+  color: var(--guard-color-danger-text);
+  text-align: right;
+}

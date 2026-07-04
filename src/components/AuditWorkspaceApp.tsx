@@ -144,9 +144,8 @@ interface ManualFindingFormValues {
   userNote?: string
 }
 
-interface PopupAppProps {
-  surface?: 'popup' | 'devtools'
-  targetTab?: AuditTargetTab
+interface AuditWorkspaceAppProps {
+  targetTab: AuditTargetTab
 }
 
 function truncateHeaderTabTitle(value: string): string {
@@ -341,7 +340,7 @@ function formatStorageSize(bytes: number): string {
   })} MB`
 }
 
-export const PopupApp: React.FC<PopupAppProps> = ({ surface = 'popup', targetTab }) => {
+export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab }) => {
   const quotaRetryRef = useRef<(() => Promise<unknown>) | null>(null)
   const importInputRef = useRef<HTMLInputElement | null>(null)
   const popupContentRef = useRef<HTMLDivElement | null>(null)
@@ -509,28 +508,7 @@ export const PopupApp: React.FC<PopupAppProps> = ({ surface = 'popup', targetTab
 
   useEffect(() => {
     void loadAuditForCurrentTab()
-
-    if (surface === 'devtools') return undefined
-
-    const handleTabActivated = () => {
-      void loadAuditForCurrentTab()
-    }
-
-    const handleTabUpdated = (tabId: number, changeInfo: { status?: string; url?: string }) => {
-      if (!activeTab?.id || tabId !== activeTab.id) return
-      if (changeInfo.status === 'complete' || 'url' in changeInfo) {
-        void loadAuditForCurrentTab()
-      }
-    }
-
-    chrome.tabs.onActivated.addListener(handleTabActivated)
-    chrome.tabs.onUpdated.addListener(handleTabUpdated)
-
-    return () => {
-      chrome.tabs.onActivated.removeListener(handleTabActivated)
-      chrome.tabs.onUpdated.removeListener(handleTabUpdated)
-    }
-  }, [activeTab?.id, loadAuditForCurrentTab, surface])
+  }, [loadAuditForCurrentTab])
 
   const sendMessageToActiveTab = useCallback(
     async (payload: Record<string, unknown>) => {
@@ -2165,7 +2143,7 @@ export const PopupApp: React.FC<PopupAppProps> = ({ surface = 'popup', targetTab
     displayedAuditResult?.pageTitle || activeTab?.title || activeTab?.url || ''
 
   return (
-    <Layout className={`popup-app popup-app-${surface}`}>
+    <Layout className="popup-app popup-app-devtools">
       <Header className="popup-header">
         <div className="header-row">
           <div className="header-content">

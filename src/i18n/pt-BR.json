@@ -129,6 +129,19 @@
     }
   },
   "popup": {
+    "guide": {
+      "eyebrow": "Auditoria de acessibilidade",
+      "title": "Use o Guardião no DevTools",
+      "description": "A análise completa fica junto da página inspecionada, com mais espaço para revisar e corrigir achados.",
+      "stepOpen": "Abra as Ferramentas do desenvolvedor do Chrome.",
+      "stepSelect": "Selecione a aba Guardião NBR 17225.",
+      "stepAudit": "Execute ou continue a auditoria da página.",
+      "shortcut": "Atalho no Windows e Linux: F12 ou Ctrl+Shift+I.",
+      "currentAudit": "Auditoria atual desta aba",
+      "noCurrentAudit": "Nenhuma auditoria atual. Execute uma análise pelo DevTools.",
+      "projectPage": "Página do projeto",
+      "loadError": "Não foi possível consultar a auditoria desta aba."
+    },
     "header": {
       "activeTab": "Aba ativa: {{title}}",
       "fallback": "Verificação por aba com foco em requisitos e recomendações."

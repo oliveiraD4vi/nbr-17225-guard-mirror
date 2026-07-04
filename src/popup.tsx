@@ -2,9 +2,9 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { ConfigProvider } from 'antd'
 import ptBR from 'antd/locale/pt_BR'
-import { PopupApp } from './components/PopupApp'
+import { PopupLandingApp } from './components/PopupLandingApp'
 import './styles/theme.css'
-import './styles/popup.css'
+import './styles/popup-guide.css'
 
 const root = ReactDOM.createRoot(document.getElementById('root')!)
 const cssRoot = document.documentElement
@@ -63,7 +63,7 @@ root.render(
         components: antThemeComponents,
       }}
     >
-      <PopupApp />
+      <PopupLandingApp />
     </ConfigProvider>
   </React.StrictMode>,
 )

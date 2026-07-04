@@ -329,7 +329,10 @@ const duplicateAudit = mergeResolvedManualFindings(
 
 assert.equal(duplicateAudit.violations.length, 1)
 
-const popupSource = await fs.readFile(path.resolve('src/components/PopupApp.tsx'), 'utf8')
+const popupSource = await fs.readFile(
+  path.resolve('src/components/AuditWorkspaceApp.tsx'),
+  'utf8',
+)
 const contentSource = await fs.readFile(path.resolve('src/content.ts'), 'utf8')
 
 assert.match(popupSource, /popup\.manualFinding\.validation\.rule/)

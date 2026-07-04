@@ -93,7 +93,10 @@ restoreInlineStyle(styleWithoutInlineValue, 'background-color', originalBackgrou
 assert.equal(styleWithoutInlineValue.getPropertyValue('background-color'), '')
 
 const contentSource = await fs.readFile(path.resolve('src/content.ts'), 'utf8')
-const popupSource = await fs.readFile(path.resolve('src/components/PopupApp.tsx'), 'utf8')
+const popupSource = await fs.readFile(
+  path.resolve('src/components/AuditWorkspaceApp.tsx'),
+  'utf8',
+)
 const violationsSource = await fs.readFile(
   path.resolve('src/components/ViolationsList.tsx'),
   'utf8',
