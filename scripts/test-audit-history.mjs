@@ -235,5 +235,133 @@ assert.equal(stateChangeSummary.resolvedViolations.length, 0)
 assert.equal(stateChangeSummary.stateChangedViolations.length, 1)
 assert.equal(stateChangeSummary.targetOpenCount, 0)
 assert.equal(stateChangeSummary.targetDismissedReviews, 1)
+assert.equal(stateChangeSummary.technicalTrend, 'unchanged')
+assert.equal(stateChangeSummary.ignoredSinceBaseline.length, 1)
+
+const reopenedSummary = compareAuditResults(openToIgnoredTarget, openToIgnoredBaseline)
+assert.equal(reopenedSummary.technicalTrend, 'unchanged')
+assert.equal(reopenedSummary.reopenedSinceBaseline.length, 1)
+assert.equal(reopenedSummary.newViolations.length, 0)
+
+const mixedSummary = compareAuditResults(
+  createAuditResult({
+    id: 'mixed-baseline',
+    violations: [createViolation({ id: 'removed-item', ruleId: 'removed-rule' })],
+  }),
+  createAuditResult({
+    id: 'mixed-target',
+    violations: [createViolation({ id: 'new-item', ruleId: 'new-rule' })],
+  }),
+)
+assert.equal(mixedSummary.technicalTrend, 'mixed')
+assert.equal(mixedSummary.newViolations.length, 1)
+assert.equal(mixedSummary.noLongerDetectedViolations.length, 1)
+assert.equal(mixedSummary.resolvedViolations, mixedSummary.noLongerDetectedViolations)
+
+const partialScopeSummary = compareAuditResults(
+  createAuditResult({
+    id: 'partial-baseline',
+    includeRecommendations: true,
+    violations: [
+      createViolation({ id: 'requirement-removed', ruleId: 'requirement-removed' }),
+      createViolation({
+        id: 'recommendation-outside-scope',
+        ruleId: 'recommendation-outside-scope',
+        normativeType: 'Recomendação',
+      }),
+    ],
+  }),
+  createAuditResult({
+    id: 'partial-target',
+    includeRecommendations: false,
+    violations: [],
+  }),
+)
+assert.equal(partialScopeSummary.comparisonScope.mode, 'partial')
+assert.deepEqual(partialScopeSummary.comparisonScope.excluded, ['recommendations'])
+assert.equal(partialScopeSummary.noLongerDetectedViolations.length, 1)
+assert.equal(partialScopeSummary.technicalTrend, 'improvement')
+
+const reviewChangeSummary = compareAuditResults(
+  createAuditResult({
+    id: 'review-change-baseline',
+    violations: [
+      createViolation({
+        id: 'review-change',
+        userNote: 'Texto anterior',
+        alternativeTextReview: {
+          currentSource: 'alt',
+          currentText: '',
+          proposedText: 'Descrição anterior',
+          targetAttribute: 'alt',
+          updatedAt: 100,
+        },
+        userContrastOverride: {
+          foregroundHex: '#000000',
+          backgroundHex: '#ffffff',
+          updatedAt: 100,
+        },
+      }),
+    ],
+  }),
+  createAuditResult({
+    id: 'review-change-target',
+    violations: [
+      createViolation({
+        id: 'review-change',
+        userNote: 'Texto atualizado',
+        alternativeTextReview: {
+          currentSource: 'alt',
+          currentText: '',
+          proposedText: 'Descrição atualizada',
+          targetAttribute: 'alt',
+          updatedAt: 200,
+        },
+        userContrastOverride: {
+          foregroundHex: '#111111',
+          backgroundHex: '#ffffff',
+          updatedAt: 200,
+        },
+      }),
+    ],
+  }),
+)
+assert.deepEqual(reviewChangeSummary.reviewChangedViolations[0].changedFields, [
+  'user_note',
+  'alternative_text',
+  'contrast',
+])
+assert.equal(reviewChangeSummary.technicalTrend, 'unchanged')
+
+const timestampOnlySummary = compareAuditResults(
+  createAuditResult({
+    id: 'timestamp-baseline',
+    violations: [
+      createViolation({
+        id: 'timestamp-only',
+        userContrastOverride: {
+          foregroundHex: '#111111',
+          backgroundHex: '#ffffff',
+          updatedAt: 100,
+        },
+      }),
+    ],
+  }),
+  createAuditResult({
+    id: 'timestamp-target',
+    violations: [
+      createViolation({
+        id: 'timestamp-only',
+        userContrastOverride: {
+          foregroundHex: '#111111',
+          backgroundHex: '#ffffff',
+          updatedAt: 200,
+        },
+      }),
+    ],
+  }),
+)
+assert.equal(timestampOnlySummary.reviewChangedViolations.length, 0)
+assert.equal(timestampOnlySummary.technicalTrend, 'unchanged')
 
 console.log('Audit history comparison checks passed.')
