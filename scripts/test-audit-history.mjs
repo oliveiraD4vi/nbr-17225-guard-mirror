@@ -207,7 +207,7 @@ const openToIgnoredBaseline = createAuditResult({
     createViolation({
       id: 'same-finding',
       ruleId: 'rule-state',
-      message: 'Mesmo achado',
+      message: 'Mesma violação',
       suggestion: 'Corrigir',
     }),
   ],
@@ -220,7 +220,7 @@ const openToIgnoredTarget = createAuditResult({
     createViolation({
       id: 'same-finding',
       ruleId: 'rule-state',
-      message: 'Mesmo achado',
+      message: 'Mesma violação',
       suggestion: 'Corrigir',
       findingStatus: 'ignored',
       ignoreReason: 'false_positive',
@@ -281,6 +281,38 @@ assert.equal(partialScopeSummary.comparisonScope.mode, 'partial')
 assert.deepEqual(partialScopeSummary.comparisonScope.excluded, ['recommendations'])
 assert.equal(partialScopeSummary.noLongerDetectedViolations.length, 1)
 assert.equal(partialScopeSummary.technicalTrend, 'improvement')
+
+const legacyScopeSummary = compareAuditResults(
+  createAuditResult({
+    id: 'legacy-baseline',
+    includeRecommendations: undefined,
+    includeHumanReview: undefined,
+    violations: [
+      createViolation({ id: 'legacy-requirement', ruleId: 'legacy-requirement' }),
+      createViolation({
+        id: 'legacy-recommendation',
+        ruleId: 'legacy-recommendation',
+        normativeType: 'Recomendação',
+      }),
+      createViolation({
+        id: 'legacy-contextual',
+        ruleId: 'legacy-contextual',
+        requiresHumanReview: true,
+      }),
+    ],
+  }),
+  createAuditResult({
+    id: 'legacy-target',
+    includeRecommendations: true,
+    includeHumanReview: false,
+    violations: [],
+  }),
+)
+assert.equal(legacyScopeSummary.comparisonScope.mode, 'partial')
+assert.equal(legacyScopeSummary.comparisonScope.includeRecommendations, false)
+assert.equal(legacyScopeSummary.comparisonScope.includeHumanReview, false)
+assert.deepEqual(legacyScopeSummary.comparisonScope.excluded, ['recommendations', 'contextual'])
+assert.equal(legacyScopeSummary.noLongerDetectedViolations.length, 1)
 
 const reviewChangeSummary = compareAuditResults(
   createAuditResult({

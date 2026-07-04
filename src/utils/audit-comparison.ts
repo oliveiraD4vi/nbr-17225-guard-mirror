@@ -83,14 +83,18 @@ function getViolationsByKey(violations: Violation[]): Map<string, Violation> {
 }
 
 function getComparisonScope(baseline: AuditResult, target: AuditResult): AuditComparisonScope {
-  const includeRecommendations = baseline.includeRecommendations && target.includeRecommendations
-  const includeHumanReview = baseline.includeHumanReview && target.includeHumanReview
+  const baselineIncludesRecommendations = baseline.includeRecommendations ?? false
+  const targetIncludesRecommendations = target.includeRecommendations ?? false
+  const baselineIncludesHumanReview = baseline.includeHumanReview ?? true
+  const targetIncludesHumanReview = target.includeHumanReview ?? true
+  const includeRecommendations = baselineIncludesRecommendations && targetIncludesRecommendations
+  const includeHumanReview = baselineIncludesHumanReview && targetIncludesHumanReview
   const excluded: ComparisonScopeExclusion[] = []
 
-  if (baseline.includeRecommendations !== target.includeRecommendations) {
+  if (baselineIncludesRecommendations !== targetIncludesRecommendations) {
     excluded.push('recommendations')
   }
-  if (baseline.includeHumanReview !== target.includeHumanReview) {
+  if (baselineIncludesHumanReview !== targetIncludesHumanReview) {
     excluded.push('contextual')
   }
 
