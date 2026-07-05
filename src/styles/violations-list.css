@@ -115,6 +115,7 @@
   gap: 16px;
   width: 100%;
   align-items: flex-start;
+  flex-direction: column;
 }
 
 .violation-group-main {
@@ -984,14 +985,6 @@
 @media (max-width: 640px) {
   .violations-toolbar {
     grid-template-columns: 1fr;
-  }
-
-  .violations-toolbar-actions {
-    flex-wrap: wrap;
-  }
-
-  .violations-toolbar-actions .ant-btn {
-    width: 100%;
   }
 
   .contrast-board-grid {

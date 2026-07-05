@@ -455,7 +455,6 @@
     "downloadFullJson": "Baixar relatório completo (JSON)",
     "downloadSummaryJson": "Baixar relatório simplificado (JSON)",
     "scoreOutOf": "{{score}}/100",
-    "normativeScopeNote": "“Requisitos” e “Recomendações” são categorias da própria ABNT NBR 17225, não rótulos internos do sistema.",
     "failingRequirements": "Regras obrigatórias com falha: {{count}}",
     "failingRecommendations": "Recomendações com violação: {{count}}",
     "scorePanelTitle": "Números da auditoria",
@@ -709,7 +708,7 @@
     "infoBlur": "Reduz a nitidez para apoiar a inspeção de legibilidade."
   },
   "report": {
-    "title": "Guardião NBR 17225 - Relatório detalhado",
+    "title": "Relatório de Auditoria",
     "loading": "Carregando relatório...",
     "empty": "Nenhum relatório disponível para esta visualização",
     "introTitle": "Leitura do relatório",
@@ -720,7 +719,6 @@
     "modeSummary": "Resumido",
     "printDetailed": "Imprimir detalhado",
     "printSummary": "Imprimir resumo",
-    "exportSummaryJson": "Exportar resumo",
     "summaryTitle": "Resumo executivo da auditoria",
     "summaryDescription": "Versão compacta para leitura e impressão, com números por regra e registros de contraste, texto alternativo, anotações e triagem sem abrir cada ocorrência em profundidade.",
     "summaryOccurrences": "ocorrências",

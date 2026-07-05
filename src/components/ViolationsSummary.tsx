@@ -1,5 +1,5 @@
-import React from 'react'
-import { Button, Card, Dropdown, Empty, Space, Tag } from 'antd'
+import React, { useCallback } from 'react'
+import { Button, Card, Dropdown, Empty, message, Space, Tag } from 'antd'
 import {
   ArrowRightOutlined,
   CheckCircleOutlined,
@@ -41,6 +41,27 @@ export const ViolationsSummary: React.FC<ViolationsSummaryProps> = React.memo(
     const resultKey = result ? (result.id ?? `${result.url}:${result.timestamp}`) : 'empty'
     const [scorePanelState, setScorePanelState] = React.useState({ key: resultKey, open: false })
     const isScorePanelOpen = scorePanelState.key === resultKey && scorePanelState.open
+
+    const handleOpenReport = useCallback(async () => {
+      const reportResult = reviewSourceResult ?? result
+      if (!reportResult) {
+        message.warning(t('popup.messages.noAuditToExport'))
+        return
+      }
+
+      try {
+        const response = await chrome.runtime.sendMessage({
+          action: 'OPEN_REPORT',
+          auditResult: reportResult,
+        })
+        if (response?.error) {
+          throw new Error(response.error)
+        }
+      } catch (error) {
+        console.error('Erro ao abrir relatório em nova aba:', error)
+        message.error(t('popup.messages.reportOpenError'))
+      }
+    }, [result, reviewSourceResult])
 
     if (loading) {
       return <SummarySkeleton />
@@ -258,13 +279,16 @@ export const ViolationsSummary: React.FC<ViolationsSummaryProps> = React.memo(
                   ))}
                 </div>
                 <p className="summary-score-formula">{scoreFormula}</p>
-                <p className="summary-scope-note">{t('summary.normativeScopeNote')}</p>
               </div>
             )}
           </div>
 
           <div className={`summary-next-step is-${nextStep.tone}`}>
-            <button className="summary-next-step-button" type="button" onClick={onOpenViolations}>
+            <button
+              className="summary-next-step-button"
+              type="button"
+              onClick={hasViolations ? onOpenViolations : handleOpenReport}
+            >
               <span className="summary-next-step-icon">{nextStep.icon}</span>
               <span>
                 <span className="summary-stat-label">{t('summary.nextStepLabel')}</span>

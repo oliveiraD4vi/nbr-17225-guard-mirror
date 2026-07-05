@@ -563,9 +563,7 @@ function renderViolationGroups(
                   onFindingStatusChange={onFindingStatusChange}
                   onBulkFindingStatusChange={onBulkFindingStatusChange}
                   onViolationNoteChange={onViolationNoteChange}
-                  onViolationAlternativeTextReviewChange={
-                    onViolationAlternativeTextReviewChange
-                  }
+                  onViolationAlternativeTextReviewChange={onViolationAlternativeTextReviewChange}
                   onViolationContrastOverrideChange={onViolationContrastOverrideChange}
                   onBulkViolationContrastOverrideChange={onBulkViolationContrastOverrideChange}
                   onViolationContrastPreviewChange={onViolationContrastPreviewChange}
@@ -1206,9 +1204,9 @@ const ViolationCard: React.FC<ViolationCardProps> = React.memo(
                   {violation.alternativeTextReview.updatedAt && (
                     <Tag>
                       {t('violations.alternativeTextUpdatedAt', {
-                        date: new Date(
-                          violation.alternativeTextReview.updatedAt,
-                        ).toLocaleString('pt-BR'),
+                        date: new Date(violation.alternativeTextReview.updatedAt).toLocaleString(
+                          'pt-BR',
+                        ),
                       })}
                     </Tag>
                   )}
@@ -1220,9 +1218,7 @@ const ViolationCard: React.FC<ViolationCardProps> = React.memo(
                     <p>{getAlternativeTextCurrentValue(violation.alternativeTextReview)}</p>
                     <Tag>
                       {t('violations.alternativeTextSourceLabel')}:{' '}
-                      {getAlternativeTextSourceLabel(
-                        violation.alternativeTextReview.currentSource,
-                      )}
+                      {getAlternativeTextSourceLabel(violation.alternativeTextReview.currentSource)}
                     </Tag>
                   </div>
 
@@ -1990,13 +1986,15 @@ export const ViolationsList: React.FC<ViolationsListProps> = React.memo(
                 })),
               ]}
             />
-            <Button
-              icon={<EyeInvisibleOutlined />}
-              disabled={filteredIgnoredViolations.length === 0}
-              onClick={() => setIsIgnoredDrawerOpen(true)}
+            <Tooltip
+              title={t('violations.openIgnored', { count: filteredIgnoredViolations.length })}
             >
-              {t('violations.openIgnored', { count: filteredIgnoredViolations.length })}
-            </Button>
+              <Button
+                icon={<EyeInvisibleOutlined />}
+                disabled={filteredIgnoredViolations.length === 0}
+                onClick={() => setIsIgnoredDrawerOpen(true)}
+              ></Button>
+            </Tooltip>
           </div>
         </div>
         <Segmented
@@ -2019,9 +2017,7 @@ export const ViolationsList: React.FC<ViolationsListProps> = React.memo(
           onClose={() => setIsIgnoredDrawerOpen(false)}
           destroyOnHidden
         >
-          <p className="ignored-findings-description">
-            {t('violations.ignoredDrawerDescription')}
-          </p>
+          <p className="ignored-findings-description">{t('violations.ignoredDrawerDescription')}</p>
           {ignoredListContent}
         </Drawer>
       </div>

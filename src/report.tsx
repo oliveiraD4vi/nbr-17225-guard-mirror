@@ -416,18 +416,20 @@ export const ReportApp: React.FC = () => {
               value={reportMode}
               onChange={(value) => setReportMode(value as ReportMode)}
             />
-            <Button icon={<PrinterOutlined />} onClick={() => window.print()}>
-              {reportMode === 'summary' ? t('report.printSummary') : t('report.printDetailed')}
-            </Button>
-            <Button icon={<DownloadOutlined />} onClick={() => downloadSummaryJson(auditResult)}>
-              {t('report.exportSummaryJson')}
-            </Button>
+
             <Button
-              type="primary"
               icon={<DownloadOutlined />}
-              onClick={() => downloadDetailedJson(auditResult)}
+              onClick={
+                reportMode === 'summary'
+                  ? () => downloadSummaryJson(auditResult)
+                  : () => downloadDetailedJson(auditResult)
+              }
             >
               {t('shared.actions.exportJson')}
+            </Button>
+
+            <Button type="primary" icon={<PrinterOutlined />} onClick={() => window.print()}>
+              {reportMode === 'summary' ? t('report.printSummary') : t('report.printDetailed')}
             </Button>
           </Space>
         )}

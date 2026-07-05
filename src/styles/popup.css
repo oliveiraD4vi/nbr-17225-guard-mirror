@@ -12,7 +12,7 @@
 .popup-header {
   background: var(--guard-color-surface);
   color: var(--guard-color-text-primary);
-  padding: 0.25rem 1rem !important;
+  padding: 0 1rem !important;
   border-bottom: 1px solid var(--guard-color-border);
   box-shadow: none;
 }
@@ -20,6 +20,7 @@
 .header-content {
   display: flex;
   flex-direction: column;
+  justify-content: center;
   gap: 6px;
   flex: 1 1 auto;
   min-width: 0;
@@ -28,10 +29,17 @@
 
 .header-row {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  align-items: center;
   gap: 12px;
   min-width: 0;
+  position: relative;
+  height: 100%;
+}
+
+.header-row > .ant-space {
+  position: absolute;
+  top: 0;
+  right: 0;
 }
 
 .header-eyebrow {
@@ -60,10 +68,11 @@
 
 .header-stage-tag {
   margin-inline-start: 2px;
+  display: flex;
+  gap: 0.25rem;
 }
 
 .header-version-tag {
-  color: var(--guard-color-text-muted);
   font-size: 11px;
   font-weight: 700;
 }
@@ -228,10 +237,7 @@
 }
 
 .audit-meta-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
+  position: relative;
   padding: 10px 12px;
 }
 
@@ -269,6 +275,9 @@
   align-items: center;
   gap: 2px;
   flex: 0 0 auto;
+  top: 12px;
+  right: 12px;
+  position: absolute;
 }
 
 .audit-meta-toggle {
@@ -312,7 +321,7 @@
 
 .tab-status-strip {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(600px, 1fr));
   align-items: stretch;
   gap: 12px;
   padding: 0 12px 12px;
@@ -601,33 +610,6 @@
     max-width 0.18s ease,
     width 0.18s ease,
     padding 0.18s ease;
-}
-
-.footer-icon-action:hover,
-.footer-icon-action:focus-visible {
-  width: auto;
-  max-width: 190px;
-  padding-inline: 10px 12px !important;
-}
-
-.footer-action-label {
-  display: inline-block;
-  max-width: 0;
-  opacity: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  transition:
-    max-width 0.18s ease,
-    opacity 0.18s ease,
-    margin-inline-start 0.18s ease;
-}
-
-.footer-icon-action:hover .footer-action-label,
-.footer-icon-action:focus-visible .footer-action-label,
-.footer-download-action .footer-action-label {
-  max-width: 130px;
-  margin-inline-start: 6px;
-  opacity: 1;
 }
 
 .footer-download-action {
@@ -997,7 +979,7 @@
 }
 
 .vision-floating-button {
-  height: 32px;
+  height: 36px;
   box-shadow: 0 14px 30px rgba(15, 118, 110, 0.28);
   pointer-events: auto;
 }
@@ -1010,7 +992,7 @@
 }
 
 .manual-finding-floating-button {
-  height: 32px;
+  height: 36px;
   box-shadow: 0 12px 28px rgba(15, 23, 42, 0.16);
 }
 

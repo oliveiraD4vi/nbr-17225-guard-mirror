@@ -2261,8 +2261,8 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
               <span>{t('shared.brand.name')}</span>
               <Tag className="header-stage-tag" color="gold">
                 {t('shared.states.beta')}
+                <span className="header-version-tag">v{APP_VERSION}</span>
               </Tag>
-              <span className="header-version-tag">v{APP_VERSION}</span>
             </h1>
             <p
               title={
@@ -2276,6 +2276,7 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
                 : t('popup.header.fallback')}
             </p>
           </div>
+
           <Space>
             {canReturnFromAbout ? (
               <Button icon={<ArrowLeftOutlined />} onClick={() => setShowAboutView(false)}>
@@ -2533,20 +2534,23 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
                     }}
                   />
                 </Tooltip>
-                <Button
-                  className="vision-floating-button"
-                  type={isVisionSimulatorOpen ? 'default' : 'primary'}
-                  shape="circle"
-                  icon={<EyeOutlined />}
-                  aria-label={t('vision.openFloatingPanel')}
-                  aria-expanded={isVisionSimulatorOpen}
-                  onClick={() => {
-                    if (!isVisionSimulatorOpen) {
-                      setHasVisionSimulatorMounted(true)
-                    }
-                    setIsVisionSimulatorOpen((current) => !current)
-                  }}
-                />
+
+                <Tooltip placement="topLeft" title={t('vision.openFloatingPanel')}>
+                  <Button
+                    className="vision-floating-button"
+                    type={isVisionSimulatorOpen ? 'default' : 'primary'}
+                    shape="circle"
+                    icon={<EyeOutlined />}
+                    aria-label={t('vision.openFloatingPanel')}
+                    aria-expanded={isVisionSimulatorOpen}
+                    onClick={() => {
+                      if (!isVisionSimulatorOpen) {
+                        setHasVisionSimulatorMounted(true)
+                      }
+                      setIsVisionSimulatorOpen((current) => !current)
+                    }}
+                  />
+                </Tooltip>
               </div>
             </div>
           </>
@@ -2817,18 +2821,24 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
                       action.key === 'csv' ? 'CSV' : action.key === 'json' ? 'JSON' : null
 
                     return (
-                      <Button
-                        key={action.key}
-                        className={downloadLabel ? 'footer-download-action' : 'footer-icon-action'}
-                        type="text"
-                        icon={action.icon}
-                        aria-label={action.label}
-                        onClick={action.onClick}
-                        loading={action.loading}
-                        disabled={action.disabled}
-                      >
-                        <span className="footer-action-label">{downloadLabel ?? action.label}</span>
-                      </Button>
+                      <Tooltip key={action.key} title={action.label} placement="top">
+                        <Button
+                          key={action.key}
+                          className={
+                            downloadLabel ? 'footer-download-action' : 'footer-icon-action'
+                          }
+                          type="text"
+                          icon={action.icon}
+                          aria-label={action.label}
+                          onClick={action.onClick}
+                          loading={action.loading}
+                          disabled={action.disabled}
+                        >
+                          {downloadLabel && (
+                            <span className="footer-action-label">{downloadLabel}</span>
+                          )}
+                        </Button>
+                      </Tooltip>
                     )
                   })}
               </div>
