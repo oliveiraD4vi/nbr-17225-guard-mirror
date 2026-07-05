@@ -258,30 +258,9 @@ export const ViolationsSummary: React.FC<ViolationsSummaryProps> = React.memo(
                   ))}
                 </div>
                 <p className="summary-score-formula">{scoreFormula}</p>
+                <p className="summary-scope-note">{t('summary.normativeScopeNote')}</p>
               </div>
             )}
-          </div>
-
-          <div className="summary-total-wrapper">
-            <div className="summary-stat-card is-total">
-              <span className="summary-stat-label">{t('shared.labels.total')}</span>
-              <strong>{result.totalViolations}</strong>
-              <small>{t('summary.totalItemsFound')}</small>
-            </div>
-
-            <div className="summary-stat-grid">
-              <div className="summary-stat-card is-error">
-                <span className="summary-stat-label">{t('shared.labels.requirements')}</span>
-                <strong>{result.errors}</strong>
-                <small>{t('summary.requirementsMissed')}</small>
-              </div>
-              <div className="summary-stat-card is-warning">
-                <span className="summary-stat-label">{t('shared.labels.recommendations')}</span>
-                <strong>{result.warnings}</strong>
-                <small>{t('summary.recommendationsReview')}</small>
-              </div>
-            </div>
-            <p className="summary-scope-note">{t('summary.normativeScopeNote')}</p>
           </div>
 
           <div className={`summary-next-step is-${nextStep.tone}`}>
