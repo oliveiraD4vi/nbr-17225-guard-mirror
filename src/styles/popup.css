@@ -98,7 +98,7 @@
 
 .popup-content {
   flex: 1;
-  padding: 16px;
+  padding: 0.5rem;
   overflow-y: auto;
 }
 

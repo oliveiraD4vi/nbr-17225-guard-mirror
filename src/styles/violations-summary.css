@@ -70,7 +70,7 @@
   gap: 16px;
   align-items: flex-start;
   margin-bottom: 18px;
-  padding: 16px;
+  padding: 0.5rem;
   border: 1px solid var(--guard-color-border-soft);
   border-radius: 8px;
   background: var(--guard-color-info-soft);
