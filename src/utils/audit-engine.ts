@@ -165,18 +165,39 @@ export async function ensureContentScriptReady(tabId: number, tabUrl?: string): 
 
   if (await pingContentScript(tabId)) return
 
+  let injectionError: unknown = null
   try {
     await chrome.scripting.executeScript({
       target: { tabId },
       files: ['content-bootstrap.js'],
     })
-  } catch {
-    // Páginas internas do navegador e hosts sem permissão são tratados pela mensagem abaixo.
+  } catch (error) {
+    injectionError = error
+
+    if (
+      resolvedTabUrl &&
+      isHostPermissionError(error) &&
+      (await requestOptionalHostPermission(resolvedTabUrl))
+    ) {
+      try {
+        await chrome.scripting.executeScript({
+          target: { tabId },
+          files: ['content-bootstrap.js'],
+        })
+        injectionError = null
+      } catch (retryError) {
+        injectionError = retryError
+      }
+    }
   }
 
   for (let attempt = 0; attempt < 10; attempt += 1) {
     if (await pingContentScript(tabId)) return
     await new Promise((resolve) => setTimeout(resolve, 150))
+  }
+
+  if (isHostPermissionError(injectionError)) {
+    throw new Error(t('engine.hostPermissionRequired'))
   }
 
   throw new Error(t('engine.domUnavailable'))
@@ -202,6 +223,39 @@ async function getTabUrl(tabId: number): Promise<string | undefined> {
 
 function isSupportedTabUrl(url: string): boolean {
   return /^(https?:|file:)/.test(url)
+}
+
+function isHostPermissionError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error ?? '')
+  return /Cannot access contents|permission|respective host|host permission/i.test(message)
+}
+
+function getOptionalHostPermissionPattern(url: string): string | null {
+  try {
+    const parsedUrl = new URL(url)
+    if (parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:') {
+      return `${parsedUrl.origin}/*`
+    }
+    if (parsedUrl.protocol === 'file:') {
+      return 'file:///*'
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
+async function requestOptionalHostPermission(url: string): Promise<boolean> {
+  const origin = getOptionalHostPermissionPattern(url)
+  if (!origin || !chrome.permissions?.contains || !chrome.permissions.request) return false
+
+  try {
+    const permission = { origins: [origin] }
+    if (await chrome.permissions.contains(permission)) return true
+    return chrome.permissions.request(permission)
+  } catch {
+    return false
+  }
 }
 
 function isQuotaExceededError(error: unknown): boolean {

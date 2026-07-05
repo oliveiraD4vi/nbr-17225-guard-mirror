@@ -756,6 +756,7 @@
     "unsupportedUrl": "A auditoria só pode ser executada em páginas HTTP, HTTPS ou arquivos locais com permissão.",
     "contentExecutionError": "Erro ao executar a auditoria no content script.",
     "domUnavailable": "Não foi possível acessar o DOM da página. Recarregue a aba e tente novamente.",
+    "hostPermissionRequired": "Permita que o Guardião acesse este site e tente executar a auditoria novamente.",
     "quotaExceeded": "Não foi possível salvar os dados da auditoria porque o armazenamento local da extensão atingiu o limite.",
     "invalidImportReport": "O arquivo selecionado não é um relatório JSON válido exportado pelo Guardião NBR 17225."
   },

@@ -5,6 +5,7 @@
   "version_name": "1.1.4-beta.8",
   "description": "Verificador profissional de acessibilidade web conforme ABNT NBR 17225:2025",
   "permissions": ["storage", "activeTab", "scripting"],
+  "optional_host_permissions": ["http://*/*", "https://*/*", "file:///*"],
   "devtools_page": "src/devtools.html",
   "web_accessible_resources": [
     {
