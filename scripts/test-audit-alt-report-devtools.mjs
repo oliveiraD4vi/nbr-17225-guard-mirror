@@ -12,6 +12,7 @@ async function loadAuditModules() {
     export: path.resolve('src/utils/audit-export.ts'),
     history: path.resolve('src/utils/audit-history.ts'),
     extensionStorage: path.resolve('src/utils/extension-storage.ts'),
+    extensionRuntime: path.resolve('src/utils/extension-runtime.ts'),
     normative: path.resolve('src/normative.ts'),
     reportSnapshots: path.resolve('src/utils/report-snapshots.ts'),
     score: path.resolve('src/utils/audit-score.ts'),
@@ -33,7 +34,11 @@ async function loadAuditModules() {
     reportSnapshots: (await fs.readFile(sourcePaths.reportSnapshots, 'utf8'))
       .replace("from '@/utils/audit-history'", "from './audit-history.mjs'")
       .replace("from '@/utils/extension-storage'", "from './extension-storage.mjs'"),
-    extensionStorage: await fs.readFile(sourcePaths.extensionStorage, 'utf8'),
+    extensionStorage: (await fs.readFile(sourcePaths.extensionStorage, 'utf8')).replace(
+      "from './extension-runtime'",
+      "from './extension-runtime.mjs'",
+    ),
+    extensionRuntime: await fs.readFile(sourcePaths.extensionRuntime, 'utf8'),
     score: (await fs.readFile(sourcePaths.score, 'utf8'))
       .replace("from '@/normative'", "from './normative.mjs'")
       .replace("from '@/rules'", "from './rules.mjs'")
@@ -68,6 +73,7 @@ export function getRunnableRules() {
     ['normative.mjs', sources.normative, sourcePaths.normative],
     ['report-snapshots.mjs', sources.reportSnapshots, sourcePaths.reportSnapshots],
     ['extension-storage.mjs', sources.extensionStorage, sourcePaths.extensionStorage],
+    ['extension-runtime.mjs', sources.extensionRuntime, sourcePaths.extensionRuntime],
     ['i18n.mjs', sources.i18n, 'i18n.mjs'],
     ['rules.mjs', sources.rules, 'rules.mjs'],
   ]

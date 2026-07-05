@@ -7,21 +7,39 @@ import ts from 'typescript'
 
 async function loadExtensionStorageModule() {
   const sourcePath = path.resolve('src/utils/extension-storage.ts')
+  const runtimeSourcePath = path.resolve('src/utils/extension-runtime.ts')
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'extension-storage-'))
   const modulePath = path.join(tempDir, 'extension-storage.mjs')
-  const source = await fs.readFile(sourcePath, 'utf8')
-
-  await fs.writeFile(
-    modulePath,
-    ts.transpileModule(source, {
-      compilerOptions: {
-        module: ts.ModuleKind.ESNext,
-        target: ts.ScriptTarget.ES2022,
-      },
-      fileName: sourcePath,
-    }).outputText,
-    'utf8',
+  const source = (await fs.readFile(sourcePath, 'utf8')).replace(
+    "from './extension-runtime'",
+    "from './extension-runtime.mjs'",
   )
+  const runtimeSource = await fs.readFile(runtimeSourcePath, 'utf8')
+
+  await Promise.all([
+    fs.writeFile(
+      modulePath,
+      ts.transpileModule(source, {
+        compilerOptions: {
+          module: ts.ModuleKind.ESNext,
+          target: ts.ScriptTarget.ES2022,
+        },
+        fileName: sourcePath,
+      }).outputText,
+      'utf8',
+    ),
+    fs.writeFile(
+      path.join(tempDir, 'extension-runtime.mjs'),
+      ts.transpileModule(runtimeSource, {
+        compilerOptions: {
+          module: ts.ModuleKind.ESNext,
+          target: ts.ScriptTarget.ES2022,
+        },
+        fileName: runtimeSourcePath,
+      }).outputText,
+      'utf8',
+    ),
+  ])
 
   try {
     return await import(pathToFileURL(modulePath).href)
@@ -40,6 +58,7 @@ const {
 const directCalls = []
 globalThis.chrome = {
   runtime: {
+    id: 'extension-id',
     sendMessage: async () => {
       throw new Error('O proxy não deve ser usado quando storage.local está disponível.')
     },
@@ -78,6 +97,7 @@ assert.deepEqual(directCalls, [
 const proxyCalls = []
 globalThis.chrome = {
   runtime: {
+    id: 'extension-id',
     sendMessage: async (request) => {
       proxyCalls.push(request)
       switch (request.action) {

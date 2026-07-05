@@ -15,6 +15,7 @@ async function loadManualFindingModules() {
     auditScore: path.resolve('src/utils/audit-score.ts'),
     auditTriage: path.resolve('src/utils/audit-triage.ts'),
     extensionStorage: path.resolve('src/utils/extension-storage.ts'),
+    extensionRuntime: path.resolve('src/utils/extension-runtime.ts'),
     manualFindings: path.resolve('src/utils/manual-findings.ts'),
     normative: path.resolve('src/normative.ts'),
     types: path.resolve('src/types/index.ts'),
@@ -43,7 +44,11 @@ async function loadManualFindingModules() {
       .replaceAll("from '@/rules'", "from './rules.mjs'")
       .replaceAll("from '@/utils/audit-triage'", "from './audit-triage.mjs'"),
     auditTriage: await fs.readFile(sourcePaths.auditTriage, 'utf8'),
-    extensionStorage: await fs.readFile(sourcePaths.extensionStorage, 'utf8'),
+    extensionStorage: (await fs.readFile(sourcePaths.extensionStorage, 'utf8')).replaceAll(
+      "from './extension-runtime'",
+      "from './extension-runtime.mjs'",
+    ),
+    extensionRuntime: await fs.readFile(sourcePaths.extensionRuntime, 'utf8'),
     manualFindings: (await fs.readFile(sourcePaths.manualFindings, 'utf8')).replaceAll(
       "from '@/types'",
       "from './types.mjs'",
@@ -122,6 +127,7 @@ export function getRunnableRules(includeRecommendations, includeHumanReview) {
     ['audit-score.mjs', sources.auditScore, sourcePaths.auditScore],
     ['audit-triage.mjs', sources.auditTriage, sourcePaths.auditTriage],
     ['extension-storage.mjs', sources.extensionStorage, sourcePaths.extensionStorage],
+    ['extension-runtime.mjs', sources.extensionRuntime, sourcePaths.extensionRuntime],
     ['manual-findings.mjs', sources.manualFindings, sourcePaths.manualFindings],
     ['normative.mjs', sources.normative, sourcePaths.normative],
     ['types.mjs', sources.types, sourcePaths.types],

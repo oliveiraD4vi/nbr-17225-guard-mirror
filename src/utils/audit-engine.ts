@@ -128,7 +128,7 @@ export async function runAccessibilityAudit(options: RunAuditOptions = {}): Prom
       throw new Error(t('engine.unsupportedUrl'))
     }
 
-    await ensureContentScriptReady(activeTab.id)
+    await ensureContentScriptReady(activeTab.id, activeTab.url)
 
     const response = await chrome.tabs.sendMessage(activeTab.id, {
       action: 'RUN_AUDIT',
@@ -157,7 +157,12 @@ export async function runAccessibilityAudit(options: RunAuditOptions = {}): Prom
   }
 }
 
-export async function ensureContentScriptReady(tabId: number): Promise<void> {
+export async function ensureContentScriptReady(tabId: number, tabUrl?: string): Promise<void> {
+  const resolvedTabUrl = tabUrl ?? (await getTabUrl(tabId))
+  if (resolvedTabUrl && !isSupportedTabUrl(resolvedTabUrl)) {
+    throw new Error(t('engine.unsupportedUrl'))
+  }
+
   if (await pingContentScript(tabId)) return
 
   try {
@@ -165,8 +170,8 @@ export async function ensureContentScriptReady(tabId: number): Promise<void> {
       target: { tabId },
       files: ['content-bootstrap.js'],
     })
-  } catch (error) {
-    console.warn('[Guardião NBR 17225] Erro ao injetar content script:', error)
+  } catch {
+    // Páginas internas do navegador e hosts sem permissão são tratados pela mensagem abaixo.
   }
 
   for (let attempt = 0; attempt < 10; attempt += 1) {
@@ -183,6 +188,15 @@ async function pingContentScript(tabId: number): Promise<boolean> {
     return response?.status === 'OK'
   } catch {
     return false
+  }
+}
+
+async function getTabUrl(tabId: number): Promise<string | undefined> {
+  try {
+    const tab = await chrome.tabs.get(tabId)
+    return tab.url
+  } catch {
+    return undefined
   }
 }
 
@@ -296,7 +310,7 @@ async function reapplyManualFindingsFromHistory(
   if (manualFindings.length === 0) return result
 
   try {
-    await ensureContentScriptReady(tabId)
+    await ensureContentScriptReady(tabId, result.url)
     const response = await chrome.tabs.sendMessage(tabId, {
       action: 'RESOLVE_MANUAL_FINDING_SELECTORS',
       candidates: manualFindings.map(
