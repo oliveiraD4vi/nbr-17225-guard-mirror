@@ -339,6 +339,7 @@
       "comparisonSectionPersistent": "Violações persistentes ({{count}})",
       "comparisonSectionTriage": "Decisões de triagem ({{count}})",
       "comparisonSectionReview": "Registros de revisão alterados ({{count}})",
+      "reviewChangedRecords": "Registros de revisão alterados",
       "comparisonUnknownElement": "Elemento não identificado",
       "comparisonStatusOpen": "Aberta",
       "comparisonStatusRegistered": "Registrada",

@@ -117,6 +117,15 @@ function getContrastValue(violation: Violation): string {
     : t('popup.history.comparisonEmptyValue')
 }
 
+function ComparisonSectionHeader({ count, label }: { count: number; label: string }) {
+  return (
+    <div className="history-comparison-section-header">
+      <strong>{count}</strong>
+      <span>{label}</span>
+    </div>
+  )
+}
+
 function ComparisonViolationList({ violations }: { violations: Violation[] }) {
   return (
     <div className="history-comparison-change-list">
@@ -526,25 +535,6 @@ export const HistoryTabPanel: React.FC<HistoryTabPanelProps> = React.memo(
                     description={t('popup.history.comparisonPartialScopeDescription')}
                   />
                 )}
-                <div className="history-comparison-stats">
-                  <div>
-                    <strong>{comparisonSummary.newViolations.length}</strong>
-                    <span>{t('popup.history.newProblems')}</span>
-                  </div>
-                  <div>
-                    <strong>{comparisonSummary.noLongerDetectedViolations.length}</strong>
-                    <span>{t('popup.history.resolvedProblems')}</span>
-                  </div>
-                  <div>
-                    <strong>{comparisonSummary.persistentViolations.length}</strong>
-                    <span>{t('popup.history.persistentProblems')}</span>
-                  </div>
-                  <div>
-                    <strong>{comparisonSummary.stateChangedViolations.length}</strong>
-                    <span>{t('popup.history.stateChangedFindings')}</span>
-                  </div>
-                </div>
-
                 <div className="history-comparison-meta">
                   <span>
                     {t('popup.history.metadataVisible', {
@@ -577,18 +567,24 @@ export const HistoryTabPanel: React.FC<HistoryTabPanelProps> = React.memo(
                   items={[
                     {
                       key: 'new',
-                      label: t('popup.history.comparisonSectionNew', {
-                        count: comparisonSummary.newViolations.length,
-                      }),
+                      label: (
+                        <ComparisonSectionHeader
+                          count={comparisonSummary.newViolations.length}
+                          label={t('popup.history.newProblems')}
+                        />
+                      ),
                       children: (
                         <ComparisonViolationList violations={comparisonSummary.newViolations} />
                       ),
                     },
                     {
                       key: 'not-detected',
-                      label: t('popup.history.comparisonSectionNotDetected', {
-                        count: comparisonSummary.noLongerDetectedViolations.length,
-                      }),
+                      label: (
+                        <ComparisonSectionHeader
+                          count={comparisonSummary.noLongerDetectedViolations.length}
+                          label={t('popup.history.resolvedProblems')}
+                        />
+                      ),
                       children: (
                         <ComparisonViolationList
                           violations={comparisonSummary.noLongerDetectedViolations}
@@ -597,9 +593,12 @@ export const HistoryTabPanel: React.FC<HistoryTabPanelProps> = React.memo(
                     },
                     {
                       key: 'persistent',
-                      label: t('popup.history.comparisonSectionPersistent', {
-                        count: comparisonSummary.persistentViolations.length,
-                      }),
+                      label: (
+                        <ComparisonSectionHeader
+                          count={comparisonSummary.persistentViolations.length}
+                          label={t('popup.history.persistentProblems')}
+                        />
+                      ),
                       children: (
                         <ComparisonViolationList
                           violations={comparisonSummary.persistentViolations}
@@ -608,18 +607,24 @@ export const HistoryTabPanel: React.FC<HistoryTabPanelProps> = React.memo(
                     },
                     {
                       key: 'triage',
-                      label: t('popup.history.comparisonSectionTriage', {
-                        count: comparisonSummary.stateChangedViolations.length,
-                      }),
+                      label: (
+                        <ComparisonSectionHeader
+                          count={comparisonSummary.stateChangedViolations.length}
+                          label={t('popup.history.stateChangedFindings')}
+                        />
+                      ),
                       children: (
                         <ComparisonTriageList changes={comparisonSummary.stateChangedViolations} />
                       ),
                     },
                     {
                       key: 'review',
-                      label: t('popup.history.comparisonSectionReview', {
-                        count: comparisonSummary.reviewChangedViolations.length,
-                      }),
+                      label: (
+                        <ComparisonSectionHeader
+                          count={comparisonSummary.reviewChangedViolations.length}
+                          label={t('popup.history.reviewChangedRecords')}
+                        />
+                      ),
                       children: (
                         <ComparisonReviewList changes={comparisonSummary.reviewChangedViolations} />
                       ),

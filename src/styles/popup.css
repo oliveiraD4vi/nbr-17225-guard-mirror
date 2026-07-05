@@ -12,7 +12,7 @@
 .popup-header {
   background: var(--guard-color-surface);
   color: var(--guard-color-text-primary);
-  padding: 0 1rem !important;
+  padding: 0 0.5rem !important;
   border-bottom: 1px solid var(--guard-color-border);
   box-shadow: none;
 }
@@ -731,28 +731,19 @@
   margin-top: 12px;
 }
 
-.history-comparison-stats {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.history-comparison-stats > div {
+.history-comparison-section-header {
   display: grid;
   gap: 4px;
-  padding: 12px;
-  border: 1px solid var(--guard-color-border-soft);
-  border-radius: 8px;
-  background: var(--guard-color-surface);
+  min-width: 0;
 }
 
-.history-comparison-stats strong {
+.history-comparison-section-header strong {
   color: var(--guard-color-text-primary);
   font-size: 22px;
   line-height: 1;
 }
 
-.history-comparison-stats span {
+.history-comparison-section-header span {
   color: var(--guard-color-text-secondary);
   font-size: 12px;
   line-height: 1.35;
@@ -772,8 +763,27 @@
 }
 
 .history-comparison-details {
+  display: grid;
+  gap: 10px;
   margin-top: 12px;
+  border: 0;
+  background: transparent;
+}
+
+.history-comparison-details .ant-collapse-item {
+  overflow: hidden;
+  border: 1px solid var(--guard-color-border-soft) !important;
+  border-radius: 8px !important;
   background: var(--guard-color-surface);
+}
+
+.history-comparison-details .ant-collapse-header {
+  align-items: center !important;
+  min-height: 68px;
+}
+
+.history-comparison-details .ant-collapse-header-text {
+  min-width: 0;
 }
 
 .history-comparison-change-list {
@@ -1040,8 +1050,7 @@
 
   .history-comparison-header,
   .history-toolbar,
-  .history-comparison-selectors,
-  .history-comparison-stats {
+  .history-comparison-selectors {
     grid-template-columns: 1fr;
     flex-direction: column;
   }
