@@ -40,7 +40,7 @@ O Guardião NBR 17225 executa auditorias diretamente na página inspecionada e o
 - histórico compacto de auditorias por URL;
 - herança de decisões de triagem, anotações, correções de contraste e propostas de texto alternativo entre auditorias equivalentes;
 - exclusão de entradas do histórico com confirmação explícita no painel DevTools;
-- comparação entre auditorias salvas, com indicadores de evolução, regressão e estabilidade;
+- comparação entre auditorias salvas, com cards expansíveis por tipo de mudança;
 - comparação detalhada por escopo comum, separando novas violações, itens não detectados novamente, persistências e decisões de triagem;
 - ignorar ou reabrir uma violação não é tratado como melhoria ou regressão técnica;
 - importação de relatórios JSON exportados pela própria extensão para retomar a análise em outro navegador ou computador;
@@ -63,7 +63,7 @@ O Guardião NBR 17225 executa auditorias diretamente na página inspecionada e o
 - controles de escopo com linguagem orientada à ação, deixando explícito o que será incluído ou removido da leitura atual;
 - feedback visual para a nota, com leitura rápida de risco;
 - contadores acionáveis que excluem violações ignoradas sem apagar seu registro;
-- relatório detalhado em página dedicada, com snapshot imprimível da auditoria visualizada;
+- relatório detalhado ou resumido em página dedicada, com snapshot imprimível da auditoria visualizada;
 - painel do Chrome DevTools como superfície principal para auditar e revisar a página inspecionada;
 - popup enxuto com orientação de acesso ao DevTools e atalho para o relatório da auditoria atual;
 - exportação de resumo simples da auditoria diretamente pela aba de resumo.
@@ -103,8 +103,8 @@ O Guardião NBR 17225 executa auditorias diretamente na página inspecionada e o
 
 ## Definição da Beta
 
-Produto: `1.1.4-beta.8`
-Manifest Chrome: `1.1.4`
+Produto: `1.2.0-beta.9`
+Manifest Chrome: `1.2.0`
 Nome: **V1 Farol Beta**
 
 Escopo da Beta:
@@ -195,7 +195,7 @@ Ative o escopo `Requisitos e recomendações` quando a base obrigatória já est
 
 ### 5. Exportar ou importar contexto quando necessário
 
-Use `Abrir relatório` para gerar uma nova aba com snapshot da auditoria visualizada, adequada para leitura e impressão. Quando a auditoria precisar continuar em outro ambiente, exporte o relatório em JSON e depois use a importação pela aba de histórico ou pela tela inicial. Se a URL importada for a mesma da aba atual, o relatório volta pronto para comparação.
+Use `Abrir relatório` para gerar uma nova aba com snapshot da auditoria visualizada, adequada para leitura e impressão. O relatório pode ser consultado em modo detalhado ou resumido. Quando a auditoria precisar continuar em outro ambiente, exporte o relatório em JSON e depois use a importação pela aba de histórico ou pela tela inicial. Se a URL importada for a mesma da aba atual, o relatório volta pronto para comparação.
 
 Se o painel DevTools avisar que o armazenamento local está em atenção, compacte o histórico e exporte os relatórios que precisarem de retenção de longo prazo.
 
@@ -259,8 +259,8 @@ Quando um PR alterar, remover ou criar uma função de verificação de regra, o
 
 ## Versionamento
 
-Produto: `1.1.4-beta.8`
-Manifest Chrome: `1.1.4`
+Produto: `1.2.0-beta.9`
+Manifest Chrome: `1.2.0`
 Nome: **V1 Farol Beta**
 
 A política de nomes e evolução está documentada em `docs/VERSIONING.md`.

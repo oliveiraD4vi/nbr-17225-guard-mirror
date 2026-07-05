@@ -6,6 +6,27 @@ O formato segue, de forma simples, a ideia de "Keep a Changelog" e versionamento
 
 ## [Unreleased]
 
+## [1.2.0-beta.9] - 2026-07-05
+
+### Added
+
+- relatório em nova aba com modos detalhado e resumido para leitura, impressão e exportação;
+- solicitação opcional de acesso ao site auditado quando o painel DevTools precisa executar a auditoria fora do alcance inicial da permissão da aba.
+
+### Changed
+
+- popup de orientação passa a concentrar links do projeto, repositório e documentação de regras;
+- criação manual de violação passa a usar fluxo compacto em painel lateral;
+- barra de ações do DevTools reduz espaço ocupado e revela rótulos dos botões no foco ou no hover;
+- comparação de auditorias passa a usar os cards de contagem como cabeçalhos expansíveis, reduzindo repetição visual;
+- resumo da nota remove blocos redundantes e mantém explicações objetivas.
+
+### Fixed
+
+- tratamento de contexto invalidado ao recuperar auditoria, histórico e ações dependentes do DOM;
+- erro de hook na tela de resumo de violações durante validação de commit;
+- mensagens de DOM indisponível ficam restritas aos casos em que a página realmente não pode ser acessada.
+
 ## [1.1.4-beta.8] - 2026-07-04
 
 ### Added

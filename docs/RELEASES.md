@@ -36,7 +36,7 @@ git tag -a v1.1.0-beta.4 -m "Release v1.1.0-beta.4"
 Para a rodada atual da linha V1 Farol Beta, use:
 
 ```bash
-git tag -a v1.1.4-beta.8 -m "Release v1.1.4-beta.8"
+git tag -a v1.2.0-beta.9 -m "Release v1.2.0-beta.9"
 ```
 
 ## Atualização dos usuários
@@ -54,7 +54,7 @@ Referências:
 
 O Chrome pode avisar que uma extensão ainda não é considerada confiável pela Navegação segura melhorada. Segundo a documentação do navegador, desenvolvedores novos normalmente precisam de alguns meses de histórico em conformidade com as políticas da Chrome Web Store para adquirir esse estado de confiança.
 
-Esse aviso não é removido por uma configuração do manifesto. O projeto deve manter finalidade única, descrição transparente, política de privacidade atualizada e apenas as permissões necessárias. Nesta versão, `storage`, `activeTab` e `scripting` continuam necessárias para salvar auditorias e executar a análise solicitada pelo usuário na aba ativa.
+Esse aviso não é removido por uma configuração do manifesto. O projeto deve manter finalidade única, descrição transparente, política de privacidade atualizada e apenas as permissões necessárias. Nesta versão, `storage`, `activeTab` e `scripting` continuam necessárias para salvar auditorias e executar a análise solicitada pelo usuário. A permissão opcional por site fica em `optional_host_permissions` e só é solicitada quando o painel DevTools precisa acessar explicitamente a origem auditada.
 
 Referências:
 
