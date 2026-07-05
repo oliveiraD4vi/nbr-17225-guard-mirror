@@ -140,6 +140,7 @@
       "currentAudit": "Auditoria atual desta aba",
       "noCurrentAudit": "Nenhuma auditoria atual. Execute uma análise pelo DevTools.",
       "projectPage": "Página do projeto",
+      "footerLinksLabel": "Links do Guardião",
       "loadError": "Não foi possível consultar a auditoria desta aba."
     },
     "header": {
@@ -229,7 +230,8 @@
       "contrastPreviewUnavailable": "O elemento desta ocorrência não está disponível para pré-visualização.",
       "auditUrlCopied": "URL da auditoria copiada",
       "auditUrlCopyError": "Não foi possível copiar a URL da auditoria",
-      "reportOpenError": "Não foi possível abrir o relatório em nova aba"
+      "reportOpenError": "Não foi possível abrir o relatório em nova aba",
+      "extensionContextInvalidated": "A extensão foi recarregada. Feche este painel e abra o Guardião novamente no DevTools."
     },
     "manualFinding": {
       "title": "Criar violação manual",

@@ -19,6 +19,7 @@
   gap: 16px;
 }
 
+.popup-guide-brand div,
 .popup-guide-brand {
   align-items: center;
   gap: 10px;
@@ -42,7 +43,6 @@
 }
 
 .popup-guide-brand span,
-.popup-guide-report span,
 .popup-guide-report small {
   color: var(--guard-color-text-muted);
   font-size: 11px;
@@ -51,18 +51,6 @@
 .popup-guide-intro {
   padding: 36px 10px 28px;
   text-align: center;
-}
-
-.popup-guide-icon {
-  display: inline-grid;
-  place-items: center;
-  width: 64px;
-  height: 64px;
-  margin-bottom: 14px;
-  border-radius: 18px;
-  background: var(--guard-color-info-soft);
-  color: var(--guard-color-primary);
-  font-size: 30px;
 }
 
 .popup-guide-eyebrow {
@@ -134,19 +122,25 @@
 }
 
 .popup-guide-footer {
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  align-items: stretch;
+  flex-direction: column;
+  gap: 8px;
   min-height: 24px;
   padding-top: 14px;
   font-size: 11px;
 }
 
-.popup-guide-footer a {
+.popup-guide-footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+}
+
+.popup-guide-footer-links a {
   color: var(--guard-color-primary);
 }
 
 .popup-guide-footer span {
   color: var(--guard-color-danger-text);
-  text-align: right;
+  text-align: left;
 }

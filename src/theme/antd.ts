@@ -5,9 +5,16 @@ function resolveGuardToken(variableName: string, fallback: string): string {
   return resolved || fallback
 }
 
+function resolveGuardNumberToken(variableName: string, fallback: number): number {
+  const resolved = getComputedStyle(document.documentElement).getPropertyValue(variableName).trim()
+  const parsed = Number.parseFloat(resolved || `${fallback}`)
+  return Number.isFinite(parsed) ? parsed : fallback
+}
+
 export function createGuardAntTheme(): ThemeConfig {
   return {
     token: {
+      controlHeight: resolveGuardNumberToken('--guard-control-height', 36),
       colorPrimary: resolveGuardToken('--guard-color-primary', '#0f766e'),
       colorBgBase: resolveGuardToken('--guard-color-page-bg', '#f3f6fb'),
       colorBgLayout: resolveGuardToken('--guard-color-page-bg', '#f3f6fb'),

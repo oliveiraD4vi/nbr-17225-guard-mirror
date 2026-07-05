@@ -1,10 +1,17 @@
 import React from 'react'
 import { Button, Spin, Tag } from 'antd'
-import { FileTextOutlined, ToolOutlined } from '@ant-design/icons'
-import { PROJECT_PAGE_URL } from '@/config/links'
+import { FileTextOutlined } from '@ant-design/icons'
+import {
+  EXTENSION_PUBLIC_REPOSITORY_URL,
+  PROJECT_PAGE_URL,
+  PROJECT_PRIVACY_URL,
+  PROJECT_RULES_URL,
+  PROJECT_SCORE_URL,
+} from '@/config/links'
 import { t } from '@/i18n'
 import type { AuditResult } from '@/types'
 import { getAuditResult, getAuditTargetTab, type AuditTargetTab } from '@/utils/audit-engine'
+import { isExtensionContextInvalidatedError } from '@/utils/extension-runtime'
 import { APP_VERSION } from '@/version'
 
 export const PopupLandingApp: React.FC = () => {
@@ -14,6 +21,13 @@ export const PopupLandingApp: React.FC = () => {
   const [openingReport, setOpeningReport] = React.useState(false)
   const [statusMessage, setStatusMessage] = React.useState('')
   const appIconUrl = React.useMemo(() => chrome.runtime.getURL('icons/icon.png'), [])
+  const footerLinks = [
+    { href: PROJECT_PAGE_URL, label: t('popup.guide.projectPage') },
+    { href: PROJECT_RULES_URL, label: t('popup.about.links.rules') },
+    { href: PROJECT_SCORE_URL, label: t('summary.scoreExplanationLink') },
+    { href: PROJECT_PRIVACY_URL, label: t('popup.about.links.privacy') },
+    { href: EXTENSION_PUBLIC_REPOSITORY_URL, label: t('popup.about.links.github') },
+  ]
 
   React.useEffect(() => {
     let disposed = false
@@ -26,8 +40,17 @@ export const PopupLandingApp: React.FC = () => {
         setActiveTab(tab)
         setAuditResult(result)
       } catch (error) {
-        console.error(t('popup.guide.loadError'), error)
-        if (!disposed) setStatusMessage(t('popup.guide.loadError'))
+        const isInvalidatedContext = isExtensionContextInvalidatedError(error)
+        if (!isInvalidatedContext) {
+          console.error(t('popup.guide.loadError'), error)
+        }
+        if (!disposed) {
+          setStatusMessage(
+            isInvalidatedContext
+              ? t('popup.messages.extensionContextInvalidated')
+              : t('popup.guide.loadError'),
+          )
+        }
       } finally {
         if (!disposed) setLoading(false)
       }
@@ -51,7 +74,9 @@ export const PopupLandingApp: React.FC = () => {
       })
       if (response?.error) throw new Error(response.error)
     } catch (error) {
-      console.error(t('popup.messages.reportOpenError'), error)
+      if (!isExtensionContextInvalidatedError(error)) {
+        console.error(t('popup.messages.reportOpenError'), error)
+      }
       setStatusMessage(t('popup.messages.reportOpenError'))
     } finally {
       setOpeningReport(false)
@@ -65,18 +90,13 @@ export const PopupLandingApp: React.FC = () => {
       <header className="popup-guide-header">
         <div className="popup-guide-brand">
           <img src={appIconUrl} alt="" aria-hidden="true" />
-          <div>
-            <strong>{t('shared.brand.name')}</strong>
-            <span>v{APP_VERSION}</span>
-          </div>
+          <strong>{t('shared.brand.name')}</strong>
+          <span>v{APP_VERSION}</span>
         </div>
         <Tag color="gold">{t('shared.states.beta')}</Tag>
       </header>
 
       <section className="popup-guide-intro">
-        <span className="popup-guide-icon" aria-hidden="true">
-          <ToolOutlined />
-        </span>
         <p className="popup-guide-eyebrow">{t('popup.guide.eyebrow')}</p>
         <h1>{t('popup.guide.title')}</h1>
         <p>{t('popup.guide.description')}</p>
@@ -117,9 +137,13 @@ export const PopupLandingApp: React.FC = () => {
       </section>
 
       <footer className="popup-guide-footer">
-        <a href={PROJECT_PAGE_URL} target="_blank" rel="noreferrer">
-          {t('popup.guide.projectPage')}
-        </a>
+        <nav className="popup-guide-footer-links" aria-label={t('popup.guide.footerLinksLabel')}>
+          {footerLinks.map((link) => (
+            <a key={link.href} href={link.href} target="_blank" rel="noreferrer">
+              {link.label}
+            </a>
+          ))}
+        </nav>
         <span aria-live="polite">{statusMessage}</span>
       </footer>
     </main>
