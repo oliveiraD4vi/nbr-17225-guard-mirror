@@ -75,14 +75,12 @@ export function buildAuditSummaryJson(result: AuditResult) {
     (violation) => violation.normativeType === 'Requisito',
   ).length
   const actionableRecommendationCount = actionableViolations.length - actionableRequirementCount
-  const topViolations = normalizedViolations
-    .filter((violation) => !isIgnoredFinding(violation))
-    .sort((a, b) => {
-      if (a.severity !== b.severity) return a.severity === 'error' ? -1 : 1
-      if (a.requiresHumanReview !== b.requiresHumanReview) return a.requiresHumanReview ? -1 : 1
-      return a.nbrReference.localeCompare(b.nbrReference, 'pt-BR')
-    })
-    .slice(0, 12)
+  const summarizedViolations = normalizedViolations.sort((a, b) => {
+    if (isIgnoredFinding(a) !== isIgnoredFinding(b)) return isIgnoredFinding(a) ? 1 : -1
+    if (a.severity !== b.severity) return a.severity === 'error' ? -1 : 1
+    if (a.requiresHumanReview !== b.requiresHumanReview) return a.requiresHumanReview ? -1 : 1
+    return a.nbrReference.localeCompare(b.nbrReference, 'pt-BR')
+  })
 
   return {
     title: t('summaryExport.title'),
@@ -123,9 +121,10 @@ export function buildAuditSummaryJson(result: AuditResult) {
       pending: pendingReviews,
       alternativeTextReviews: alternativeTextReviewCount,
     },
-    mainFindings: topViolations.map((violation) => ({
+    mainFindings: summarizedViolations.map((violation) => ({
       nbrReference: violation.nbrReference,
       ruleName: violation.ruleName,
+      severity: violation.severity,
       message: violation.message,
       normativeType: violation.normativeType,
       requiresHumanReview: violation.requiresHumanReview,
@@ -135,6 +134,9 @@ export function buildAuditSummaryJson(result: AuditResult) {
       ignoreReason: violation.ignoreReason,
       ignoreNote: violation.ignoreNote,
       alternativeTextReview: violation.alternativeTextReview,
+      userContrastOverride: violation.userContrastOverride,
+      userNote: violation.userNote,
+      elementSelector: violation.elementSelector,
     })),
   }
 }

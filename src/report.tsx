@@ -1,13 +1,13 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { Button, ConfigProvider, Empty, Layout, Space, Tag } from 'antd'
+import { Button, ConfigProvider, Empty, Layout, Segmented, Space, Tag } from 'antd'
 import { DownloadOutlined, PrinterOutlined } from '@ant-design/icons'
 import ptBR from 'antd/locale/pt_BR'
 import { ReportSkeleton } from './components/LoadingSkeletons'
 import { t } from './i18n'
 import { isNormativeRequirement } from './normative'
 import type { AuditResult, Violation } from './types'
-import { buildExportableAuditResult } from './utils/audit-export'
+import { buildAuditSummaryJson, buildExportableAuditResult } from './utils/audit-export'
 import { getAuditScoreData } from './utils/audit-score'
 import { isIgnoredFinding, normalizeViolationFindingState } from './utils/audit-triage'
 import { getReportSnapshot } from './utils/report-snapshots'
@@ -26,6 +26,8 @@ interface ReportSection {
   violations: Violation[]
 }
 
+type ReportMode = 'detailed' | 'summary'
+
 function formatDate(timestamp: number): string {
   return new Date(timestamp).toLocaleString('pt-BR')
 }
@@ -34,15 +36,23 @@ function getSnapshotId(): string | null {
   return new URLSearchParams(window.location.search).get('snapshotId')
 }
 
-function downloadJson(result: AuditResult): void {
-  const dataStr = JSON.stringify(buildExportableAuditResult(result), null, 2)
+function downloadJsonFile(data: unknown, filenamePrefix: string): void {
+  const dataStr = JSON.stringify(data, null, 2)
   const blob = new Blob([dataStr], { type: 'application/json;charset=utf-8' })
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url
-  link.download = `${t('shared.exports.reportFilePrefix')}-${new Date().toISOString().split('T')[0]}.json`
+  link.download = `${filenamePrefix}-${new Date().toISOString().split('T')[0]}.json`
   link.click()
   URL.revokeObjectURL(url)
+}
+
+function downloadDetailedJson(result: AuditResult): void {
+  downloadJsonFile(buildExportableAuditResult(result), t('shared.exports.reportFilePrefix'))
+}
+
+function downloadSummaryJson(result: AuditResult): void {
+  downloadJsonFile(buildAuditSummaryJson(result), t('shared.exports.summaryFilePrefix'))
 }
 
 function groupByRule(violations: Violation[]): Array<{ key: string; violations: Violation[] }> {
@@ -200,6 +210,132 @@ const ViolationReportItem: React.FC<{ violation: Violation }> = ({ violation }) 
   </article>
 )
 
+function getRuleSummary(violations: Violation[]) {
+  return {
+    alternativeTextReviews: violations.filter((violation) =>
+      Boolean(violation.alternativeTextReview?.proposedText?.trim()),
+    ).length,
+    contrastAdjustments: violations.filter((violation) => Boolean(violation.userContrastOverride))
+      .length,
+    ignored: violations.filter(isIgnoredFinding).length,
+    notes: violations.filter((violation) => Boolean(violation.userNote?.trim())).length,
+    errors: violations.filter((violation) => violation.severity === 'error').length,
+    warnings: violations.filter((violation) => violation.severity === 'warning').length,
+    total: violations.length,
+  }
+}
+
+const SummaryViolationItem: React.FC<{ violation: Violation }> = ({ violation }) => (
+  <article className="report-summary-finding">
+    <div>
+      <strong>{violation.message}</strong>
+      <span>
+        NBR {violation.nbrReference} ·{' '}
+        {violation.elementSelector || violation.elementTagName || '-'}
+      </span>
+    </div>
+    <Space wrap>
+      <Tag color={violation.severity === 'error' ? 'red' : 'orange'}>
+        {violation.severity === 'error' ? t('shared.severity.error') : t('shared.severity.warning')}
+      </Tag>
+      <Tag>{getFindingLabel(violation)}</Tag>
+    </Space>
+    {(violation.userContrastOverride ||
+      violation.alternativeTextReview?.proposedText ||
+      violation.userNote ||
+      violation.ignoreReason) && (
+      <ul>
+        {violation.userContrastOverride && (
+          <li>
+            {t('report.summaryContrast')}: {violation.userContrastOverride.foregroundHex} /{' '}
+            {violation.userContrastOverride.backgroundHex}
+          </li>
+        )}
+        {violation.alternativeTextReview?.proposedText && (
+          <li>
+            {t('report.summaryAlternativeText')}: {violation.alternativeTextReview.proposedText}
+          </li>
+        )}
+        {violation.userNote && (
+          <li>
+            {t('shared.labels.annotations')}: {violation.userNote}
+          </li>
+        )}
+        {violation.ignoreReason && (
+          <li>
+            {t('violations.ignoreSummaryTitle')}: {violation.ignoreReason}
+            {violation.ignoreNote ? ` — ${violation.ignoreNote}` : ''}
+          </li>
+        )}
+      </ul>
+    )}
+  </article>
+)
+
+const SummaryReportSectionView: React.FC<{ section: ReportSection }> = ({ section }) => (
+  <section className="report-section report-summary-section">
+    <div className="report-section-header">
+      <div>
+        <h2>{section.title}</h2>
+        <p>{section.description}</p>
+      </div>
+      <Tag>{t('shared.counts.items', { count: section.violations.length })}</Tag>
+    </div>
+
+    {section.violations.length === 0 ? (
+      <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('report.sections.empty')} />
+    ) : (
+      groupByRule(section.violations).map((group) => {
+        const firstViolation = group.violations[0]
+        const summary = getRuleSummary(group.violations)
+
+        return (
+          <article className="report-summary-rule" key={`${section.key}-${group.key}`}>
+            <div className="report-rule-header">
+              <div>
+                <h3>{firstViolation.ruleName}</h3>
+                <p>{firstViolation.description}</p>
+              </div>
+              <Tag color={isNormativeRequirement(firstViolation.nbrReference) ? 'red' : 'blue'}>
+                NBR {firstViolation.nbrReference}
+              </Tag>
+            </div>
+            <div className="report-summary-chips">
+              <span>
+                <strong>{summary.total}</strong> {t('report.summaryOccurrences')}
+              </span>
+              <span>
+                <strong>{summary.errors}</strong> {t('shared.severity.error')}
+              </span>
+              <span>
+                <strong>{summary.warnings}</strong> {t('shared.severity.warning')}
+              </span>
+              <span>
+                <strong>{summary.ignored}</strong> {t('summary.scorePanelIgnoredFindingsShort')}
+              </span>
+              <span>
+                <strong>{summary.contrastAdjustments}</strong> {t('report.summaryContrastCount')}
+              </span>
+              <span>
+                <strong>{summary.alternativeTextReviews}</strong>{' '}
+                {t('report.summaryAlternativeTextCount')}
+              </span>
+              <span>
+                <strong>{summary.notes}</strong> {t('shared.labels.annotations')}
+              </span>
+            </div>
+            <div className="report-summary-findings">
+              {group.violations.map((violation) => (
+                <SummaryViolationItem key={violation.id} violation={violation} />
+              ))}
+            </div>
+          </article>
+        )
+      })
+    )}
+  </section>
+)
+
 const ReportSectionView: React.FC<{ section: ReportSection }> = ({ section }) => (
   <section className="report-section">
     <div className="report-section-header">
@@ -239,6 +375,7 @@ const ReportSectionView: React.FC<{ section: ReportSection }> = ({ section }) =>
 export const ReportApp: React.FC = () => {
   const [auditResult, setAuditResult] = React.useState<AuditResult | null>(null)
   const [loading, setLoading] = React.useState(true)
+  const [reportMode, setReportMode] = React.useState<ReportMode>('detailed')
 
   React.useEffect(() => {
     const loadSnapshot = async () => {
@@ -271,13 +408,24 @@ export const ReportApp: React.FC = () => {
         </div>
         {auditResult && (
           <Space className="report-actions">
+            <Segmented
+              options={[
+                { label: t('report.modeDetailed'), value: 'detailed' },
+                { label: t('report.modeSummary'), value: 'summary' },
+              ]}
+              value={reportMode}
+              onChange={(value) => setReportMode(value as ReportMode)}
+            />
             <Button icon={<PrinterOutlined />} onClick={() => window.print()}>
-              {t('shared.actions.print')}
+              {reportMode === 'summary' ? t('report.printSummary') : t('report.printDetailed')}
+            </Button>
+            <Button icon={<DownloadOutlined />} onClick={() => downloadSummaryJson(auditResult)}>
+              {t('report.exportSummaryJson')}
             </Button>
             <Button
               type="primary"
               icon={<DownloadOutlined />}
-              onClick={() => downloadJson(auditResult)}
+              onClick={() => downloadDetailedJson(auditResult)}
             >
               {t('shared.actions.exportJson')}
             </Button>
@@ -326,9 +474,20 @@ export const ReportApp: React.FC = () => {
               </div>
             </section>
 
-            {sections.map((section) => (
-              <ReportSectionView key={section.key} section={section} />
-            ))}
+            {reportMode === 'summary' ? (
+              <section className="report-summary-intro">
+                <h2>{t('report.summaryTitle')}</h2>
+                <p>{t('report.summaryDescription')}</p>
+              </section>
+            ) : null}
+
+            {sections.map((section) =>
+              reportMode === 'summary' ? (
+                <SummaryReportSectionView key={section.key} section={section} />
+              ) : (
+                <ReportSectionView key={section.key} section={section} />
+              ),
+            )}
           </>
         )}
       </Content>
@@ -340,10 +499,7 @@ const root = ReactDOM.createRoot(document.getElementById('root')!)
 
 root.render(
   <React.StrictMode>
-    <ConfigProvider
-      locale={ptBR}
-      theme={antTheme}
-    >
+    <ConfigProvider locale={ptBR} theme={antTheme}>
       <ReportApp />
     </ConfigProvider>
   </React.StrictMode>,
