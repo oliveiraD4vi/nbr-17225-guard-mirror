@@ -99,43 +99,77 @@
   align-items: center;
 }
 
-.manual-finding-modal-content {
+.manual-finding-drawer .ant-drawer-body {
+  padding: 14px;
+}
+
+.manual-finding-drawer-content {
   width: 100%;
 }
 
-.manual-finding-element-preview {
+.manual-finding-element-card {
   display: grid;
-  gap: 8px;
+  gap: 10px;
   padding: 12px;
   border: 1px solid var(--guard-color-border-soft);
   border-radius: 8px;
   background: var(--guard-color-surface-muted);
 }
 
-.manual-finding-element-preview-header {
+.manual-finding-element-card-header {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
   min-width: 0;
 }
 
-.manual-finding-element-preview code {
+.manual-finding-element-card-header div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.manual-finding-element-card-header span {
+  color: var(--guard-color-text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.manual-finding-element-card-header strong {
+  color: var(--guard-color-text-primary);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.manual-finding-element-card code {
   min-width: 0;
   overflow-wrap: anywhere;
-  color: var(--guard-color-text-primary);
+  color: #1d4ed8;
   font-size: 12px;
 }
 
-.manual-finding-element-preview p {
+.manual-finding-element-card p {
   margin: 0;
   color: var(--guard-color-text-secondary);
   font-size: 12px;
   line-height: 1.45;
 }
 
-.manual-finding-element-preview pre {
+.manual-finding-element-card details {
+  color: var(--guard-color-text-secondary);
+  font-size: 12px;
+}
+
+.manual-finding-element-card summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.manual-finding-element-card pre {
   max-height: 120px;
-  margin: 0;
+  margin: 8px 0 0;
   padding: 8px;
   overflow: auto;
   border-radius: 6px;
@@ -147,8 +181,18 @@
   overflow-wrap: anywhere;
 }
 
-.manual-finding-form .ant-form-item {
-  margin-bottom: 14px;
+.manual-finding-compact-form .ant-form-item {
+  margin-bottom: 12px;
+}
+
+.manual-finding-compact-form textarea.ant-input {
+  min-height: 66px;
+}
+
+.manual-finding-drawer-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .popup-loading-state {
@@ -272,6 +316,12 @@
   align-items: stretch;
   gap: 12px;
   padding: 0 12px 12px;
+}
+
+.tab-status-strip > .ant-tag {
+  justify-self: start;
+  align-self: start;
+  width: auto;
 }
 
 .tab-status-item {
@@ -545,7 +595,39 @@
   max-width: 36px;
   height: 36px;
   padding: 0 !important;
-  border-radius: 50% !important;
+  overflow: hidden;
+  border-radius: 999px !important;
+  transition:
+    max-width 0.18s ease,
+    width 0.18s ease,
+    padding 0.18s ease;
+}
+
+.footer-icon-action:hover,
+.footer-icon-action:focus-visible {
+  width: auto;
+  max-width: 190px;
+  padding-inline: 10px 12px !important;
+}
+
+.footer-action-label {
+  display: inline-block;
+  max-width: 0;
+  opacity: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  transition:
+    max-width 0.18s ease,
+    opacity 0.18s ease,
+    margin-inline-start 0.18s ease;
+}
+
+.footer-icon-action:hover .footer-action-label,
+.footer-icon-action:focus-visible .footer-action-label,
+.footer-download-action .footer-action-label {
+  max-width: 130px;
+  margin-inline-start: 6px;
+  opacity: 1;
 }
 
 .footer-download-action {
@@ -920,9 +1002,31 @@
   pointer-events: auto;
 }
 
+.floating-action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: auto;
+}
+
+.manual-finding-floating-button {
+  height: 32px;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.16);
+}
+
 @media (max-width: 640px) {
+  .header-row,
+  .audit-meta-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .popup-content {
+    padding: 12px;
+  }
+
   .tab-status-strip {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -945,8 +1049,7 @@
 
 @media (max-width: 640px) {
   .tab-status-strip {
-    flex-direction: column;
-    align-items: flex-start;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .popup-loading-grid {
@@ -973,12 +1076,18 @@
   }
 
   .footer-report-action {
-    width: auto;
-    margin-inline-start: auto;
+    width: 100%;
+    margin-inline-start: 0;
   }
 
   .vision-floating-shell {
     bottom: 7.25rem;
+    right: 1rem;
+  }
+
+  .manual-finding-drawer,
+  .manual-finding-drawer .ant-drawer-content-wrapper {
+    width: 100% !important;
   }
 }
 

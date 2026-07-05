@@ -2,6 +2,7 @@ import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } fr
 import {
   Alert,
   Button,
+  Drawer,
   Form,
   Input,
   Layout,
@@ -78,6 +79,7 @@ import { areSimilarViolations } from '@/utils/audit-bulk-actions'
 import { getAuditUrlStorageKey, hydrateAuditResult } from '@/utils/audit-history'
 import { applyFindingStatusUpdate, type FindingStatusUpdate } from '@/utils/audit-triage'
 import { extensionStorageGet, extensionStorageSet } from '@/utils/extension-storage'
+import { isExtensionContextInvalidatedError } from '@/utils/extension-runtime'
 import {
   getManualFindingDraftTabKey,
   MANUAL_FINDING_DRAFTS_STORAGE_KEY,
@@ -431,7 +433,7 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
   const [isManualFindingModalOpen, setIsManualFindingModalOpen] = useState(false)
   const [manualFindingSaving, setManualFindingSaving] = useState(false)
   const [manualFindingForm] = Form.useForm<ManualFindingFormValues>()
-  const appIconUrl = useMemo(() => chrome.runtime.getURL('icons/icon-white.png'), [])
+  const appIconUrl = useMemo(() => chrome.runtime.getURL('icons/icon.png'), [])
 
   const resolveCurrentTab = useCallback(async () => getAuditTargetTab(targetTab), [targetTab])
 
@@ -506,7 +508,11 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
       setComparisonTargetId(history[0]?.id)
       setComparisonBaselineId(history[1]?.id || history[0]?.id)
     } catch (error) {
-      console.error('Erro ao carregar resultado da aba ativa:', error)
+      if (isExtensionContextInvalidatedError(error)) {
+        message.warning(t('popup.messages.extensionContextInvalidated'))
+      } else {
+        console.error('Erro ao carregar resultado da aba ativa:', error)
+      }
       setAuditResult(null)
       setAuditHistory([])
       setSiteAuditHistory([])
@@ -563,7 +569,7 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
   const sendMessageToActiveTab = useCallback(
     async (payload: Record<string, unknown>) => {
       const tab = activeTab ?? (await resolveCurrentTab())
-      await ensureContentScriptReady(tab.id)
+      await ensureContentScriptReady(tab.id, tab.url)
       const response = await chrome.tabs.sendMessage(tab.id, payload)
       if (response?.error) {
         throw new Error(response.error)
@@ -707,7 +713,7 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
 
   const ensureContrastPreviewSession = useCallback(async () => {
     if (contrastPreviewPortRef.current || !activeTab?.id) return
-    await ensureContentScriptReady(activeTab.id)
+    await ensureContentScriptReady(activeTab.id, activeTab.url)
     const port = chrome.tabs.connect(activeTab.id, { name: 'contrast-preview-session' })
     port.onDisconnect.addListener(() => {
       if (contrastPreviewPortRef.current === port) {
@@ -716,7 +722,7 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
       }
     })
     contrastPreviewPortRef.current = port
-  }, [activeTab?.id])
+  }, [activeTab?.id, activeTab?.url])
 
   const clearContrastPreviewsOnPage = useCallback(async () => {
     contrastPreviewItemsRef.current.clear()
@@ -1285,13 +1291,13 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
       await extensionStorageSet({ visionFilter: filter })
       if (!activeTab?.id) return
       try {
-        await ensureContentScriptReady(activeTab.id)
+        await ensureContentScriptReady(activeTab.id, activeTab.url)
         await chrome.tabs.sendMessage(activeTab.id, { action: 'APPLY_VISION_FILTER', filter })
       } catch (error) {
         console.error('Erro ao aplicar simulador de percepção visual:', error)
       }
     },
-    [activeTab?.id],
+    [activeTab?.id, activeTab?.url],
   )
 
   const handleHighlightAll = useCallback(async () => {
@@ -2071,13 +2077,6 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
         disabled: !canRerunViewedAudit,
       },
       {
-        key: 'manual-finding',
-        label: t('shared.actions.createManualFinding'),
-        icon: <PlusOutlined />,
-        onClick: handleStartManualFindingSelection,
-        disabled: isHistoricalView,
-      },
-      {
         key: 'highlight',
         label: t('shared.actions.highlightAll'),
         icon: <EyeOutlined />,
@@ -2125,7 +2124,6 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
     handleRunAudit,
     canRerunViewedAudit,
     loading,
-    handleStartManualFindingSelection,
     handleHighlightAll,
     isHistoricalView,
     handleNextPriorityIssue,
@@ -2521,7 +2519,20 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
                   </Suspense>
                 </section>
               )}
-              <Tooltip placement="topLeft" title={t('vision.openFloatingPanel')}>
+              <div className="floating-action-buttons">
+                <Tooltip placement="topLeft" title={t('shared.actions.createManualFinding')}>
+                  <Button
+                    className="manual-finding-floating-button"
+                    type="default"
+                    shape="circle"
+                    icon={<PlusOutlined />}
+                    aria-label={t('shared.actions.createManualFinding')}
+                    disabled={isHistoricalView}
+                    onClick={() => {
+                      void handleStartManualFindingSelection()
+                    }}
+                  />
+                </Tooltip>
                 <Button
                   className="vision-floating-button"
                   type={isVisionSimulatorOpen ? 'default' : 'primary'}
@@ -2536,50 +2547,50 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
                     setIsVisionSimulatorOpen((current) => !current)
                   }}
                 />
-              </Tooltip>
+              </div>
             </div>
           </>
         )}
       </Content>
 
-      <Modal
+      <Drawer
         open={isManualFindingModalOpen}
         title={t('popup.manualFinding.title')}
-        onCancel={handleCloseManualFindingModal}
-        footer={[
-          <Button key="cancel-draft" onClick={() => void handleCancelManualFindingDraft()}>
-            {t('popup.manualFinding.actions.cancelDraft')}
-          </Button>,
-          <Button key="reselect" onClick={() => void handleReselectManualFindingElement()}>
-            {t('popup.manualFinding.actions.reselect')}
-          </Button>,
-          <Button
-            key="save"
-            type="primary"
-            loading={manualFindingSaving}
-            onClick={() => void handleSaveManualFinding()}
-          >
-            {t('popup.manualFinding.actions.save')}
-          </Button>,
-        ]}
+        onClose={handleCloseManualFindingModal}
+        placement="right"
+        width={420}
+        className="manual-finding-drawer"
+        footer={
+          <div className="manual-finding-drawer-footer">
+            <Button onClick={() => void handleCancelManualFindingDraft()}>
+              {t('popup.manualFinding.actions.cancelDraft')}
+            </Button>
+            <Button
+              type="primary"
+              loading={manualFindingSaving}
+              onClick={() => void handleSaveManualFinding()}
+            >
+              {t('popup.manualFinding.actions.save')}
+            </Button>
+          </div>
+        }
         getContainer={false}
-        centered
-        width={560}
       >
         {manualFindingDraft ? (
-          <Space direction="vertical" size={16} className="manual-finding-modal-content">
-            <Alert
-              type="info"
-              showIcon
-              message={t('popup.manualFinding.selectedElementTitle')}
-              description={t('popup.manualFinding.selectedElementDescription')}
-            />
-
-            <div className="manual-finding-element-preview">
-              <div className="manual-finding-element-preview-header">
-                {manualFindingDraft.tagName && <Tag>{manualFindingDraft.tagName}</Tag>}
-                <code>{manualFindingDraft.selector}</code>
+          <Space direction="vertical" size={14} className="manual-finding-drawer-content">
+            <section className="manual-finding-element-card">
+              <div className="manual-finding-element-card-header">
+                <div>
+                  <span>{t('popup.manualFinding.selectedElementTitle')}</span>
+                  <strong>
+                    {manualFindingDraft.tagName || t('shared.labels.affectedElement')}
+                  </strong>
+                </div>
+                <Button size="small" onClick={() => void handleReselectManualFindingElement()}>
+                  {t('popup.manualFinding.actions.reselect')}
+                </Button>
               </div>
+              <code>{manualFindingDraft.selector}</code>
               {manualFindingDraft.accessibleName && (
                 <p>
                   <strong>{t('shared.labels.accessibleName')}:</strong>{' '}
@@ -2592,13 +2603,16 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
                   {manualFindingDraft.visibleText}
                 </p>
               )}
-              <pre>{manualFindingDraft.snippet}</pre>
-            </div>
+              <details>
+                <summary>{t('popup.manualFinding.elementSnippetSummary')}</summary>
+                <pre>{manualFindingDraft.snippet}</pre>
+              </details>
+            </section>
 
             <Form
               form={manualFindingForm}
               layout="vertical"
-              className="manual-finding-form"
+              className="manual-finding-compact-form"
               requiredMark
             >
               <Form.Item
@@ -2691,7 +2705,7 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
             description={t('popup.manualFinding.emptyDraftDescription')}
           />
         )}
-      </Modal>
+      </Drawer>
 
       <Modal
         open={Boolean(historyEntryPendingDeletion)}
@@ -2803,22 +2817,18 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
                       action.key === 'csv' ? 'CSV' : action.key === 'json' ? 'JSON' : null
 
                     return (
-                      <Tooltip key={action.key} title={action.label}>
-                        <Button
-                          className={
-                            downloadLabel ? 'footer-download-action' : 'footer-icon-action'
-                          }
-                          type="text"
-                          shape={downloadLabel ? undefined : 'circle'}
-                          icon={action.icon}
-                          aria-label={action.label}
-                          onClick={action.onClick}
-                          loading={action.loading}
-                          disabled={action.disabled}
-                        >
-                          {downloadLabel}
-                        </Button>
-                      </Tooltip>
+                      <Button
+                        key={action.key}
+                        className={downloadLabel ? 'footer-download-action' : 'footer-icon-action'}
+                        type="text"
+                        icon={action.icon}
+                        aria-label={action.label}
+                        onClick={action.onClick}
+                        loading={action.loading}
+                        disabled={action.disabled}
+                      >
+                        <span className="footer-action-label">{downloadLabel ?? action.label}</span>
+                      </Button>
                     )
                   })}
               </div>

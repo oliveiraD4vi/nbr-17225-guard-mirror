@@ -237,6 +237,7 @@
       "title": "Criar violação manual",
       "selectedElementTitle": "Elemento selecionado",
       "selectedElementDescription": "Revise o elemento e preencha a regra NBR que fundamenta a violação.",
+      "elementSnippetSummary": "Ver HTML resumido",
       "emptyDraftTitle": "Nenhum elemento selecionado",
       "emptyDraftDescription": "Inicie a seleção novamente para escolher um elemento da página.",
       "actions": {

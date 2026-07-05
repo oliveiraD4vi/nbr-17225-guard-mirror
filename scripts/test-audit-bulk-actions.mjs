@@ -154,10 +154,7 @@ assert.equal(
   2,
 )
 
-const popupSource = await fs.readFile(
-  path.resolve('src/components/AuditWorkspaceApp.tsx'),
-  'utf8',
-)
+const popupSource = await fs.readFile(path.resolve('src/components/AuditWorkspaceApp.tsx'), 'utf8')
 const violationsListSource = await fs.readFile(
   path.resolve('src/components/ViolationsList.tsx'),
   'utf8',
@@ -189,7 +186,6 @@ assert.doesNotMatch(popupSource.slice(jsonActionStart, reportActionStart), /type
 assert.match(popupSource.slice(reportActionStart, reportActionEnd), /type: 'primary'/)
 assert.doesNotMatch(popupSource.slice(highlightActionStart, priorityActionStart), /type: 'primary'/)
 assert.match(popupSource, /downloadLabel \? 'footer-download-action' : 'footer-icon-action'/)
-assert.match(popupSource, /shape=\{downloadLabel \? undefined : 'circle'\}/)
 assert.match(popupSource, /aria-label=\{action\.label\}/)
 
 assert.doesNotMatch(violationsListSource, /findingActionConfirm|findingTriage/)
