@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Guardião Lab</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#workspace">Pular para o conteúdo principal</a>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand">
+          <strong>Guardião Lab</strong>
+          <span>Explorador experimental da árvore de acessibilidade</span>
+        </div>
+        <div class="connection-actions" aria-label="Controles da conexão">
+          <span id="connection-status" class="connection-status" role="status">
+            <span aria-hidden="true"></span> Desconectado
+          </span>
+          <button id="connect-button" class="button button-primary" type="button">Conectar</button>
+          <button id="refresh-button" class="button" type="button" disabled>
+            Atualizar árvore
+          </button>
+          <button id="disconnect-button" class="button" type="button" disabled>Desconectar</button>
+        </div>
+      </header>
+
+      <main id="workspace" class="workspace" tabindex="-1">
+        <section class="panel tree-panel" aria-labelledby="tree-title">
+          <div class="panel-heading">
+            <h1 id="tree-title">Árvore de acessibilidade</h1>
+            <span id="tree-count">0 nós</span>
+          </div>
+          <label class="search-field">
+            <span class="visually-hidden">Buscar na árvore de acessibilidade</span>
+            <input id="tree-search" type="search" placeholder="Buscar por nome, papel ou valor" />
+          </label>
+          <div id="tree-empty" class="empty-state">
+            Conecte o Lab à aba inspecionada para carregar a árvore real do Chromium.
+          </div>
+          <div id="tree" class="tree" role="tree" aria-label="Árvore de acessibilidade"></div>
+        </section>
+
+        <section class="panel inspector-panel" aria-labelledby="inspector-title">
+          <div class="panel-heading">
+            <h2 id="inspector-title">Inspector do nó selecionado</h2>
+            <button id="highlight-button" class="button" type="button" disabled>
+              Destacar elemento visual
+            </button>
+          </div>
+          <div id="inspector-empty" class="empty-state">
+            Selecione um nó da árvore para examinar as propriedades expostas ao Chromium.
+          </div>
+          <div id="inspector-content" hidden>
+            <section class="inspector-section" aria-labelledby="dom-title">
+              <h3 id="dom-title">Elemento correspondente no DOM</h3>
+              <pre id="dom-preview"><code>—</code></pre>
+            </section>
+            <section class="inspector-section" aria-labelledby="properties-title">
+              <h3 id="properties-title">Propriedades acessíveis</h3>
+              <dl id="properties-list" class="property-list"></dl>
+            </section>
+            <section class="inspector-section" aria-labelledby="relation-title">
+              <h3 id="relation-title">Relação com o elemento</h3>
+              <dl id="relation-list" class="property-list"></dl>
+            </section>
+          </div>
+        </section>
+
+        <aside class="utility-column" aria-label="Leituras auxiliares">
+          <section class="panel utility-panel" aria-labelledby="focus-title">
+            <div class="panel-heading">
+              <div>
+                <h2 id="focus-title">Ordem de foco</h2>
+                <p>Sequência real de Tab e Shift+Tab, distinta da ordem estrutural.</p>
+              </div>
+              <button id="focus-refresh-button" class="button button-small" type="button" disabled>
+                Recalcular
+              </button>
+            </div>
+            <ol id="focus-order" class="focus-order"></ol>
+            <p id="focus-empty" class="empty-state compact">Nenhum item focalizável carregado.</p>
+          </section>
+
+          <section class="panel utility-panel live-panel" aria-labelledby="live-title">
+            <div class="panel-heading">
+              <div>
+                <h2 id="live-title">Regiões vivas</h2>
+                <p>Atualizações observadas na árvore durante esta conexão.</p>
+              </div>
+              <button id="clear-live-button" class="button button-small" type="button">
+                Limpar registros
+              </button>
+            </div>
+            <ol id="live-events" class="live-events"></ol>
+            <p id="live-empty" class="empty-state compact">Nenhuma atualização observada.</p>
+          </section>
+        </aside>
+      </main>
+
+      <section class="speech-area" aria-labelledby="speech-title">
+        <div class="speech-controls">
+          <h2 id="speech-title">Prévia de leitura sintetizada</h2>
+          <p>Gera uma fala opcional a partir do nó selecionado.</p>
+          <div class="button-row">
+            <button id="speak-button" class="button button-primary" type="button" disabled>
+              Reproduzir
+            </button>
+            <button id="stop-button" class="button" type="button" disabled>Parar</button>
+          </div>
+        </div>
+        <output id="speech-preview" class="speech-preview" aria-live="polite">
+          Selecione um nó para preparar a prévia.
+        </output>
+        <div class="limitation" role="note" aria-labelledby="limitation-title">
+          <strong id="limitation-title">Importante</strong>
+          <p>
+            O Guardião Lab não é um leitor de tela. A prévia não reproduz cursor virtual, modos de
+            navegação, Braille, comandos, pronúncia ou diferenças de NVDA, JAWS e VoiceOver.
+          </p>
+        </div>
+      </section>
+    </div>
+
+    <div id="announcer" class="visually-hidden" aria-live="polite" aria-atomic="true"></div>
+    <script src="panel.js"></script>
+  </body>
+</html>

@@ -1,0 +1,10 @@
+{
+  "name": "guardiao-lab",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Explorador experimental da árvore de acessibilidade do Chromium",
+  "type": "module",
+  "scripts": {
+    "verify": "node scripts/verify.mjs"
+  }
+}

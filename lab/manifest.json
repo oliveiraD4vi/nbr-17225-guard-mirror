@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "Guardião Lab",
+  "version": "0.1.0",
+  "description": "Explorador experimental da árvore de acessibilidade do Chromium.",
+  "permissions": ["debugger"],
+  "devtools_page": "devtools.html",
+  "icons": {
+    "16": "icons/icon.png",
+    "48": "icons/icon.png",
+    "128": "icons/icon.png"
+  }
+}
