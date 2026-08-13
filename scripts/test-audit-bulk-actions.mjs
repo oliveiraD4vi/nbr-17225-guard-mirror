@@ -202,6 +202,6 @@ assert.doesNotMatch(summarySource, /summary-status-pill|summary-meta-item|action
 assert.match(popupSource, /handleCopyAuditUrl/)
 assert.match(popupSource, /displayedAuditResult\?\.pageTitle \|\| activeTab\?\.title/)
 assert.doesNotMatch(reportSource, /getPendingHumanReviewCount|pendingReviews/)
-assert.match(scoreSource, /isProvisional: false/)
+assert.match(scoreSource, /isProvisional: pendingHumanReviewItems > 0/)
 
 console.log('Audit bulk action checks passed.')

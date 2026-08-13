@@ -1,6 +1,20 @@
-import type { ManualFindingDraft, Rule, SeverityLevel, Violation, WCAGLevel } from '@/types'
+import type {
+  FindingConfidence,
+  FindingEvidence,
+  ManualFindingDraft,
+  Rule,
+  SeverityLevel,
+  VerificationMode,
+  Violation,
+  WCAGLevel,
+} from '@/types'
 import { getNormativeRuleType } from '@/normative'
-import { isFullyAutomatedCategory } from '@/types'
+import {
+  getDefaultReviewQuestion,
+  getFindingConfidence,
+  getRuleAuditScope,
+  getRuleVerificationMode,
+} from '@/utils/audit-contract'
 import {
   MANUAL_FINDING_SELECTION_HOST_ID,
   MANUAL_FINDING_SELECTION_ID_PREFIX,
@@ -428,7 +442,11 @@ function getAlternativeTextTargetAttribute(
   element: Element,
   currentSource: NonNullable<Violation['alternativeTextReview']>['currentSource'],
 ): NonNullable<Violation['alternativeTextReview']>['targetAttribute'] {
-  if (currentSource === 'aria-label' || currentSource === 'aria-labelledby' || currentSource === 'title') {
+  if (
+    currentSource === 'aria-label' ||
+    currentSource === 'aria-labelledby' ||
+    currentSource === 'title'
+  ) {
     return currentSource
   }
 
@@ -489,7 +507,10 @@ function getAlternativeTextReviewForManualDraft(
   draft: ManualFindingDraft,
 ): Violation['alternativeTextReview'] {
   const tagName = draft.tagName?.toLowerCase()
-  if (!isAlternativeTextRule(rule.id, rule.nbrReference) || !['img', 'area'].includes(tagName || '')) {
+  if (
+    !isAlternativeTextRule(rule.id, rule.nbrReference) ||
+    !['img', 'area'].includes(tagName || '')
+  ) {
     return undefined
   }
 
@@ -529,7 +550,15 @@ export function getAssociatedLabelText(
 export function createViolation(
   rule: Pick<
     Rule,
-    'id' | 'name' | 'nbrReference' | 'severity' | 'wcagLevel' | 'description' | 'category'
+    | 'id'
+    | 'name'
+    | 'nbrReference'
+    | 'severity'
+    | 'wcagLevel'
+    | 'description'
+    | 'category'
+    | 'verificationMode'
+    | 'auditScope'
   >,
   options: {
     element?: HTMLElement
@@ -543,12 +572,21 @@ export function createViolation(
     customIdPrefix?: string
     contrastDetails?: Violation['contrastDetails']
     requiresHumanReview?: boolean
+    verificationMode?: VerificationMode
+    confidence?: FindingConfidence
+    evidence?: FindingEvidence[]
+    reviewQuestion?: string
   },
 ): Violation {
   const element = options.element
   const selector = element ? getElementSelector(element) : undefined
-  const requiresHumanReview =
-    options.requiresHumanReview ?? !isFullyAutomatedCategory(rule.category)
+  const ruleVerificationMode = getRuleVerificationMode(rule)
+  const requiresHumanReview = options.requiresHumanReview ?? ruleVerificationMode !== 'automatic'
+  const verificationMode =
+    options.verificationMode ??
+    (requiresHumanReview && ruleVerificationMode === 'automatic'
+      ? 'assisted'
+      : ruleVerificationMode)
   const stableSeed = [
     rule.id,
     selector || '',
@@ -566,6 +604,17 @@ export function createViolation(
     severity: options.severity || rule.severity,
     wcagLevel: options.wcagLevel || rule.wcagLevel,
     automationCategory: rule.category,
+    verificationMode,
+    auditScope: getRuleAuditScope(rule),
+    confidence: options.confidence ?? getFindingConfidence(verificationMode),
+    evidence: options.evidence ?? [
+      {
+        kind: verificationMode === 'automatic' ? 'dom' : 'author_review',
+        summary: options.message,
+        selector,
+      },
+    ],
+    reviewQuestion: options.reviewQuestion ?? getDefaultReviewQuestion(verificationMode),
     normativeType: getNormativeRuleType(rule.nbrReference),
     requiresHumanReview,
     humanReviewStatus: requiresHumanReview ? 'pending' : 'not_applicable',
@@ -590,7 +639,14 @@ export function createViolation(
 export function createManualViolation(
   rule: Pick<
     Rule,
-    'id' | 'name' | 'nbrReference' | 'severity' | 'wcagLevel' | 'description' | 'category'
+    | 'id'
+    | 'name'
+    | 'nbrReference'
+    | 'severity'
+    | 'wcagLevel'
+    | 'description'
+    | 'category'
+    | 'auditScope'
   >,
   options: {
     draft: ManualFindingDraft
@@ -624,8 +680,19 @@ export function createManualViolation(
     severity: options.severity || rule.severity,
     wcagLevel: rule.wcagLevel,
     automationCategory: rule.category,
+    verificationMode: 'manual',
+    auditScope: getRuleAuditScope(rule),
+    confidence: 'contextual',
+    evidence: [
+      {
+        kind: 'author_review',
+        summary: message,
+        selector: options.draft.selector,
+      },
+    ],
+    reviewQuestion: getDefaultReviewQuestion('manual'),
     normativeType: getNormativeRuleType(rule.nbrReference),
-    requiresHumanReview: !isFullyAutomatedCategory(rule.category),
+    requiresHumanReview: true,
     humanReviewStatus: 'confirmed',
     findingOrigin: 'manual',
     findingStatus: 'confirmed',

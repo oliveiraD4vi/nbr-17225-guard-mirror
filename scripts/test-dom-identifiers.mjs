@@ -11,6 +11,7 @@ async function loadUtilities() {
   const source = (await fs.readFile(sourcePath, 'utf8'))
     .replace("from '@/normative'", "from './normative.mjs'")
     .replaceAll("from '@/types'", "from './types.mjs'")
+    .replace("from '@/utils/audit-contract'", "from './audit-contract.mjs'")
     .replace("from '@/utils/manual-findings'", "from './manual-findings.mjs'")
 
   await Promise.all([
@@ -22,6 +23,16 @@ async function loadUtilities() {
     fs.writeFile(
       path.join(tempDir, 'types.mjs'),
       'export function isFullyAutomatedCategory() { return true }\n',
+      'utf8',
+    ),
+    fs.writeFile(
+      path.join(tempDir, 'audit-contract.mjs'),
+      [
+        'export function getDefaultReviewQuestion() { return undefined }',
+        "export function getFindingConfidence() { return 'high' }",
+        "export function getRuleAuditScope() { return 'page' }",
+        "export function getRuleVerificationMode() { return 'automatic' }",
+      ].join('\n'),
       'utf8',
     ),
     fs.writeFile(

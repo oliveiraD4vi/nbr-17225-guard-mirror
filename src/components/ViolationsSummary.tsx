@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react'
-import { Button, Card, Dropdown, Empty, message, Space, Tag } from 'antd'
+import { Button, Card, Dropdown, Empty, Space, Tag } from 'antd'
 import {
   ArrowRightOutlined,
   CheckCircleOutlined,
@@ -16,6 +16,7 @@ import { t } from '@/i18n'
 import type { AuditResult } from '@/types'
 import { getAuditScoreData } from '@/utils/audit-score'
 import { SummarySkeleton } from './LoadingSkeletons'
+import { useAccessibleMessage } from './AccessibleStatusAnnouncer'
 import '../styles/violations-summary.css'
 
 interface ViolationsSummaryProps {
@@ -38,6 +39,7 @@ export const ViolationsSummary: React.FC<ViolationsSummaryProps> = React.memo(
     onOpenViolations,
     onRerunAudit,
   }) => {
+    const { announcer, notify } = useAccessibleMessage()
     const resultKey = result ? (result.id ?? `${result.url}:${result.timestamp}`) : 'empty'
     const [scorePanelState, setScorePanelState] = React.useState({ key: resultKey, open: false })
     const isScorePanelOpen = scorePanelState.key === resultKey && scorePanelState.open
@@ -45,7 +47,7 @@ export const ViolationsSummary: React.FC<ViolationsSummaryProps> = React.memo(
     const handleOpenReport = useCallback(async () => {
       const reportResult = reviewSourceResult ?? result
       if (!reportResult) {
-        message.warning(t('popup.messages.noAuditToExport'))
+        notify.warning(t('popup.messages.noAuditToExport'))
         return
       }
 
@@ -59,9 +61,9 @@ export const ViolationsSummary: React.FC<ViolationsSummaryProps> = React.memo(
         }
       } catch (error) {
         console.error('Erro ao abrir relatório em nova aba:', error)
-        message.error(t('popup.messages.reportOpenError'))
+        notify.error(t('popup.messages.reportOpenError'))
       }
-    }, [result, reviewSourceResult])
+    }, [notify, result, reviewSourceResult])
 
     if (loading) {
       return <SummarySkeleton />
@@ -139,6 +141,12 @@ export const ViolationsSummary: React.FC<ViolationsSummaryProps> = React.memo(
         value: ignoredFindings,
         tone: 'muted',
       },
+      {
+        key: 'pending-review',
+        label: t('summary.scorePanelPendingReview'),
+        value: auditScopeNumbers.pendingHumanReviewItems,
+        tone: 'warning',
+      },
     ]
     const scoreSecondaryItems = [
       {
@@ -156,6 +164,21 @@ export const ViolationsSummary: React.FC<ViolationsSummaryProps> = React.memo(
         label: t('summary.scorePanelOccurrences'),
         value: auditScopeNumbers.totalOccurrenceCount,
       },
+      {
+        key: 'executed-rules',
+        label: t('summary.scorePanelExecutedRules'),
+        value: reviewBase.ruleExecution.executed,
+      },
+      {
+        key: 'candidate-rules',
+        label: t('summary.scorePanelCandidateRules'),
+        value: reviewBase.ruleExecution.withCandidates,
+      },
+      {
+        key: 'manual-rules',
+        label: t('summary.scorePanelManualRules'),
+        value: reviewBase.ruleExecution.awaitingManualReview,
+      },
     ]
     const scoreFormula = auditScore.includesRecommendations
       ? t('summary.scoreFormulaWithRecommendations', {
@@ -170,6 +193,7 @@ export const ViolationsSummary: React.FC<ViolationsSummaryProps> = React.memo(
 
     return (
       <div className="violations-summary">
+        {announcer}
         <Card className="summary-card">
           <div className="summary-hero">
             <div className="summary-hero-copy">
@@ -215,8 +239,21 @@ export const ViolationsSummary: React.FC<ViolationsSummaryProps> = React.memo(
                   {t('summary.scoreExplanationLink')}
                 </Button>
               </span>
-              <strong>{t('summary.scoreOutOf', { score: auditScore.score })}</strong>
-              <p>{t('summary.scoreDescription')}</p>
+              <strong>
+                {auditScore.isProvisional
+                  ? t('summary.scoreRangeOutOf', {
+                      conservative: auditScore.conservativeScore,
+                      confirmed: auditScore.confirmedScore,
+                    })
+                  : t('summary.scoreOutOf', { score: auditScore.score })}
+              </strong>
+              <p>
+                {t(
+                  auditScore.isProvisional
+                    ? 'summary.scoreProvisionalDescription'
+                    : 'summary.scoreDescription',
+                )}
+              </p>
               <div className="summary-score-meter" aria-hidden="true">
                 <span
                   className="summary-score-meter-fill"

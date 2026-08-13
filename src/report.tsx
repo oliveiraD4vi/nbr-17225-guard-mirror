@@ -165,6 +165,16 @@ const ViolationReportItem: React.FC<{ violation: Violation }> = ({ violation }) 
       </section>
     </div>
 
+    <section className="report-callout">
+      <strong>{t('report.evidenceTitle')}</strong>
+      <p>{violation.evidence.map((item) => item.summary).join(' · ')}</p>
+      {violation.reviewQuestion && (
+        <p>
+          <strong>{t('report.reviewQuestion')}:</strong> {violation.reviewQuestion}
+        </p>
+      )}
+    </section>
+
     {violation.alternativeTextReview?.proposedText && (
       <section className="report-callout">
         <strong>{t('violations.alternativeTextTitle')}</strong>
@@ -394,6 +404,22 @@ export const ReportApp: React.FC = () => {
   }, [])
 
   const scoreData = auditResult ? getAuditScoreData(auditResult) : null
+  const auditScopeLabel = auditResult ? t(`report.scope.${auditResult.auditScope}`) : ''
+  const sessionDetail = auditResult?.siteSession
+    ? t(
+        auditResult.siteSession.pages.length === 1
+          ? 'report.siteSessionPage'
+          : 'report.siteSessionPages',
+        { count: auditResult.siteSession.pages.length },
+      )
+    : auditResult?.journeySession
+      ? t(
+          auditResult.journeySession.steps.length === 1
+            ? 'report.journeySessionStep'
+            : 'report.journeySessionSteps',
+          { count: auditResult.journeySession.steps.length },
+        )
+      : null
   const sections = React.useMemo(
     () => (auditResult ? buildSections(auditResult) : []),
     [auditResult],
@@ -450,10 +476,18 @@ export const ReportApp: React.FC = () => {
                 <small>
                   {t('shared.labels.auditedAt')}: {formatDate(auditResult.timestamp)}
                 </small>
+                <small>
+                  {t('report.scopeLabel')}: {auditScopeLabel}
+                  {sessionDetail ? ` · ${sessionDetail}` : ''}
+                </small>
               </div>
               <div className="report-score">
                 <span>{t('summary.scoreLabel')}</span>
-                <strong>{scoreData.score}/100</strong>
+                <strong>
+                  {scoreData.isProvisional
+                    ? `${scoreData.conservativeScore}–${scoreData.confirmedScore}/100`
+                    : `${scoreData.score}/100`}
+                </strong>
               </div>
             </section>
 
@@ -473,6 +507,14 @@ export const ReportApp: React.FC = () => {
               <div>
                 <span>{t('summary.scorePanelIgnoredFindingsShort')}</span>
                 <strong>{scoreData.ignoredFindingCount}</strong>
+              </div>
+              <div>
+                <span>{t('summary.scorePanelPendingReview')}</span>
+                <strong>{scoreData.pendingHumanReviewItems}</strong>
+              </div>
+              <div>
+                <span>{t('summary.scorePanelExecutedRules')}</span>
+                <strong>{auditResult.ruleExecution.executed}</strong>
               </div>
             </section>
 

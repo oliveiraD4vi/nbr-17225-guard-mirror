@@ -150,9 +150,8 @@ export const locationAlternativesRule: Rule = {
   description: t('rules.navigation.locationAlternatives.description'),
   severity: 'warning',
   wcagLevel: 'A',
-  readiness: 'not_ready',
-  readinessReason:
-    'A ausência de busca, breadcrumb ou mapa do site não é confiável em páginas institucionais e páginas pequenas.',
+  auditScope: 'site',
+  verificationMode: 'assisted',
   category: 'Semi-Automatizável',
   check: async (): Promise<Violation[]> => {
     const internalLinks = Array.from(

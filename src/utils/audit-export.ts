@@ -19,6 +19,11 @@ export function buildExportableAuditResult(result: AuditResult) {
   const requirementScore = getRequirementScoreData(result)
   const compactAudit = {
     ...result,
+    schemaVersion: 4,
+    scoreRange: {
+      conservative: auditScore.conservativeScore,
+      confirmed: auditScore.confirmedScore,
+    },
     violations: result.violations.map((violation) => {
       const compactViolation = { ...violation }
       Reflect.deleteProperty(compactViolation, 'element')
@@ -32,7 +37,7 @@ export function buildExportableAuditResult(result: AuditResult) {
   Reflect.deleteProperty(compactAudit, 'summary')
 
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     exportedAt: Date.now(),
     audit: compactAudit,
     summary: {
@@ -95,6 +100,10 @@ export function buildAuditSummaryJson(result: AuditResult) {
     },
     score: {
       general: auditScore.score,
+      range: {
+        conservative: auditScore.conservativeScore,
+        confirmed: auditScore.confirmedScore,
+      },
       provisional: auditScore.isProvisional,
       requirements: auditScore.requirementScore,
       recommendations: auditScore.includesRecommendations ? auditScore.recommendationScore : null,
@@ -131,6 +140,11 @@ export function buildAuditSummaryJson(result: AuditResult) {
       humanReviewStatus: violation.humanReviewStatus,
       findingOrigin: violation.findingOrigin,
       findingStatus: violation.findingStatus,
+      verificationMode: violation.verificationMode,
+      auditScope: violation.auditScope,
+      confidence: violation.confidence,
+      evidence: violation.evidence,
+      reviewQuestion: violation.reviewQuestion,
       ignoreReason: violation.ignoreReason,
       ignoreNote: violation.ignoreNote,
       alternativeTextReview: violation.alternativeTextReview,

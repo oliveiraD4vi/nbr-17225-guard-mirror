@@ -2,56 +2,56 @@
 
 Esta análise consolida o catálogo v1 implementado e compara a cobertura com os módulos em `src/rules`.
 
-O catálogo implementado atual contém 112 itens revisados contra a referência pública da ABNT NBR 17225.
+O catálogo implementado atual contém 146 itens revisados contra a referência pública da ABNT NBR 17225.
 
 ## Resumo Atual
 
 | Situação                          | Quantidade | Observação                                                                               |
 | --------------------------------- | ---------: | ---------------------------------------------------------------------------------------- |
-| Itens documentados                |        112 | V1 Farol com todos os requisitos e 16 recomendações incorporadas ao motor                |
-| Regras com implementação no motor |        112 | Todas possuem `nbrReference` dedicado em `src/rules`                                     |
+| Itens documentados                |        146 | 96 requisitos e 50 recomendações representados operacionalmente                          |
+| Regras com implementação no motor |        146 | Todas possuem `nbrReference` dedicado em `src/rules`                                     |
 | Regras ausentes                   |          0 | Nenhuma pendência após esta atualização                                                  |
 | Requisitos normativos             |         96 | Classificação extraída da ABNT NBR 17225, sem inferir por nível WCAG ou severidade       |
-| Recomendações normativas          |         16 | Recomendações de maior valor operacional para a V1                                       |
+| Recomendações normativas          |         50 | Conclusões automáticas, candidatos assistidos ou roteiros manuais                        |
 | Totalmente automatizáveis         |         46 | Verificadas por DOM/CSS/metadados de forma objetiva                                      |
-| Semi-automatizáveis               |         65 | Implementadas como heurísticas assistidas e exigem revisão humana em parte do julgamento |
-| Não automatizáveis                |          1 | `5.12.9 Uso de texto especial`, registrado como revisão manual                           |
+| Semi-automatizáveis               |         77 | Implementadas como heurísticas assistidas e exigem revisão humana em parte do julgamento |
+| Não automatizáveis                |         23 | Apresentadas como roteiros de revisão, sem conclusão automática                          |
 
 Duas entradas já estiveram declaradas no mapeamento sem regra própria no código:
 
 - `5.9.3 Rótulo de campo associado`
 - `5.12.9 Uso de texto especial`
 
-Essas entradas agora possuem regras dedicadas e são verificadas pelo script `pnpm verify:rules`. O mesmo vale para `5.1.16`, `5.2.6`, `5.7.13` e para as 15 recomendações priorizadas para a V1 Farol.
+Essas entradas agora possuem regras dedicadas e são verificadas pelo script `pnpm verify:rules`. O mesmo vale para `5.1.16`, `5.2.6`, `5.7.13` e para as 50 recomendações do catálogo adotado.
 
 ## Cobertura por Seção
 
 | Seção | Tema                             | Documentadas | Implementadas | Ausentes |
 | ----- | -------------------------------- | -----------: | ------------: | -------: |
-| 5.1   | Interação por teclado            |           10 |            10 |        0 |
+| 5.1   | Interação por teclado            |           16 |            16 |        0 |
 | 5.2   | Imagens                          |            6 |             6 |        0 |
-| 5.3   | Cabeçalhos                       |            4 |             4 |        0 |
-| 5.4   | Regiões                          |            4 |             4 |        0 |
+| 5.3   | Cabeçalhos                       |            5 |             5 |        0 |
+| 5.4   | Regiões                          |            5 |             5 |        0 |
 | 5.5   | Listas                           |            2 |             2 |        0 |
-| 5.6   | Tabelas                          |            4 |             4 |        0 |
-| 5.7   | Links e navegação                |           10 |            10 |        0 |
-| 5.8   | Botões e controles               |           12 |            12 |        0 |
-| 5.9   | Formulários e entrada de dados   |           16 |            16 |        0 |
-| 5.10  | Apresentação                     |            4 |             4 |        0 |
+| 5.6   | Tabelas                          |            6 |             6 |        0 |
+| 5.7   | Links e navegação                |           16 |            16 |        0 |
+| 5.8   | Botões e controles               |           15 |            15 |        0 |
+| 5.9   | Formulários e entrada de dados   |           18 |            18 |        0 |
+| 5.10  | Apresentação                     |            5 |             5 |        0 |
 | 5.11  | Uso de cores                     |            6 |             6 |        0 |
-| 5.12  | Conteúdo textual                 |           10 |            10 |        0 |
+| 5.12  | Conteúdo textual                 |           13 |            13 |        0 |
 | 5.13  | Codificação e marcação semântica |           13 |            13 |        0 |
-| 5.14  | Áudio e vídeo                    |            6 |             6 |        0 |
-| 5.15  | Animação                         |            2 |             2 |        0 |
-| 5.16  | Tempo                            |            3 |             3 |        0 |
+| 5.14  | Áudio e vídeo                    |           10 |            10 |        0 |
+| 5.15  | Animação                         |            4 |             4 |        0 |
+| 5.16  | Tempo                            |            6 |             6 |        0 |
 
 ## Escopo Implementado e Limite Normativo
 
-O escopo implementado atual é a V1 Farol, com 112 itens validados por `pnpm verify:rules`. A classificação normativa `Requisito` ou `Recomendação` é extraída da própria ABNT NBR 17225 e mantida em `src/normative.ts`; ela não é inferida por `wcagLevel`, `severity` nem por documentação local. Fontes públicas da NBR 17225 expõem 34 recomendações adicionais fora desse recorte. Elas não entram nesta versão, mas estão organizadas como plano de expansão futura.
+O escopo implementado atual contém 146 itens validados por `pnpm verify:rules`. A classificação normativa `Requisito` ou `Recomendação` é extraída da própria ABNT NBR 17225 e mantida em `src/normative.ts`; ela não é inferida por `wcagLevel`, `severity` nem por documentação local. As 34 recomendações antes registradas como expansão futura foram incorporadas com o modo de verificação compatível com sua evidência.
 
 Para o confronto formal regra a regra com a referência normativa pública, consulte `RULES_NORMATIVE_MATRIX.md`.
 
-Para a lista completa dos itens fora do escopo v1 e a estratégia de implementação futura, consulte `FUTURE_RULES_PLAN.md`.
+Para o registro dos lotes antes planejados e agora incorporados, consulte `FUTURE_RULES_PLAN.md`.
 
 ## Regras Totalmente Automatizáveis
 
@@ -74,9 +74,9 @@ Nesta revisão, duas sobreposições de ruído foram tratadas explicitamente:
 
 Para a classificação ordenada das heurísticas mais frágeis e a priorização futura de endurecimento, consulte `RULES_HEURISTIC_CLASSIFICATION.md`.
 
-## Regra Não Automatizável
+## Regras Não Automatizáveis
 
-`5.12.9 Uso de texto especial` exige avaliação semântica do conteúdo textual. O motor registra a regra e sinaliza candidatos à revisão manual quando encontra texto especial.
+As regras manuais apresentam um roteiro e, quando existe um sinal técnico conservador, uma evidência inicial. Elas não geram conclusão automática e só entram no limite confirmado da nota após decisão humana.
 
 ## Funcionalidades Agregadas
 

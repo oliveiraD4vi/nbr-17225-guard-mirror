@@ -17,8 +17,10 @@ async function loadAuditEngineModule() {
   const engineSource = (await fs.readFile(engineSourcePath, 'utf8'))
     .replace("from '@/i18n'", "from './i18n.mjs'")
     .replace("from '@/normative'", "from './normative.mjs'")
+    .replace("from '@/utils/audit-score'", "from './audit-score.mjs'")
     .replace("from '@/utils/audit-history'", "from './audit-history.mjs'")
     .replace("from '@/utils/audit-triage'", "from './audit-triage.mjs'")
+    .replace("from '@/utils/audit-sessions'", "from './audit-sessions.mjs'")
     .replace("from '@/utils/extension-storage'", "from './extension-storage.mjs'")
   const historySource = (await fs.readFile(historySourcePath, 'utf8'))
     .replace("from '@/normative'", "from './normative.mjs'")
@@ -39,6 +41,18 @@ export function t(key) {
 
   return messages[key] ?? key
 }
+`
+  const auditScoreSource = `
+export function getAuditScoreData(result) {
+  return {
+    conservativeScore: result.scoreRange?.conservative ?? 100,
+    confirmedScore: result.scoreRange?.confirmed ?? 100,
+  }
+}
+`
+  const auditSessionsSource = `
+export async function recordJourneyAuditStep() { return undefined }
+export async function recordSiteAuditPage() { return undefined }
 `
 
   const transpileOptions = {
@@ -80,6 +94,8 @@ export function t(key) {
   const i18nFile = path.join(tempDir, 'i18n.mjs')
   const extensionStorageFile = path.join(tempDir, 'extension-storage.mjs')
   const extensionRuntimeFile = path.join(tempDir, 'extension-runtime.mjs')
+  const auditScoreFile = path.join(tempDir, 'audit-score.mjs')
+  const auditSessionsFile = path.join(tempDir, 'audit-sessions.mjs')
 
   await fs.writeFile(engineFile, transpiledEngine, 'utf8')
   await fs.writeFile(historyFile, transpiledHistory, 'utf8')
@@ -88,6 +104,8 @@ export function t(key) {
   await fs.writeFile(i18nFile, i18nSource, 'utf8')
   await fs.writeFile(extensionStorageFile, transpiledExtensionStorage, 'utf8')
   await fs.writeFile(extensionRuntimeFile, transpiledExtensionRuntime, 'utf8')
+  await fs.writeFile(auditScoreFile, auditScoreSource, 'utf8')
+  await fs.writeFile(auditSessionsFile, auditSessionsSource, 'utf8')
 
   try {
     return await import(pathToFileURL(engineFile).href)

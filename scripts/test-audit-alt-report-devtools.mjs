@@ -42,8 +42,17 @@ async function loadAuditModules() {
     score: (await fs.readFile(sourcePaths.score, 'utf8'))
       .replace("from '@/normative'", "from './normative.mjs'")
       .replace("from '@/rules'", "from './rules.mjs'")
+      .replace("from '@/utils/audit-contract'", "from './audit-contract.mjs'")
       .replace("from '@/utils/audit-triage'", "from './audit-triage.mjs'"),
     triage: await fs.readFile(sourcePaths.triage, 'utf8'),
+    auditContract: `
+export function getRuleVerificationMode(rule) {
+  if (rule.verificationMode) return rule.verificationMode
+  if (rule.category === 'Totalmente Automatizável') return 'automatic'
+  if (rule.category === 'Semi-Automatizável') return 'assisted'
+  return 'manual'
+}
+`,
     i18n: `
 export function t(key, params = {}) {
   return Object.entries(params).reduce(
@@ -66,6 +75,7 @@ export function getRunnableRules() {
   }
   const files = [
     ['audit-comparison.mjs', sources.comparison, sourcePaths.comparison],
+    ['audit-contract.mjs', sources.auditContract, 'audit-contract.mjs'],
     ['audit-export.mjs', sources.export, sourcePaths.export],
     ['audit-history.mjs', sources.history, sourcePaths.history],
     ['audit-score.mjs', sources.score, sourcePaths.score],

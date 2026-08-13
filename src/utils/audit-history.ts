@@ -6,6 +6,8 @@ import {
   normalizeViolationFindingState,
 } from '@/utils/audit-triage'
 
+const CURRENT_AUDIT_SCHEMA_VERSION = 4
+
 function getAuditCollections(violations: Violation[]) {
   const violationsByRule = violations.reduce<Record<string, Violation[]>>((acc, violation) => {
     acc[violation.ruleId] ??= []
@@ -35,9 +37,28 @@ export function hydrateAuditResult<T extends AuditResult>(result: T): T {
   const humanReviewItems = violations.filter((violation) => violation.requiresHumanReview).length
   const automatedFindings = violations.length - humanReviewItems
   const collections = getAuditCollections(violations)
+  const rulesWithCandidates = new Set(
+    violations
+      .filter((violation) => violation.requiresHumanReview)
+      .map((violation) => violation.ruleId),
+  ).size
+  const manualRuleCount = new Set(
+    violations
+      .filter((violation) => violation.verificationMode === 'manual')
+      .map((violation) => violation.ruleId),
+  ).size
 
   return {
     ...result,
+    schemaVersion: CURRENT_AUDIT_SCHEMA_VERSION,
+    auditScope: result.auditScope ?? 'page',
+    scoreRange: result.scoreRange ?? { conservative: 0, confirmed: 100 },
+    ruleExecution: {
+      executed:
+        result.ruleExecution?.executed ?? new Set(violations.map((item) => item.ruleId)).size,
+      withCandidates: rulesWithCandidates,
+      awaitingManualReview: result.ruleExecution?.awaitingManualReview ?? manualRuleCount,
+    },
     totalViolations: violations.length,
     errors: requirementViolations.length,
     warnings: recommendationViolations.length,
@@ -202,7 +223,8 @@ export function inheritViolationStateFromHistory(
                 currentAlternativeTextReview?.currentSource ??
                 inheritedAlternativeTextReview.currentSource,
               currentText:
-                currentAlternativeTextReview?.currentText ?? inheritedAlternativeTextReview.currentText,
+                currentAlternativeTextReview?.currentText ??
+                inheritedAlternativeTextReview.currentText,
               targetAttribute:
                 inheritedAlternativeTextReview.targetAttribute ??
                 currentAlternativeTextReview?.targetAttribute,

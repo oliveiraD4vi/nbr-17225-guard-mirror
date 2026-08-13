@@ -504,6 +504,7 @@ export const HistoryTabPanel: React.FC<HistoryTabPanelProps> = React.memo(
               <div className="history-comparison-field">
                 <span>{t('shared.labels.base')}</span>
                 <Select
+                  aria-label={t('shared.labels.base')}
                   value={comparisonBaselineId}
                   onChange={onComparisonBaselineChange}
                   options={comparisonEntries.map((entry) => ({
@@ -515,6 +516,7 @@ export const HistoryTabPanel: React.FC<HistoryTabPanelProps> = React.memo(
               <div className="history-comparison-field">
                 <span>{t('shared.labels.compareWith')}</span>
                 <Select
+                  aria-label={t('shared.labels.compareWith')}
                   value={comparisonTargetId}
                   onChange={onComparisonTargetChange}
                   options={comparisonEntries.map((entry) => ({

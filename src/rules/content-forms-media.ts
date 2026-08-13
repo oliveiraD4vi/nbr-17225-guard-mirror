@@ -295,9 +295,8 @@ export const criticalFormPreventionRule: Rule = {
   description: t('rules.contentFormsMedia.criticalFormPrevention.description'),
   severity: 'warning',
   wcagLevel: 'AA',
-  readiness: 'not_ready',
-  readinessReason:
-    'Depende da jornada crítica completa e de confirmação de fluxo; a Beta ainda não interage com formulários.',
+  auditScope: 'journey',
+  verificationMode: 'assisted',
   category: 'Semi-Automatizável',
   check: async () => {
     const criticalControls = Array.from(
@@ -332,9 +331,8 @@ export const dataReentryRule: Rule = {
   description: t('rules.contentFormsMedia.dataReentry.description'),
   severity: 'warning',
   wcagLevel: 'A',
-  readiness: 'not_ready',
-  readinessReason:
-    'Campo repetido na mesma página não prova reentrada indevida de dados entre etapas ou sessões.',
+  auditScope: 'journey',
+  verificationMode: 'assisted',
   category: 'Semi-Automatizável',
   check: async () => {
     const repeatedFields = new Map<string, HTMLElement[]>()
@@ -432,9 +430,7 @@ export const presentationOrderRule: Rule = {
             message: t('rules.contentFormsMedia.presentationOrder.positiveTabindexMessage', {
               value: tabIndex,
             }),
-            suggestion: t(
-              'rules.contentFormsMedia.presentationOrder.positiveTabindexSuggestion',
-            ),
+            suggestion: t('rules.contentFormsMedia.presentationOrder.positiveTabindexSuggestion'),
             remediationAdvice: t(
               'rules.contentFormsMedia.presentationOrder.positiveTabindexRemediation',
             ),
@@ -456,9 +452,7 @@ export const presentationOrderRule: Rule = {
             element,
             message: t('rules.contentFormsMedia.presentationOrder.cssOrderMessage'),
             suggestion: t('rules.contentFormsMedia.presentationOrder.cssOrderSuggestion'),
-            remediationAdvice: t(
-              'rules.contentFormsMedia.presentationOrder.cssOrderRemediation',
-            ),
+            remediationAdvice: t('rules.contentFormsMedia.presentationOrder.cssOrderRemediation'),
             customIdPrefix: 'presentation-order',
           }),
         )
@@ -942,9 +936,8 @@ export const customComponentSemanticRule: Rule = {
   description: t('rules.contentFormsMedia.customComponentSemantic.description'),
   severity: 'warning',
   wcagLevel: 'A',
-  readiness: 'not_ready',
-  readinessReason:
-    'A detecção por tabindex/evento inferiu intenção interativa demais e gerou falso positivo em cards narrativos.',
+  auditScope: 'page',
+  verificationMode: 'manual',
   category: 'Semi-Automatizável',
   check: async () =>
     createWarnings(
@@ -1108,9 +1101,7 @@ export const animationControlRule: Rule = {
               element,
               message: t('rules.contentFormsMedia.animationControl.carouselMessage'),
               suggestion: t('rules.contentFormsMedia.animationControl.carouselSuggestion'),
-              remediationAdvice: t(
-                'rules.contentFormsMedia.animationControl.carouselRemediation',
-              ),
+              remediationAdvice: t('rules.contentFormsMedia.animationControl.carouselRemediation'),
               customIdPrefix: 'animation-control',
             }),
           )
@@ -1126,9 +1117,7 @@ export const animationControlRule: Rule = {
               element: media as unknown as HTMLElement,
               message: t('rules.contentFormsMedia.animationControl.mediaMessage'),
               suggestion: t('rules.contentFormsMedia.animationControl.mediaSuggestion'),
-              remediationAdvice: t(
-                'rules.contentFormsMedia.animationControl.mediaRemediation',
-              ),
+              remediationAdvice: t('rules.contentFormsMedia.animationControl.mediaRemediation'),
               customIdPrefix: 'animation-control',
             }),
           )
@@ -1230,9 +1219,7 @@ export const adjustableTimeLimitRule: Rule = {
             createViolation(adjustableTimeLimitRule, {
               element,
               message: t('rules.contentFormsMedia.adjustableTimeLimit.countdownMessage'),
-              suggestion: t(
-                'rules.contentFormsMedia.adjustableTimeLimit.countdownSuggestion',
-              ),
+              suggestion: t('rules.contentFormsMedia.adjustableTimeLimit.countdownSuggestion'),
               remediationAdvice: t(
                 'rules.contentFormsMedia.adjustableTimeLimit.countdownRemediation',
               ),

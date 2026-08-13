@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fixture de regra do Guardião</title>
+    <style>
+      :focus-visible {
+        outline: 3px solid #005fcc;
+        outline-offset: 3px;
+      }
+      body {
+        max-width: 72rem;
+        margin: 0 auto;
+        padding: 2rem;
+        font:
+          16px/1.6 system-ui,
+          sans-serif;
+      }
+      .fixture-note {
+        padding: 1rem;
+        border: 2px solid #445;
+      }
+      table {
+        border-collapse: collapse;
+      }
+      th,
+      td {
+        padding: 0.5rem;
+        border: 1px solid #555;
+      }
+    </style>
+  </head>
+  <body>
+    <a href="#conteudo">Pular para o conteúdo principal</a>
+    <header><h1>Fixture de regra do Guardião</h1></header>
+    <main id="conteudo" tabindex="-1">
+      <p id="fixture-description" class="fixture-note"></p>
+      <div id="fixture-content"></div>
+    </main>
+    <script type="module" src="rule-fixture.js"></script>
+  </body>
+</html>

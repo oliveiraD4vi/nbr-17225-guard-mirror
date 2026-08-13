@@ -4,17 +4,18 @@ O Guardião NBR 17225 usa versionamento semântico para a extensão e nomes curt
 
 ## Versão Atual
 
-Produto: `1.2.0-beta.9`
-Manifest Chrome: `1.2.0`
+Produto: `2.0.0-beta.1`
+Manifest Chrome: `2.0.0`
 
-| Versão         | Nome          | Escopo                                                                                                                               |
-| -------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `1.1.0-beta.4` | V1 Farol Beta | Nota por regra, números objetivos, triagem opcional, violações manuais, ações em massa e prévia temporária de contraste.             |
-| `1.1.1-beta.5` | V1 Farol Beta | Propostas de texto alternativo, relatório em nova aba com snapshot e painel DevTools.                                                |
-| `1.1.2-beta.6` | V1 Farol Beta | DevTools como superfície principal, popup de orientação, ignorados em drawer e correções de interface.                               |
-| `1.1.3-beta.7` | V1 Farol Beta | Correção do acesso ao armazenamento local pelo painel DevTools.                                                                      |
-| `1.1.4-beta.8` | V1 Farol Beta | Vocabulário público refinado, revisão contextual simplificada e comparação técnica separada das decisões de triagem.                 |
-| `1.2.0-beta.9` | V1 Farol Beta | Marco final da Beta para o TCC, com relatório resumido/detalhado, fluxo compacto de violações manuais e comparação menos redundante. |
+| Versão         | Nome            | Escopo                                                                                                                               |
+| -------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `1.1.0-beta.4` | V1 Farol Beta   | Nota por regra, números objetivos, triagem opcional, violações manuais, ações em massa e prévia temporária de contraste.             |
+| `1.1.1-beta.5` | V1 Farol Beta   | Propostas de texto alternativo, relatório em nova aba com snapshot e painel DevTools.                                                |
+| `1.1.2-beta.6` | V1 Farol Beta   | DevTools como superfície principal, popup de orientação, ignorados em drawer e correções de interface.                               |
+| `1.1.3-beta.7` | V1 Farol Beta   | Correção do acesso ao armazenamento local pelo painel DevTools.                                                                      |
+| `1.1.4-beta.8` | V1 Farol Beta   | Vocabulário público refinado, revisão contextual simplificada e comparação técnica separada das decisões de triagem.                 |
+| `1.2.0-beta.9` | V1 Farol Beta   | Marco final da Beta para o TCC, com relatório resumido/detalhado, fluxo compacto de violações manuais e comparação menos redundante. |
+| `2.0.0-beta.1` | V2 Polaris Beta | Modos de verificação, faixa de nota, escopos de site e jornada, catálogo completo e Guardião Lab isolado.                            |
 
 Regra executada na Beta significa regra habilitada para avaliação assistida. Não significa regra final.
 

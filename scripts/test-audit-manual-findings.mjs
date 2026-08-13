@@ -28,8 +28,10 @@ async function loadManualFindingModules() {
     auditEngine: (await fs.readFile(sourcePaths.auditEngine, 'utf8'))
       .replaceAll("from '@/i18n'", "from './i18n.mjs'")
       .replaceAll("from '@/normative'", "from './normative.mjs'")
+      .replaceAll("from '@/utils/audit-score'", "from './audit-score.mjs'")
       .replaceAll("from '@/utils/audit-history'", "from './audit-history.mjs'")
       .replaceAll("from '@/utils/audit-triage'", "from './audit-triage.mjs'")
+      .replaceAll("from '@/utils/audit-sessions'", "from './audit-sessions.mjs'")
       .replaceAll("from '@/utils/extension-storage'", "from './extension-storage.mjs'"),
     auditExport: (await fs.readFile(sourcePaths.auditExport, 'utf8'))
       .replaceAll("from '@/i18n'", "from './i18n.mjs'")
@@ -42,6 +44,7 @@ async function loadManualFindingModules() {
     auditScore: (await fs.readFile(sourcePaths.auditScore, 'utf8'))
       .replaceAll("from '@/normative'", "from './normative.mjs'")
       .replaceAll("from '@/rules'", "from './rules.mjs'")
+      .replaceAll("from '@/utils/audit-contract'", "from './audit-contract.mjs'")
       .replaceAll("from '@/utils/audit-triage'", "from './audit-triage.mjs'"),
     auditTriage: await fs.readFile(sourcePaths.auditTriage, 'utf8'),
     extensionStorage: (await fs.readFile(sourcePaths.extensionStorage, 'utf8')).replaceAll(
@@ -61,7 +64,23 @@ async function loadManualFindingModules() {
     utils: (await fs.readFile(sourcePaths.utils, 'utf8'))
       .replaceAll("from '@/types'", "from './types.mjs'")
       .replaceAll("from '@/normative'", "from './normative.mjs'")
+      .replaceAll("from '@/utils/audit-contract'", "from './audit-contract.mjs'")
       .replaceAll("from '@/utils/manual-findings'", "from './manual-findings.mjs'"),
+    auditContract: `
+export function getDefaultReviewQuestion(mode) { return mode === 'automatic' ? undefined : 'Revisar?' }
+export function getFindingConfidence(mode) { return mode === 'automatic' ? 'high' : 'contextual' }
+export function getRuleAuditScope(rule) { return rule.auditScope ?? 'page' }
+export function getRuleVerificationMode(rule) {
+  if (rule.verificationMode) return rule.verificationMode
+  if (rule.category === 'Totalmente Automatizável') return 'automatic'
+  if (rule.category === 'Semi-Automatizável') return 'assisted'
+  return 'manual'
+}
+`,
+    auditSessions: `
+export async function recordJourneyAuditStep() { return undefined }
+export async function recordSiteAuditPage() { return undefined }
+`,
     i18n: `
 export function t(key, params = {}) {
   return Object.entries(params).reduce(
@@ -121,10 +140,12 @@ export function getRunnableRules(includeRecommendations, includeHumanReview) {
   }
   const files = [
     ['audit-comparison.mjs', sources.auditComparison, sourcePaths.auditComparison],
+    ['audit-contract.mjs', sources.auditContract, 'audit-contract.mjs'],
     ['audit-engine.mjs', sources.auditEngine, sourcePaths.auditEngine],
     ['audit-export.mjs', sources.auditExport, sourcePaths.auditExport],
     ['audit-history.mjs', sources.auditHistory, sourcePaths.auditHistory],
     ['audit-score.mjs', sources.auditScore, sourcePaths.auditScore],
+    ['audit-sessions.mjs', sources.auditSessions, 'audit-sessions.mjs'],
     ['audit-triage.mjs', sources.auditTriage, sourcePaths.auditTriage],
     ['extension-storage.mjs', sources.extensionStorage, sourcePaths.extensionStorage],
     ['extension-runtime.mjs', sources.extensionRuntime, sourcePaths.extensionRuntime],

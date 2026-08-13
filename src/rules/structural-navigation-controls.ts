@@ -152,7 +152,9 @@ export const linkPurposeRule: Rule = {
         vagueTexts.includes(getAccessibleName(anchor).trim().toLowerCase()),
       ),
       (anchor) =>
-        t('rules.structureNavigationControls.linkPurpose.message', { name: getAccessibleName(anchor) }),
+        t('rules.structureNavigationControls.linkPurpose.message', {
+          name: getAccessibleName(anchor),
+        }),
       t('rules.structureNavigationControls.linkPurpose.suggestion'),
       t('rules.structureNavigationControls.linkPurpose.remediation'),
       'link-purpose',
@@ -167,9 +169,8 @@ export const navigationConsistencyRule: Rule = {
   description: t('rules.structureNavigationControls.navigationConsistency.description'),
   severity: 'warning',
   wcagLevel: 'AA',
-  readiness: 'not_ready',
-  readinessReason:
-    'Depende de comparar navegação em um conjunto real de páginas; a Beta ainda audita uma página por vez.',
+  auditScope: 'site',
+  verificationMode: 'assisted',
   category: 'Semi-Automatizável',
   check: async () => {
     const navs = Array.from(document.querySelectorAll<HTMLElement>('nav, [role="navigation"]'))
@@ -186,7 +187,9 @@ export const navigationConsistencyRule: Rule = {
             element: navs[0],
             message: t('rules.structureNavigationControls.navigationConsistency.message'),
             suggestion: t('rules.structureNavigationControls.navigationConsistency.suggestion'),
-            remediationAdvice: t('rules.structureNavigationControls.navigationConsistency.remediation'),
+            remediationAdvice: t(
+              'rules.structureNavigationControls.navigationConsistency.remediation',
+            ),
             customIdPrefix: 'nav-consistency',
           }),
         ]
@@ -201,9 +204,8 @@ export const helpConsistencyRule: Rule = {
   description: t('rules.structureNavigationControls.helpConsistency.description'),
   severity: 'warning',
   wcagLevel: 'A',
-  readiness: 'not_ready',
-  readinessReason:
-    'Depende de recorrência entre telas equivalentes; a Beta ainda não compara ajuda entre páginas.',
+  auditScope: 'site',
+  verificationMode: 'assisted',
   category: 'Semi-Automatizável',
   check: async () => {
     const helpLinks = Array.from(
@@ -292,9 +294,8 @@ export const buttonConsistencyRule: Rule = {
   description: t('rules.structureNavigationControls.buttonConsistency.description'),
   severity: 'warning',
   wcagLevel: 'AA',
-  readiness: 'not_ready',
-  readinessReason:
-    'Depende de equivalência entre páginas e decisões de produto; a checagem local gerou falso positivo amplo.',
+  auditScope: 'site',
+  verificationMode: 'assisted',
   category: 'Semi-Automatizável',
   check: async () => {
     const buttons = Array.from(

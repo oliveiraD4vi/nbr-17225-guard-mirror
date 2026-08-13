@@ -7,6 +7,16 @@ import type { NormativeRuleType } from '@/normative'
 export type SeverityLevel = 'error' | 'warning'
 export type WCAGLevel = 'A' | 'AA' | 'AAA'
 export type RuleReadiness = 'ready' | 'not_ready'
+export type VerificationMode = 'automatic' | 'assisted' | 'manual'
+export type AuditScope = 'page' | 'site' | 'journey'
+export type FindingConfidence = 'high' | 'medium' | 'contextual'
+export type FindingEvidenceKind =
+  | 'dom'
+  | 'computed_style'
+  | 'interaction'
+  | 'author_review'
+  | 'session'
+export const CURRENT_AUDIT_SCHEMA_VERSION = 4
 export const AUTOMATION_CATEGORIES = {
   fully: 'Totalmente Automatizável',
   semi: 'Semi-Automatizável',
@@ -59,9 +69,18 @@ export interface Rule {
   severity: SeverityLevel
   wcagLevel: WCAGLevel
   category: AutomationCategory
+  verificationMode?: VerificationMode
+  auditScope?: AuditScope
   readiness?: RuleReadiness
   readinessReason?: string
   check: () => Promise<Violation[]>
+}
+
+export interface FindingEvidence {
+  kind: FindingEvidenceKind
+  summary: string
+  selector?: string
+  observedValue?: string
 }
 
 export interface Violation {
@@ -73,6 +92,11 @@ export interface Violation {
   severity: SeverityLevel
   wcagLevel: WCAGLevel
   automationCategory: AutomationCategory
+  verificationMode: VerificationMode
+  auditScope: AuditScope
+  confidence: FindingConfidence
+  evidence: FindingEvidence[]
+  reviewQuestion?: string
   normativeType: NormativeRuleType
   requiresHumanReview: boolean
   humanReviewStatus: HumanReviewStatus
@@ -119,6 +143,76 @@ export interface Violation {
   customId: string
 }
 
+export interface SiteAuditPage {
+  url: string
+  pageTitle?: string
+  auditedAt: number
+  context: PageAuditContext
+}
+
+export interface PageAuditControlAction {
+  action: string
+  name: string
+}
+
+export interface PageAuditContext {
+  navigationSignatures: string[]
+  helpSignatures: string[]
+  locationMechanisms: string[]
+  controlActions: PageAuditControlAction[]
+  criticalActions: string[]
+  formFieldKeys: string[]
+  hasReviewCue: boolean
+}
+
+export interface SessionReviewCandidate {
+  ruleId: string
+  nbrReference: string
+  summary: string
+  reviewQuestion: string
+}
+
+export interface SiteAuditSession {
+  id: string
+  origin: string
+  startedAt: number
+  updatedAt: number
+  pages: SiteAuditPage[]
+  reviewCandidates: SessionReviewCandidate[]
+}
+
+export interface JourneyAuditStep {
+  id: string
+  url: string
+  pageTitle?: string
+  label: string
+  recordedAt: number
+  evidenceSelectors: string[]
+  context: PageAuditContext
+}
+
+export interface JourneyAuditSession {
+  id: string
+  name: string
+  startedAt: number
+  updatedAt: number
+  steps: JourneyAuditStep[]
+  reviewCandidates: SessionReviewCandidate[]
+}
+
+export interface AuditScoreRange {
+  /** Limite se todos os candidatos pendentes forem confirmados. */
+  conservative: number
+  /** Limite sustentado apenas por falhas automáticas ou já confirmadas. */
+  confirmed: number
+}
+
+export interface RuleExecutionSummary {
+  executed: number
+  withCandidates: number
+  awaitingManualReview: number
+}
+
 export interface ManualFindingElementDraft {
   selector: string
   tagName?: string
@@ -135,12 +229,18 @@ export interface ManualFindingDraft extends ManualFindingElementDraft {
 }
 
 export interface AuditResult {
+  schemaVersion: number
   id?: string
   timestamp: number
   url: string
   pageTitle?: string
   includeRecommendations?: boolean
   includeHumanReview?: boolean
+  auditScope: AuditScope
+  siteSession?: SiteAuditSession
+  journeySession?: JourneyAuditSession
+  scoreRange: AuditScoreRange
+  ruleExecution: RuleExecutionSummary
   totalViolations: number
   errors: number
   warnings: number
@@ -186,4 +286,7 @@ export interface StorageData {
   visionFilter?: VisionSimulationFilter
   includeRecommendationsPreference?: boolean
   includeHumanReviewPreference?: boolean
+  auditScopePreference?: AuditScope
+  siteAuditSessionsByOrigin?: Record<string, SiteAuditSession>
+  journeyAuditSession?: JourneyAuditSession
 }

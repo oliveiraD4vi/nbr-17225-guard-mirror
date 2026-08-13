@@ -31,8 +31,17 @@ async function loadAuditModules() {
     score: (await fs.readFile(sourcePaths.score, 'utf8'))
       .replace("from '@/normative'", "from './normative.mjs'")
       .replace("from '@/rules'", "from './rules.mjs'")
+      .replace("from '@/utils/audit-contract'", "from './audit-contract.mjs'")
       .replace("from '@/utils/audit-triage'", "from './audit-triage.mjs'"),
     triage: await fs.readFile(sourcePaths.triage, 'utf8'),
+    auditContract: `
+export function getRuleVerificationMode(rule) {
+  if (rule.verificationMode) return rule.verificationMode
+  if (rule.category === 'Totalmente Automatizável') return 'automatic'
+  if (rule.category === 'Semi-Automatizável') return 'assisted'
+  return 'manual'
+}
+`,
     i18n: `
 export function t(key, params = {}) {
   return Object.entries(params).reduce(
@@ -60,7 +69,7 @@ const rules = [
     description: 'Descrição',
     severity: 'error',
     wcagLevel: 'A',
-    category: 'Não Automatizável',
+    category: 'Semi-Automatizável',
     check: async () => [],
   },
   {
@@ -71,6 +80,17 @@ const rules = [
     severity: 'warning',
     wcagLevel: 'AA',
     category: 'Totalmente Automatizável',
+    check: async () => [],
+  },
+  {
+    id: 'manual-route',
+    nbrReference: '5.4.1',
+    name: 'Roteiro manual',
+    description: 'Sem conclusão automática',
+    severity: 'error',
+    wcagLevel: 'A',
+    category: 'Não Automatizável',
+    verificationMode: 'manual',
     check: async () => [],
   },
 ]
@@ -92,6 +112,7 @@ export function getRunnableRules(includeRecommendations, includeHumanReview) {
   }
   const files = [
     ['audit-comparison.mjs', sources.comparison, sourcePaths.comparison],
+    ['audit-contract.mjs', sources.auditContract, 'audit-contract.mjs'],
     ['audit-export.mjs', sources.export, sourcePaths.export],
     ['audit-history.mjs', sources.history, sourcePaths.history],
     ['audit-score.mjs', sources.score, sourcePaths.score],
@@ -290,10 +311,14 @@ const humanPendingAudit = createAuditResult({
 })
 const humanPendingScore = getAuditScoreData(humanPendingAudit)
 
+assert.equal(humanPendingScore.totalRequirementRules, 2)
 assert.equal(humanPendingScore.violatedRequirementRules, 1)
+assert.equal(humanPendingScore.confirmedViolatedRequirementRules, 0)
 assert.equal(humanPendingScore.activeOccurrenceCount, 1)
 assert.equal(humanPendingScore.pendingHumanReviewItems, 1)
-assert.equal(humanPendingScore.isProvisional, false)
+assert.equal(humanPendingScore.isProvisional, true)
+assert.equal(humanPendingScore.conservativeScore, 50)
+assert.equal(humanPendingScore.confirmedScore, 100)
 
 const humanConfirmedAudit = createAuditResult({
   violations: [confirmedHuman],
@@ -301,6 +326,7 @@ const humanConfirmedAudit = createAuditResult({
 const humanConfirmedScore = getAuditScoreData(humanConfirmedAudit)
 
 assert.equal(humanConfirmedScore.violatedRequirementRules, 1)
+assert.equal(humanConfirmedScore.confirmedViolatedRequirementRules, 1)
 assert.equal(humanConfirmedScore.confirmedFindingCount, 1)
 
 const visibleViolations = getVisibleAuditViolations(ignoredAudit)

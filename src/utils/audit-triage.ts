@@ -1,5 +1,18 @@
 import type { FindingStatus, HumanReviewStatus, IgnoreReason, Violation } from '@/types'
 
+function inferVerificationMode(violation: Violation) {
+  if (violation.verificationMode) return violation.verificationMode
+  if (violation.automationCategory === 'Totalmente Automatizável') return 'automatic' as const
+  if (violation.automationCategory === 'Semi-Automatizável') return 'assisted' as const
+  return 'manual' as const
+}
+
+function inferAuditScope(reference: string) {
+  if (['5.7.13', '5.7.15', '5.7.16', '5.8.5'].includes(reference)) return 'site' as const
+  if (['5.9.12', '5.9.15'].includes(reference)) return 'journey' as const
+  return 'page' as const
+}
+
 export interface FindingStatusUpdate {
   status: FindingStatus
   ignoreReason?: IgnoreReason
@@ -19,6 +32,8 @@ export function getCompatibleHumanReviewStatus(violation: Violation): HumanRevie
 }
 
 export function normalizeViolationFindingState<T extends Violation>(violation: T): T {
+  const verificationMode = inferVerificationMode(violation)
+  const requiresHumanReview = violation.requiresHumanReview ?? verificationMode !== 'automatic'
   const findingStatus =
     violation.findingStatus ?? getFindingStatusFromHumanReview(violation.humanReviewStatus)
   const migratedIgnoreReason =
@@ -29,6 +44,33 @@ export function normalizeViolationFindingState<T extends Violation>(violation: T
       : undefined
   const normalizedViolation = {
     ...violation,
+    verificationMode,
+    auditScope: violation.auditScope ?? inferAuditScope(violation.nbrReference),
+    confidence:
+      violation.confidence ??
+      (verificationMode === 'automatic'
+        ? 'high'
+        : verificationMode === 'assisted'
+          ? 'medium'
+          : 'contextual'),
+    evidence:
+      violation.evidence?.length > 0
+        ? violation.evidence
+        : [
+            {
+              kind: verificationMode === 'automatic' ? 'dom' : 'author_review',
+              summary: violation.message,
+              selector: violation.elementSelector,
+            },
+          ],
+    reviewQuestion:
+      violation.reviewQuestion ??
+      (verificationMode === 'assisted'
+        ? 'A evidência observada confirma o problema neste contexto?'
+        : verificationMode === 'manual'
+          ? 'A verificação manual confirma que o requisito não foi atendido?'
+          : undefined),
+    requiresHumanReview,
     findingOrigin: violation.findingOrigin ?? 'automatic',
     findingStatus,
     ignoreReason: migratedIgnoreReason,
@@ -79,4 +121,12 @@ export function isPendingHumanReviewFinding(violation: Violation): boolean {
 export function shouldCountFindingAsFailure(violation: Violation): boolean {
   if (isIgnoredFinding(violation)) return false
   return isOpenFinding(violation) || isConfirmedFinding(violation)
+}
+
+export function shouldCountFindingAsConfirmedFailure(violation: Violation): boolean {
+  if (isIgnoredFinding(violation)) return false
+  if (!violation.requiresHumanReview) {
+    return isOpenFinding(violation) || isConfirmedFinding(violation)
+  }
+  return isConfirmedFinding(violation)
 }

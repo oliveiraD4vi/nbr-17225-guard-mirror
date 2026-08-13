@@ -4,13 +4,13 @@ Este guia descreve como contribuir com a extensão open-source do Guardião NBR 
 
 ## Escopo atual
 
-A V1 Farol trabalha com um catálogo fechado de 112 itens: 96 requisitos normativos e 16 recomendações priorizadas, revisados contra a referência pública da ABNT NBR 17225.
+O Guardião trabalha com um catálogo de 146 itens: 96 requisitos normativos e 50 recomendações, revisados contra a referência pública da ABNT NBR 17225.
 
 Neste momento:
 
 - correções de implementação dentro desse escopo são bem-vindas;
 - melhorias de UX, performance, robustez e testes são bem-vindas;
-- recomendações fora da V1 devem entrar como proposta futura, não como alteração direta do catálogo atual, salvo alinhamento explícito no repositório.
+- mudanças de catálogo exigem matriz normativa, fixtures e rastreabilidade pública no mesmo lote.
 
 ## Antes de abrir uma contribuição
 
@@ -100,9 +100,9 @@ pnpm test
 pnpm build
 ```
 
-## Regras fora do escopo v1
+## Modos e escopos
 
-As recomendações ainda fora da V1 Farol estão listadas em `FUTURE_RULES_PLAN.md`. Elas devem ser tratadas como backlog público para contribuições futuras.
+Toda regra deve declarar ou herdar um modo `automatic`, `assisted` ou `manual`. Regras de múltiplas páginas ou etapas devem usar o escopo `site` ou `journey`; não devem inferir esse contexto a partir de uma única página.
 
 ## Pull requests
 

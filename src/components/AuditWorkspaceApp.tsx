@@ -6,7 +6,6 @@ import {
   Form,
   Input,
   Layout,
-  message,
   Modal,
   Select,
   Space,
@@ -37,6 +36,7 @@ import {
   UpOutlined,
 } from '@ant-design/icons'
 import { PopupPanelSkeleton } from './LoadingSkeletons'
+import { useAccessibleMessage } from './AccessibleStatusAnnouncer'
 import type { ViolationsListState } from './ViolationsList'
 import { t } from '@/i18n'
 import { isNormativeRequirement } from '@/normative'
@@ -45,6 +45,7 @@ import { APP_VERSION } from '@/version'
 import type {
   AuditHistoryEntry,
   AuditResult,
+  AuditScope,
   ContrastPreviewItem,
   ContrastPreviewResult,
   ManualFindingDraft,
@@ -400,12 +401,15 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
   const contrastPreviewPortRef = useRef<chrome.runtime.Port | null>(null)
   const contrastPreviewItemsRef = useRef<Map<string, ContrastPreviewItem>>(new Map())
   const contrastPreviewWarningRef = useRef<string | null>(null)
+  const visionCloseButtonRef = useRef<HTMLButtonElement | null>(null)
+  const visionToggleButtonRef = useRef<HTMLButtonElement | null>(null)
   const [auditResult, setAuditResult] = useState<AuditResult | null>(null)
   const [auditHistory, setAuditHistory] = useState<AuditHistoryEntry[]>([])
   const [siteAuditHistory, setSiteAuditHistory] = useState<AuditHistoryEntry[]>([])
   const [selectedHistoryId, setSelectedHistoryId] = useState<string | null>(null)
   const [includeRecommendations, setIncludeRecommendations] = useState(false)
   const [includeHumanReview, setIncludeHumanReview] = useState(defaultIncludeHumanReview)
+  const [auditScope, setAuditScope] = useState<AuditScope>('page')
   const [initialLoading, setInitialLoading] = useState(true)
   const [loading, setLoading] = useState(false)
   const [activeTab, setActiveTab] = useState<AuditTargetTab | null>(null)
@@ -433,7 +437,18 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
   const [isManualFindingModalOpen, setIsManualFindingModalOpen] = useState(false)
   const [manualFindingSaving, setManualFindingSaving] = useState(false)
   const [manualFindingForm] = Form.useForm<ManualFindingFormValues>()
+  const { announcer, notify } = useAccessibleMessage()
   const appIconUrl = useMemo(() => chrome.runtime.getURL('icons/icon.png'), [])
+
+  const closeVisionSimulator = useCallback(() => {
+    setIsVisionSimulatorOpen(false)
+    window.requestAnimationFrame(() => visionToggleButtonRef.current?.focus())
+  }, [])
+
+  useEffect(() => {
+    if (!isVisionSimulatorOpen) return
+    window.requestAnimationFrame(() => visionCloseButtonRef.current?.focus())
+  }, [isVisionSimulatorOpen])
 
   const resolveCurrentTab = useCallback(async () => getAuditTargetTab(targetTab), [targetTab])
 
@@ -472,6 +487,7 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
         extensionStorageGet([
           'includeRecommendationsPreference',
           'includeHumanReviewPreference',
+          'auditScopePreference',
           popupStateStorageKey,
         ]),
         getAuditHistoryForUrl(tab.url),
@@ -481,6 +497,8 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
       const resolvedPreference =
         result?.includeRecommendations ?? Boolean(preferences.includeRecommendationsPreference)
       const resolvedHumanReviewPreference = defaultIncludeHumanReview
+      const resolvedAuditScope =
+        result?.auditScope ?? (preferences.auditScopePreference as AuditScope | undefined) ?? 'page'
       const savedState = getStoredPopupState(preferences[popupStateStorageKey], tab.url)
       const availableAuditIds = new Set(
         [result?.id, ...history.map((entry) => entry.id), ...siteHistory.map((entry) => entry.id)]
@@ -498,6 +516,7 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
       setSiteAuditHistory(siteHistory)
       setIncludeRecommendations(resolvedPreference)
       setIncludeHumanReview(resolvedHumanReviewPreference)
+      setAuditScope(resolvedAuditScope)
       setStorageDiagnostics(diagnostics)
       setPopupStoredState(savedState)
       setSelectedHistoryId(restoredHistoryId)
@@ -509,7 +528,7 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
       setComparisonBaselineId(history[1]?.id || history[0]?.id)
     } catch (error) {
       if (isExtensionContextInvalidatedError(error)) {
-        message.warning(t('popup.messages.extensionContextInvalidated'))
+        notify.warning(t('popup.messages.extensionContextInvalidated'))
       } else {
         console.error('Erro ao carregar resultado da aba ativa:', error)
       }
@@ -518,6 +537,7 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
       setSiteAuditHistory([])
       setSelectedHistoryId(null)
       setIncludeHumanReview(defaultIncludeHumanReview)
+      setAuditScope('page')
       setPopupStoredState(null)
       setActiveTabKey('summary')
       setIsAuditMetaCollapsed(false)
@@ -529,7 +549,7 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
     } finally {
       setInitialLoading(false)
     }
-  }, [resolveCurrentTab])
+  }, [notify, resolveCurrentTab])
 
   const persistWithQuotaHandling = useCallback(
     async <T,>(
@@ -752,11 +772,17 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
       const result = response?.result as ContrastPreviewResult | undefined
       const unavailableCount = (result?.missing ?? 0) + (result?.unsupported ?? 0)
       if (unavailableCount > 0 && showMissingFeedback) {
-        message.warning(t('popup.messages.contrastPreviewPartial', { count: unavailableCount }))
+        notify.warning(t('popup.messages.contrastPreviewPartial', { count: unavailableCount }))
       }
       return result ?? null
     },
-    [canRerunViewedAudit, ensureContrastPreviewSession, isHistoricalView, sendMessageToActiveTab],
+    [
+      canRerunViewedAudit,
+      ensureContrastPreviewSession,
+      isHistoricalView,
+      notify,
+      sendMessageToActiveTab,
+    ],
   )
 
   const handleViolationContrastPreviewChange = useCallback(
@@ -775,13 +801,13 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
         const unavailableCount = (result?.missing ?? 0) + (result?.unsupported ?? 0)
         if (unavailableCount > 0 && contrastPreviewWarningRef.current !== item.id) {
           contrastPreviewWarningRef.current = item.id
-          message.warning(t('popup.messages.contrastPreviewUnavailable'))
+          notify.warning(t('popup.messages.contrastPreviewUnavailable'))
         }
       } catch (error) {
         console.error('Erro ao aplicar prévia de contraste:', error)
       }
     },
-    [canRerunViewedAudit, isHistoricalView, syncContrastPreviewsOnPage],
+    [canRerunViewedAudit, isHistoricalView, notify, syncContrastPreviewsOnPage],
   )
 
   useEffect(
@@ -844,12 +870,12 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
     if (!displayedAuditResult?.url) return
     try {
       await navigator.clipboard.writeText(displayedAuditResult.url)
-      message.success(t('popup.messages.auditUrlCopied'))
+      notify.success(t('popup.messages.auditUrlCopied'))
     } catch (error) {
       console.error('Erro ao copiar URL da auditoria:', error)
-      message.error(t('popup.messages.auditUrlCopyError'))
+      notify.error(t('popup.messages.auditUrlCopyError'))
     }
-  }, [displayedAuditResult?.url])
+  }, [displayedAuditResult?.url, notify])
 
   const handleSelectHistory = useCallback(
     (historyId: string | null) => {
@@ -911,13 +937,13 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
     async (showFeedback = false) => {
       try {
         await sendMessageToActiveTab({ action: 'CLEAR_HIGHLIGHTS' })
-        if (showFeedback) message.success(t('popup.messages.highlightsCleared'))
+        if (showFeedback) notify.success(t('popup.messages.highlightsCleared'))
       } catch (error) {
         console.error('Erro ao limpar destaques:', error)
-        if (showFeedback) message.error(t('popup.messages.highlightsClearError'))
+        if (showFeedback) notify.error(t('popup.messages.highlightsClearError'))
       }
     },
-    [sendMessageToActiveTab],
+    [notify, sendMessageToActiveTab],
   )
 
   const handleRunAudit = useCallback(async () => {
@@ -929,6 +955,7 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
       const result = await runAccessibilityAudit({
         includeRecommendations,
         includeHumanReview,
+        auditScope,
         tabId: tab.id,
         tabUrl: tab.url,
       })
@@ -959,7 +986,7 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
         })
         setComparisonTargetId(history[0]?.id)
         setComparisonBaselineId(history[1]?.id || history[0]?.id)
-        message.success(
+        notify.success(
           t('popup.messages.auditCompleted', {
             count:
               getDisplayResultForScope(persistedResult, includeRecommendations, includeHumanReview)
@@ -986,11 +1013,11 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
           selectedHistoryId: null,
           violationsListState: undefined,
         })
-        message.warning(t('popup.messages.quotaUnsavedAudit'))
+        notify.warning(t('popup.messages.quotaUnsavedAudit'))
       }
     } catch (error) {
       console.error('Erro ao executar auditoria:', error)
-      message.error(error instanceof Error ? error.message : t('popup.messages.auditRunError'))
+      notify.error(error instanceof Error ? error.message : t('popup.messages.auditRunError'))
     } finally {
       setLoading(false)
     }
@@ -999,6 +1026,8 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
     clearHighlightsOnPage,
     includeHumanReview,
     includeRecommendations,
+    auditScope,
+    notify,
     persistPopupState,
     persistWithQuotaHandling,
     resolveCurrentTab,
@@ -1020,6 +1049,7 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
         const upgradedResult = await runAccessibilityAudit({
           includeRecommendations: true,
           includeHumanReview,
+          auditScope,
           tabId: tab.id,
           tabUrl: tab.url,
         })
@@ -1040,28 +1070,30 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
           { url: preservedResult.url, scope: 'audit', hasUnsavedChanges: true },
         )
         if (persisted === null) {
-          message.warning(t('popup.messages.quotaUnsavedAudit'))
+          notify.warning(t('popup.messages.quotaUnsavedAudit'))
           return
         }
 
         const refreshedHistory = await getAuditHistoryForUrl(activeTab?.url || preservedResult.url)
         setAuditHistory(refreshedHistory)
-        message.success(t('popup.messages.recommendationsIncluded'))
+        notify.success(t('popup.messages.recommendationsIncluded'))
       } catch (error) {
         console.error('Erro ao incluir recomendações:', error)
         setIncludeRecommendations(false)
         await extensionStorageSet({ includeRecommendationsPreference: false })
-        message.error(t('popup.messages.recommendationsLoadError'))
+        notify.error(t('popup.messages.recommendationsLoadError'))
       } finally {
         setLoading(false)
       }
     },
     [
       activeTab,
+      auditScope,
       auditResult,
       clearHighlightsOnPage,
       includeHumanReview,
       isHistoricalView,
+      notify,
       persistWithQuotaHandling,
       resolveCurrentTab,
       syncAuditResultUpdate,
@@ -1089,6 +1121,7 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
         const upgradedResult = await runAccessibilityAudit({
           includeRecommendations,
           includeHumanReview: true,
+          auditScope,
           tabId: tab.id,
           tabUrl: tab.url,
         })
@@ -1109,23 +1142,25 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
           { url: preservedResult.url, scope: 'audit', hasUnsavedChanges: true },
         )
         if (persisted === null) {
-          message.warning(t('popup.messages.quotaUnsavedAudit'))
+          notify.warning(t('popup.messages.quotaUnsavedAudit'))
         }
       } catch (error) {
         console.error('Erro ao incluir itens não automatizáveis:', error)
         setIncludeHumanReview(false)
         await extensionStorageSet({ includeHumanReviewPreference: false })
-        message.error(t('popup.messages.humanReviewLoadError'))
+        notify.error(t('popup.messages.humanReviewLoadError'))
       } finally {
         setLoading(false)
       }
     },
     [
       activeTab,
+      auditScope,
       auditResult,
       clearHighlightsOnPage,
       includeRecommendations,
       isHistoricalView,
+      notify,
       persistWithQuotaHandling,
       resolveCurrentTab,
       syncAuditResultUpdate,
@@ -1134,7 +1169,7 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
 
   const handleExportJSON = useCallback(() => {
     if (!reviewSourceResult) {
-      message.warning(t('popup.messages.noAuditToExport'))
+      notify.warning(t('popup.messages.noAuditToExport'))
       return
     }
 
@@ -1143,12 +1178,12 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
       'application/json;charset=utf-8',
       `${t('shared.exports.auditFilePrefix')}-${getExportTimestampSegment(reviewSourceResult.timestamp)}.json`,
     )
-    message.success(t('popup.messages.exportJsonSuccess'))
-  }, [reviewSourceResult])
+    notify.success(t('popup.messages.exportJsonSuccess'))
+  }, [notify, reviewSourceResult])
 
   const handleExportCSV = useCallback(() => {
     if (!reviewSourceResult || reviewSourceResult.violations.length === 0) {
-      message.warning(t('popup.messages.noViolationsToExport'))
+      notify.warning(t('popup.messages.noViolationsToExport'))
       return
     }
 
@@ -1157,12 +1192,12 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
       'text/csv;charset=utf-8',
       `${t('shared.exports.auditFilePrefix')}-${getExportTimestampSegment(reviewSourceResult.timestamp)}.csv`,
     )
-    message.success(t('popup.messages.exportCsvSuccess'))
-  }, [reviewSourceResult])
+    notify.success(t('popup.messages.exportCsvSuccess'))
+  }, [notify, reviewSourceResult])
 
   const handleExportSummary = useCallback(() => {
     if (!reviewSourceResult) {
-      message.warning(t('popup.messages.noAuditToExport'))
+      notify.warning(t('popup.messages.noAuditToExport'))
       return
     }
 
@@ -1171,12 +1206,12 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
       'application/json;charset=utf-8',
       `${t('shared.exports.summaryFilePrefix')}-${getExportTimestampSegment(reviewSourceResult.timestamp)}.json`,
     )
-    message.success(t('popup.messages.exportSummarySuccess'))
-  }, [reviewSourceResult])
+    notify.success(t('popup.messages.exportSummarySuccess'))
+  }, [notify, reviewSourceResult])
 
   const handleOpenReport = useCallback(async () => {
     if (!reviewSourceResult) {
-      message.warning(t('popup.messages.noAuditToExport'))
+      notify.warning(t('popup.messages.noAuditToExport'))
       return
     }
 
@@ -1190,41 +1225,50 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
       }
     } catch (error) {
       console.error('Erro ao abrir relatório em nova aba:', error)
-      message.error(t('popup.messages.reportOpenError'))
+      notify.error(t('popup.messages.reportOpenError'))
     }
-  }, [reviewSourceResult])
+  }, [notify, reviewSourceResult])
 
-  const handleExportHistoryJSON = useCallback((entry: AuditHistoryEntry) => {
-    downloadTextFile(
-      JSON.stringify(buildExportableAuditResult(entry), null, 2),
-      'application/json;charset=utf-8',
-      `${t('shared.exports.auditFilePrefix')}-${getExportTimestampSegment(entry.timestamp)}.json`,
-    )
-    message.success(t('popup.messages.exportJsonSuccess'))
-  }, [])
+  const handleExportHistoryJSON = useCallback(
+    (entry: AuditHistoryEntry) => {
+      downloadTextFile(
+        JSON.stringify(buildExportableAuditResult(entry), null, 2),
+        'application/json;charset=utf-8',
+        `${t('shared.exports.auditFilePrefix')}-${getExportTimestampSegment(entry.timestamp)}.json`,
+      )
+      notify.success(t('popup.messages.exportJsonSuccess'))
+    },
+    [notify],
+  )
 
-  const handleExportHistoryCSV = useCallback((entry: AuditHistoryEntry) => {
-    if (entry.violations.length === 0) {
-      message.warning(t('popup.messages.noViolationsToExport'))
-      return
-    }
+  const handleExportHistoryCSV = useCallback(
+    (entry: AuditHistoryEntry) => {
+      if (entry.violations.length === 0) {
+        notify.warning(t('popup.messages.noViolationsToExport'))
+        return
+      }
 
-    downloadTextFile(
-      buildAuditCsv(entry),
-      'text/csv;charset=utf-8',
-      `${t('shared.exports.auditFilePrefix')}-${getExportTimestampSegment(entry.timestamp)}.csv`,
-    )
-    message.success(t('popup.messages.exportCsvSuccess'))
-  }, [])
+      downloadTextFile(
+        buildAuditCsv(entry),
+        'text/csv;charset=utf-8',
+        `${t('shared.exports.auditFilePrefix')}-${getExportTimestampSegment(entry.timestamp)}.csv`,
+      )
+      notify.success(t('popup.messages.exportCsvSuccess'))
+    },
+    [notify],
+  )
 
-  const handleExportHistorySummary = useCallback((entry: AuditHistoryEntry) => {
-    downloadTextFile(
-      JSON.stringify(buildAuditSummaryJson(entry), null, 2),
-      'application/json;charset=utf-8',
-      `${t('shared.exports.summaryFilePrefix')}-${getExportTimestampSegment(entry.timestamp)}.json`,
-    )
-    message.success(t('popup.messages.exportSummarySuccess'))
-  }, [])
+  const handleExportHistorySummary = useCallback(
+    (entry: AuditHistoryEntry) => {
+      downloadTextFile(
+        JSON.stringify(buildAuditSummaryJson(entry), null, 2),
+        'application/json;charset=utf-8',
+        `${t('shared.exports.summaryFilePrefix')}-${getExportTimestampSegment(entry.timestamp)}.json`,
+      )
+      notify.success(t('popup.messages.exportSummarySuccess'))
+    },
+    [notify],
+  )
 
   const handleOpenImportPicker = useCallback(() => {
     importInputRef.current?.click()
@@ -1258,11 +1302,11 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
             setComparisonBaselineId(refreshedHistory[1]?.id || refreshedHistory[0]?.id)
             handleTabChange('history')
             setShowAboutView(false)
-            message.success(t('popup.messages.importReadyForComparison'))
+            notify.success(t('popup.messages.importReadyForComparison'))
             return persisted
           }
 
-          message.success(t('popup.messages.importStoredForUrl', { url: persisted.entry.url }))
+          notify.success(t('popup.messages.importStoredForUrl', { url: persisted.entry.url }))
           return persisted
         }
 
@@ -1273,17 +1317,24 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
         })
 
         if (!persisted) {
-          message.warning(t('popup.messages.quotaUnsavedImport'))
+          notify.warning(t('popup.messages.quotaUnsavedImport'))
           return
         }
       } catch (error) {
         console.error('Erro ao importar relatório:', error)
-        message.error(error instanceof Error ? error.message : t('popup.messages.importAuditError'))
+        notify.error(error instanceof Error ? error.message : t('popup.messages.importAuditError'))
       } finally {
         setLoading(false)
       }
     },
-    [activeTab, handleSelectHistory, handleTabChange, persistWithQuotaHandling, resolveCurrentTab],
+    [
+      activeTab,
+      handleSelectHistory,
+      handleTabChange,
+      notify,
+      persistWithQuotaHandling,
+      resolveCurrentTab,
+    ],
   )
 
   const handleFilterChange = useCallback(
@@ -1308,24 +1359,24 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
         action: 'HIGHLIGHT_ALL_VIOLATIONS',
         violations: displayedAuditResult.violations,
       })
-      message.success(t('popup.messages.highlightsApplied'))
+      notify.success(t('popup.messages.highlightsApplied'))
     } catch (error) {
       console.error('Erro ao destacar violações:', error)
-      message.error(t('popup.messages.highlightError'))
+      notify.error(t('popup.messages.highlightError'))
     }
-  }, [displayedAuditResult, isHistoricalView, sendMessageToActiveTab])
+  }, [displayedAuditResult, isHistoricalView, notify, sendMessageToActiveTab])
 
   const handleStartManualFindingSelection = useCallback(async () => {
     if (isHistoricalView) return
 
     try {
       await sendMessageToActiveTab({ action: 'START_MANUAL_FINDING_SELECTION' })
-      message.info(t('popup.messages.manualFindingSelectionStarted'))
+      notify.info(t('popup.messages.manualFindingSelectionStarted'))
     } catch (error) {
       console.error('Erro ao iniciar seleção de violação manual:', error)
-      message.error(t('popup.messages.manualFindingSelectionError'))
+      notify.error(t('popup.messages.manualFindingSelectionError'))
     }
-  }, [isHistoricalView, sendMessageToActiveTab])
+  }, [isHistoricalView, notify, sendMessageToActiveTab])
 
   const handleManualFindingRuleChange = useCallback(
     (ruleId: string) => {
@@ -1369,7 +1420,7 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
 
   const handleSaveManualFinding = useCallback(async () => {
     if (!auditResult || isHistoricalView || !activeTab?.id || !manualFindingDraft) {
-      message.error(t('popup.messages.manualFindingSaveUnavailable'))
+      notify.error(t('popup.messages.manualFindingSaveUnavailable'))
       return
     }
 
@@ -1378,7 +1429,7 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
       const values = await manualFindingForm.validateFields()
       const selectedRule = allRules.find((rule) => rule.id === values.ruleId)
       if (!selectedRule) {
-        message.error(t('popup.messages.manualFindingRuleMissing'))
+        notify.error(t('popup.messages.manualFindingRuleMissing'))
         return
       }
 
@@ -1405,7 +1456,7 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
         { url: updatedResult.url, scope: 'review', hasUnsavedChanges: true },
       )
       if (persisted === null) {
-        message.warning(t('popup.messages.quotaUnsavedReview'))
+        notify.warning(t('popup.messages.quotaUnsavedReview'))
         return
       }
 
@@ -1415,14 +1466,14 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
       manualFindingForm.resetFields()
       setActiveTabKey('violations')
       void persistPopupState({ activeTabKey: 'violations' })
-      message.success(t('popup.messages.manualFindingSaved'))
+      notify.success(t('popup.messages.manualFindingSaved'))
     } catch (error) {
       if (typeof error === 'object' && error && 'errorFields' in error) {
         return
       }
 
       console.error('Erro ao salvar violação manual:', error)
-      message.error(t('popup.messages.manualFindingSaveError'))
+      notify.error(t('popup.messages.manualFindingSaveError'))
     } finally {
       setManualFindingSaving(false)
     }
@@ -1433,6 +1484,7 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
     isHistoricalView,
     manualFindingDraft,
     manualFindingForm,
+    notify,
     persistPopupState,
     persistWithQuotaHandling,
     syncAuditResultUpdate,
@@ -1514,16 +1566,17 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
       }
 
       await refreshStorageDiagnostics(historyUrl)
-      message.success(t('popup.messages.storageCompacted'))
+      notify.success(t('popup.messages.storageCompacted'))
     } catch (error) {
       console.error('Erro ao compactar armazenamento local:', error)
-      message.error(t('popup.messages.storageCompactError'))
+      notify.error(t('popup.messages.storageCompactError'))
     } finally {
       setStorageMaintenanceLoading(false)
     }
   }, [
     activeTab?.id,
     activeTab?.url,
+    notify,
     refreshStorageDiagnostics,
     selectedHistoryId,
     viewedAuditResult?.url,
@@ -1531,7 +1584,7 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
 
   const handleExportComparisonReport = useCallback(() => {
     if (!comparisonSummary || !comparisonTrend) {
-      message.warning(t('popup.messages.comparisonSelectWarning'))
+      notify.warning(t('popup.messages.comparisonSelectWarning'))
       return
     }
 
@@ -1612,12 +1665,12 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
     link.download = `${t('shared.exports.comparisonFilePrefix')}-${getExportTimestampSegment(comparisonSummary.targetTimestamp)}.md`
     link.click()
     URL.revokeObjectURL(url)
-    message.success(t('popup.messages.comparisonExported'))
-  }, [activeTab?.url, comparisonSummary, comparisonTrend, viewedAuditResult?.url])
+    notify.success(t('popup.messages.comparisonExported'))
+  }, [activeTab?.url, comparisonSummary, comparisonTrend, notify, viewedAuditResult?.url])
 
   const handleExportComparisonJson = useCallback(() => {
     if (!comparisonSummary) {
-      message.warning(t('popup.messages.comparisonSelectWarning'))
+      notify.warning(t('popup.messages.comparisonSelectWarning'))
       return
     }
 
@@ -1629,12 +1682,12 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
     link.download = `${t('shared.exports.comparisonFilePrefix')}-${getExportTimestampSegment(comparisonSummary.targetTimestamp)}.json`
     link.click()
     URL.revokeObjectURL(url)
-    message.success(t('popup.messages.comparisonExportedJson'))
-  }, [comparisonSummary])
+    notify.success(t('popup.messages.comparisonExportedJson'))
+  }, [comparisonSummary, notify])
 
   const handleExportComparisonCsv = useCallback(() => {
     if (!comparisonSummary) {
-      message.warning(t('popup.messages.comparisonSelectWarning'))
+      notify.warning(t('popup.messages.comparisonSelectWarning'))
       return
     }
 
@@ -1773,8 +1826,8 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
     link.download = `${t('shared.exports.comparisonFilePrefix')}-${getExportTimestampSegment(comparisonSummary.targetTimestamp)}.csv`
     link.click()
     URL.revokeObjectURL(url)
-    message.success(t('popup.messages.comparisonExportedCsv'))
-  }, [comparisonSummary])
+    notify.success(t('popup.messages.comparisonExportedCsv'))
+  }, [comparisonSummary, notify])
 
   const priorityViolations = useMemo(
     () =>
@@ -1806,10 +1859,10 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
         { url: updatedResult.url, scope: 'review', hasUnsavedChanges: true },
       )
       if (persisted === null) {
-        message.warning(t('popup.messages.quotaUnsavedReview'))
+        notify.warning(t('popup.messages.quotaUnsavedReview'))
       }
     },
-    [activeTab?.id, persistWithQuotaHandling, syncAuditResultUpdate, viewedAuditResult],
+    [activeTab?.id, notify, persistWithQuotaHandling, syncAuditResultUpdate, viewedAuditResult],
   )
 
   const handleBulkFindingStatusChange = useCallback(
@@ -1839,13 +1892,13 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
         { url: updatedResult.url, scope: 'review', hasUnsavedChanges: true },
       )
       if (persisted === null) {
-        message.warning(t('popup.messages.quotaUnsavedReview'))
+        notify.warning(t('popup.messages.quotaUnsavedReview'))
         return
       }
 
-      message.success(t('popup.messages.bulkFindingsIgnored', { count: affectedCount }))
+      notify.success(t('popup.messages.bulkFindingsIgnored', { count: affectedCount }))
     },
-    [activeTab?.id, persistWithQuotaHandling, syncAuditResultUpdate, viewedAuditResult],
+    [activeTab?.id, notify, persistWithQuotaHandling, syncAuditResultUpdate, viewedAuditResult],
   )
 
   const handleViolationNoteChange = useCallback(
@@ -1874,12 +1927,12 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
         { url: updatedResult.url, scope: 'review', hasUnsavedChanges: true },
       )
       if (persisted === null) {
-        message.warning(t('popup.messages.quotaUnsavedReview'))
+        notify.warning(t('popup.messages.quotaUnsavedReview'))
         return
       }
-      message.success(note ? t('popup.messages.noteSaved') : t('popup.messages.noteRemoved'))
+      notify.success(note ? t('popup.messages.noteSaved') : t('popup.messages.noteRemoved'))
     },
-    [activeTab?.id, persistWithQuotaHandling, syncAuditResultUpdate, viewedAuditResult],
+    [activeTab?.id, notify, persistWithQuotaHandling, syncAuditResultUpdate, viewedAuditResult],
   )
 
   const handleViolationAlternativeTextReviewChange = useCallback(
@@ -1907,16 +1960,16 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
         { url: updatedResult.url, scope: 'review', hasUnsavedChanges: true },
       )
       if (persisted === null) {
-        message.warning(t('popup.messages.quotaUnsavedReview'))
+        notify.warning(t('popup.messages.quotaUnsavedReview'))
         return
       }
-      message.success(
+      notify.success(
         review?.proposedText
           ? t('popup.messages.alternativeTextSaved')
           : t('popup.messages.alternativeTextRemoved'),
       )
     },
-    [activeTab?.id, persistWithQuotaHandling, syncAuditResultUpdate, viewedAuditResult],
+    [activeTab?.id, notify, persistWithQuotaHandling, syncAuditResultUpdate, viewedAuditResult],
   )
 
   const handleViolationContrastOverrideChange = useCallback(
@@ -1944,14 +1997,14 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
         { url: updatedResult.url, scope: 'review', hasUnsavedChanges: true },
       )
       if (persisted === null) {
-        message.warning(t('popup.messages.quotaUnsavedReview'))
+        notify.warning(t('popup.messages.quotaUnsavedReview'))
         return
       }
-      message.success(
+      notify.success(
         override ? t('popup.messages.contrastSaved') : t('popup.messages.contrastRemoved'),
       )
     },
-    [activeTab?.id, persistWithQuotaHandling, syncAuditResultUpdate, viewedAuditResult],
+    [activeTab?.id, notify, persistWithQuotaHandling, syncAuditResultUpdate, viewedAuditResult],
   )
 
   const handleBulkViolationContrastOverrideChange = useCallback(
@@ -1984,11 +2037,11 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
         { url: updatedResult.url, scope: 'review', hasUnsavedChanges: true },
       )
       if (persisted === null) {
-        message.warning(t('popup.messages.quotaUnsavedReview'))
+        notify.warning(t('popup.messages.quotaUnsavedReview'))
         return
       }
 
-      message.success(t('popup.messages.bulkContrastApplied', { count: affectedCount }))
+      notify.success(t('popup.messages.bulkContrastApplied', { count: affectedCount }))
       const previewItems = updatedResult.violations
         .filter(
           (currentViolation) =>
@@ -2001,6 +2054,7 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
     },
     [
       activeTab?.id,
+      notify,
       persistWithQuotaHandling,
       syncAuditResultUpdate,
       syncContrastPreviewsOnPage,
@@ -2031,38 +2085,38 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
         setQuotaIssue(null)
         setIsQuotaModalOpen(false)
         quotaRetryRef.current = null
-        message.success(t('popup.messages.quotaRecovered'))
+        notify.success(t('popup.messages.quotaRecovered'))
       } catch (error) {
         console.error('Erro ao recuperar quota do storage:', error)
         if (isAuditStorageQuotaError(error)) {
-          message.error(t('popup.messages.quotaRecoveryFailed'))
+          notify.error(t('popup.messages.quotaRecoveryFailed'))
           return
         }
-        message.error(
+        notify.error(
           error instanceof Error ? error.message : t('popup.messages.quotaRecoveryFailed'),
         )
       } finally {
         setQuotaRecoveryLoading(false)
       }
     },
-    [activeTab?.id, quotaIssue, refreshStorageDiagnostics],
+    [activeTab?.id, notify, quotaIssue, refreshStorageDiagnostics],
   )
 
   const handleNextPriorityIssue = useCallback(async () => {
     if (isHistoricalView) {
-      message.info(t('popup.messages.historyHighlightUnavailable'))
+      notify.info(t('popup.messages.historyHighlightUnavailable'))
       return
     }
     if (priorityViolations.length === 0) {
-      message.info(t('popup.messages.noPriorityAvailable'))
+      notify.info(t('popup.messages.noPriorityAvailable'))
       return
     }
 
     const nextViolation = priorityViolations[priorityIndex % priorityViolations.length]
     await handleHighlightViolation(nextViolation)
     setPriorityIndex((current) => (current + 1) % priorityViolations.length)
-    message.success(t('popup.messages.priorityFocus', { name: nextViolation.ruleName }))
-  }, [handleHighlightViolation, isHistoricalView, priorityIndex, priorityViolations])
+    notify.success(t('popup.messages.priorityFocus', { name: nextViolation.ruleName }))
+  }, [handleHighlightViolation, isHistoricalView, notify, priorityIndex, priorityViolations])
 
   const footerActions = useMemo(() => {
     if (!displayedAuditResult) return []
@@ -2253,6 +2307,7 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
 
   return (
     <Layout className="popup-app popup-app-devtools">
+      {announcer}
       <Header className="popup-header">
         <div className="header-row">
           <div className="header-content">
@@ -2365,6 +2420,23 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
               {!isAuditMetaCollapsed && (
                 <div className="tab-status-strip">
                   <div className="tab-status-item tab-status-item-toggle">
+                    <span className="tab-status-label">{t('popup.scope.contextLabel')}</span>
+                    <Select<AuditScope>
+                      aria-label={t('popup.scope.contextLabel')}
+                      value={auditScope}
+                      options={[
+                        { value: 'page', label: t('popup.scope.contextPage') },
+                        { value: 'site', label: t('popup.scope.contextSite') },
+                        { value: 'journey', label: t('popup.scope.contextJourney') },
+                      ]}
+                      onChange={(value) => {
+                        setAuditScope(value)
+                        void extensionStorageSet({ auditScopePreference: value })
+                      }}
+                    />
+                    <small>{t(`popup.scope.contextNote.${auditScope}`)}</small>
+                  </div>
+                  <div className="tab-status-item tab-status-item-toggle">
                     <span className="tab-status-label">
                       {t('popup.scope.toggleLabel')}:{' '}
                       {includeRecommendations
@@ -2373,6 +2445,7 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
                     </span>
                     <div className="recommendations-toggle-row">
                       <Switch
+                        aria-label={t('popup.scope.enableAction')}
                         checked={includeRecommendations}
                         loading={loading}
                         onChange={(checked) => {
@@ -2395,6 +2468,7 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
                       </span>
                       <div className="recommendations-toggle-row">
                         <Switch
+                          aria-label={t('popup.scope.humanReviewAction')}
                           checked={includeHumanReview}
                           loading={loading}
                           onChange={(checked) => {
@@ -2498,6 +2572,7 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
             <div className="vision-floating-shell">
               {hasVisionSimulatorMounted && (
                 <section
+                  id="vision-simulator-panel"
                   className="vision-floating-panel"
                   aria-label={t('vision.title')}
                   hidden={!isVisionSimulatorOpen}
@@ -2508,11 +2583,12 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
                       <strong>{t('vision.title')}</strong>
                     </div>
                     <Button
+                      ref={visionCloseButtonRef}
                       type="text"
                       size="small"
                       icon={<CloseOutlined />}
                       aria-label={t('shared.actions.close')}
-                      onClick={() => setIsVisionSimulatorOpen(false)}
+                      onClick={closeVisionSimulator}
                     />
                   </div>
                   <Suspense fallback={<PopupPanelSkeleton />}>
@@ -2523,6 +2599,7 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
               <div className="floating-action-buttons">
                 <Tooltip placement="topLeft" title={t('shared.actions.createManualFinding')}>
                   <Button
+                    ref={visionToggleButtonRef}
                     className="manual-finding-floating-button"
                     type="default"
                     shape="circle"
@@ -2542,6 +2619,7 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
                     shape="circle"
                     icon={<EyeOutlined />}
                     aria-label={t('vision.openFloatingPanel')}
+                    aria-controls="vision-simulator-panel"
                     aria-expanded={isVisionSimulatorOpen}
                     onClick={() => {
                       if (!isVisionSimulatorOpen) {
@@ -2738,7 +2816,7 @@ export const AuditWorkspaceApp: React.FC<AuditWorkspaceAppProps> = ({ targetTab 
           setComparisonTargetId(updatedHistory[0]?.id)
           setComparisonBaselineId(updatedHistory[1]?.id || updatedHistory[0]?.id)
           setHistoryEntryPendingDeletion(null)
-          message.success(t('popup.messages.historyDeleted'))
+          notify.success(t('popup.messages.historyDeleted'))
         }}
         getContainer={false}
         centered

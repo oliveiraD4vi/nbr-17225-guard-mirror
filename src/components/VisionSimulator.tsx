@@ -65,8 +65,9 @@ export const VisionSimulator: React.FC<VisionSimulatorProps> = React.memo(({ onF
         <Divider style={{ margin: '8px 0' }} />
 
         <div>
-          <label>{t('vision.filterType')}:</label>
+          <label id="vision-filter-type-label">{t('vision.filterType')}:</label>
           <Select
+            aria-labelledby="vision-filter-type-label"
             value={filterType}
             onChange={handleFilterChange}
             options={filterOptions}

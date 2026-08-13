@@ -1225,6 +1225,7 @@ const ViolationCard: React.FC<ViolationCardProps> = React.memo(
                   <label className="violation-alternative-text-field">
                     <span>{t('violations.alternativeTextTargetAttributeLabel')}</span>
                     <Select
+                      aria-label={t('violations.alternativeTextTargetAttributeLabel')}
                       value={alternativeTextTargetAttribute}
                       options={alternativeTextTargetOptions}
                       onChange={(value) => setAlternativeTextTargetAttribute(value)}
@@ -1357,6 +1358,7 @@ const ViolationCard: React.FC<ViolationCardProps> = React.memo(
                     type="text"
                     size="small"
                     icon={<BgColorsOutlined />}
+                    aria-label={t('violations.contrastBoard')}
                     onClick={(event) => {
                       event.stopPropagation()
                       setIsContrastModalOpen(true)
@@ -1369,6 +1371,8 @@ const ViolationCard: React.FC<ViolationCardProps> = React.memo(
                   type={violation.userNote ? 'default' : 'text'}
                   size="small"
                   icon={<FileTextOutlined />}
+                  aria-label={t('violations.notesTooltip')}
+                  aria-expanded={isNotesOpen}
                   onClick={(event) => {
                     event.stopPropagation()
                     setIsNotesOpen((current) => !current)
@@ -1380,6 +1384,7 @@ const ViolationCard: React.FC<ViolationCardProps> = React.memo(
                   type="text"
                   size="small"
                   icon={<LinkOutlined />}
+                  aria-label={t('violations.goToElement')}
                   disabled={!onSelectViolation}
                   onClick={(event) => {
                     event.stopPropagation()
@@ -1409,6 +1414,7 @@ const ViolationCard: React.FC<ViolationCardProps> = React.memo(
                       type="text"
                       size="small"
                       icon={<BoldOutlined />}
+                      aria-label={t('violations.insertBold')}
                       onClick={(event) => {
                         event.stopPropagation()
                         insertAtEnd('**texto**')
@@ -1420,6 +1426,7 @@ const ViolationCard: React.FC<ViolationCardProps> = React.memo(
                       type="text"
                       size="small"
                       icon={<ItalicOutlined />}
+                      aria-label={t('violations.insertItalic')}
                       onClick={(event) => {
                         event.stopPropagation()
                         insertAtEnd('*texto*')
@@ -1431,6 +1438,7 @@ const ViolationCard: React.FC<ViolationCardProps> = React.memo(
                       type="text"
                       size="small"
                       icon={<UnorderedListOutlined />}
+                      aria-label={t('violations.insertList')}
                       onClick={(event) => {
                         event.stopPropagation()
                         insertAtEnd('- item')
@@ -1442,6 +1450,7 @@ const ViolationCard: React.FC<ViolationCardProps> = React.memo(
                       type="text"
                       size="small"
                       icon={<ClearOutlined />}
+                      aria-label={t('violations.clearDraft')}
                       onClick={(event) => {
                         event.stopPropagation()
                         setNoteDraft('')
@@ -1453,6 +1462,7 @@ const ViolationCard: React.FC<ViolationCardProps> = React.memo(
                       type="text"
                       size="small"
                       icon={<SaveOutlined />}
+                      aria-label={t('violations.saveNote')}
                       onClick={handleSaveNote}
                     />
                   </Tooltip>
@@ -1973,6 +1983,7 @@ export const ViolationsList: React.FC<ViolationsListProps> = React.memo(
           <div className="violations-toolbar-actions">
             <Select
               className="violations-category-select"
+              aria-label={t('violations.categorySelectLabel')}
               value={selectedCategory}
               onChange={(value) => {
                 setSelectedCategory(value)
@@ -1991,6 +2002,9 @@ export const ViolationsList: React.FC<ViolationsListProps> = React.memo(
             >
               <Button
                 icon={<EyeInvisibleOutlined />}
+                aria-label={t('violations.openIgnored', {
+                  count: filteredIgnoredViolations.length,
+                })}
                 disabled={filteredIgnoredViolations.length === 0}
                 onClick={() => setIsIgnoredDrawerOpen(true)}
               ></Button>
@@ -1999,6 +2013,7 @@ export const ViolationsList: React.FC<ViolationsListProps> = React.memo(
         </div>
         <Segmented
           className="violations-mode-segmented"
+          aria-label={t('violations.listModeLabel')}
           block
           options={modeOptions}
           value={effectiveSelectedListMode}

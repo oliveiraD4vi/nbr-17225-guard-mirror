@@ -1,6 +1,6 @@
 # Guardião NBR 17225
 
-Verificador de acessibilidade para navegadores Chromium, alinhado à V1 Farol Beta do catálogo documental da ABNT NBR 17225:2025.
+Verificador de acessibilidade para navegadores Chromium, alinhado à V2 Polaris Beta do catálogo documental da ABNT NBR 17225:2025.
 
 ## Visão geral
 
@@ -10,11 +10,12 @@ O Guardião NBR 17225 executa auditorias diretamente na página inspecionada e o
 
 ### Auditoria e diagnóstico
 
-- cobertura de 112 regras revisadas contra a referência pública da ABNT NBR 17225: 96 requisitos normativos e 16 recomendações normativas;
+- cobertura operacional de 146 regras revisadas contra a referência pública da ABNT NBR 17225: 96 requisitos normativos e 50 recomendações normativas;
 - execução por aba, com suporte a páginas HTTP, HTTPS e arquivos locais com permissão;
 - auditoria por escopo:
   - somente requisitos;
   - requisitos e recomendações;
+  - contexto de página, sessão de site ou sessão de jornada;
 - destaque visual dos itens na página, limpeza de destaques e navegação por prioridades;
 - grupos de violações por regra, severidade e categoria natural do motor, como `cores`, `formulários`, `cabeçalhos` e `teclado`;
 - filtro por categoria na listagem de violações;
@@ -29,7 +30,9 @@ O Guardião NBR 17225 executa auditorias diretamente na página inspecionada e o
 
 - origem explícita para violações automáticas e manuais;
 - estados persistidos por item: aberto, confirmado ou ignorado;
-- possibilidade de ignorar qualquer violação, sem transformar confirmação manual em etapa obrigatória;
+- modos explícitos de verificação: automático, assistido e manual;
+- candidatos assistidos entram como revisão pendente, sem serem comunicados como falha confirmada;
+- possibilidade de confirmar ou ignorar qualquer candidato com preservação da evidência;
 - motivo obrigatório ao ignorar, com nota complementar opcional;
 - violações ignoradas permanecem no histórico, nas comparações e nas exportações, mas ficam fora da nota e dos números acionáveis;
 - drawer de itens ignorados, acessível pelo filtro de violações e com ação para reabrir;
@@ -56,7 +59,7 @@ O Guardião NBR 17225 executa auditorias diretamente na página inspecionada e o
 
 ### Apoio à decisão
 
-- nota geral baseada em regras com falha, com peso 2 para erros e peso 1 para avisos;
+- faixa de nota com limite conservador e limite sustentado por falhas automáticas ou confirmadas, com peso 2 para erros e peso 1 para avisos;
 - cada regra penaliza a nota no máximo uma vez, independentemente do número de ocorrências semelhantes;
 - requisitos representam 100% da nota no escopo padrão e 90% quando recomendações são incluídas;
 - painel objetivo com violações acionáveis, tipos de problema, regras obrigatórias com falha, ignorados e volume total de ocorrências;
@@ -83,7 +86,9 @@ O Guardião NBR 17225 executa auditorias diretamente na página inspecionada e o
 
 - verificação automática de cobertura entre catálogo documentado, requisitos incorporados e regras implementadas;
 - matriz normativa formal em `docs/RULES_NORMATIVE_MATRIX.md`;
-- plano de expansão futura em `docs/FUTURE_RULES_PLAN.md`, com as 34 recomendações ainda não implementadas listadas individualmente;
+- registro dos lotes incorporados em `docs/FUTURE_RULES_PLAN.md`, incluindo as 34 recomendações implementadas como verificações assistidas ou roteiros manuais;
+- fixtures positivas, negativas e limítrofes para cada uma das 146 regras;
+- registro de evidências, falsos positivos, falsos negativos e limites residuais das heurísticas fracas;
 - centralização de textos visíveis em catálogo de i18n PT-BR UTF-8;
 - tema centralizado em variáveis CSS, compartilhado entre popup, relatório, painel DevTools e superfícies do Ant Design;
 - resolução correta dos tokens do Ant Design a partir das variáveis CSS, preservando consistência visual em CTAs, tags, modais, drawers, tooltips e popovers.
@@ -103,42 +108,42 @@ O Guardião NBR 17225 executa auditorias diretamente na página inspecionada e o
 
 ## Definição da Beta
 
-Produto: `1.2.0-beta.9`
-Manifest Chrome: `1.2.0`
-Nome: **V1 Farol Beta**
+Produto: `2.0.0-beta.1`
+Manifest Chrome: `2.0.0`
+Nome: **V2 Polaris Beta**
 
 Escopo da Beta:
 
-- 112 regras documentadas;
-- 104 regras executadas na auditoria Beta;
-- 8 regras documentadas, fora da execução e fora da nota;
+- 146 regras documentadas e executadas no modo compatível com o contexto selecionado;
+- 96 requisitos e 50 recomendações;
+- nenhuma regra documentada permanece desativada;
 - escopo padrão com requisitos; recomendações entram por opção do usuário;
 - histórico local por página normalizada, preservando o caminho da URL e ignorando query string e hash;
 - explicações completas na Página do Projeto, principalmente em `/rules.html` e `/score.html`.
 
 ## Cobertura de regras
 
-O escopo documentado atual contém a V1 Farol, com 112 regras revisadas contra a referência pública da ABNT NBR 17225. Na Beta, uma regra executada significa regra habilitada para avaliação assistida; não significa regra final.
+O escopo documentado atual contém 146 regras revisadas contra a referência pública da ABNT NBR 17225. Uma regra executada pode produzir uma conclusão automática, um candidato assistido ou um roteiro manual; quantidade de regras não representa certificação.
 
-| Situação                               | Quantidade |
-| -------------------------------------- | ---------: |
-| Itens documentados                     |        112 |
-| Regras implementadas no motor          |        112 |
-| Regras executadas na Beta              |        104 |
-| Regras fora da execução da Beta        |          8 |
-| Regras ausentes                        |          0 |
-| Requisitos normativos implementados    |         96 |
-| Recomendações normativas implementadas |         16 |
-| Totalmente automatizáveis              |         46 |
-| Semi-automatizáveis                    |         65 |
-| Não automatizáveis                     |          1 |
+| Situação                                 | Quantidade |
+| ---------------------------------------- | ---------: |
+| Itens documentados                       |        146 |
+| Regras implementadas no motor            |        146 |
+| Regras habilitadas por escopo compatível |        146 |
+| Regras desativadas                       |          0 |
+| Regras ausentes                          |          0 |
+| Requisitos normativos implementados      |         96 |
+| Recomendações normativas implementadas   |         50 |
+| Totalmente automatizáveis                |         46 |
+| Semi-automatizáveis                      |         77 |
+| Não automatizáveis                       |         23 |
 
 Importante:
 
 - `pnpm verify:rules` valida o motor contra o catálogo implementado atual;
-- regras fora da execução da Beta continuam documentadas, mas não entram na execução nem na nota;
+- regras de site e jornada só entram quando o contexto correspondente é selecionado;
 - a classificação `Requisito` ou `Recomendação` segue a própria ABNT NBR 17225, não o nível WCAG nem a severidade técnica da violação;
-- recomendações fora do catálogo implementado seguem registradas como backlog público, sem aumentar o ruído da auditoria padrão.
+- recomendações dependentes de julgamento permanecem assistidas ou manuais e não entram como falha confirmada sem decisão humana.
 
 Consulte também:
 
@@ -153,7 +158,7 @@ Consulte também:
 
 ## Rastreabilidade pública
 
-A Página do Projeto possui uma página dedicada de rastreabilidade em `/rules.html`. Ela apresenta, para cada uma das 112 regras implementadas:
+A Página do Projeto possui uma página dedicada de rastreabilidade em `/rules.html`. Ela apresenta, para cada uma das 146 regras implementadas:
 
 - referência da ABNT NBR 17225;
 - recorte normativo interpretativo com referência à fonte pública;
@@ -239,7 +244,11 @@ O script verifica:
 
 ## Escopo da ABNT NBR 17225 x escopo implementado
 
-A norma possui recomendações adicionais fora do escopo implementado aqui. Elas não serão adicionadas à V1 Farol, mas estão registradas como backlog para futuras contribuições em `docs/FUTURE_RULES_PLAN.md`.
+Os 96 requisitos e as 50 recomendações identificadas no catálogo adotado estão representados operacionalmente. As regras que dependem de julgamento são apresentadas como candidatos assistidos ou roteiros manuais, nunca como conformidade ou falha automática.
+
+## Guardião Lab
+
+O diretório `lab/` contém uma extensão DevTools independente. Ela usa o domínio `Accessibility` do Chrome DevTools Protocol para explorar a árvore acessível, ordem de foco, nós ignorados e regiões vivas. O Lab declara a permissão `debugger` somente em seu próprio manifesto, encerra a conexão ao navegar ou fechar o painel e não persiste o conteúdo inspecionado. A prévia de leitura sintetizada não é apresentada como leitor de tela.
 
 ## Origem, abertura e governança pública
 
@@ -259,9 +268,9 @@ Quando um PR alterar, remover ou criar uma função de verificação de regra, o
 
 ## Versionamento
 
-Produto: `1.2.0-beta.9`
-Manifest Chrome: `1.2.0`
-Nome: **V1 Farol Beta**
+Produto: `2.0.0-beta.1`
+Manifest Chrome: `2.0.0`
+Nome: **V2 Polaris Beta**
 
 A política de nomes e evolução está documentada em `docs/VERSIONING.md`.
 

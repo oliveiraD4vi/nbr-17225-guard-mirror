@@ -3,7 +3,16 @@
  */
 import { t } from '@/i18n'
 import { getNormativeRuleType } from '@/normative'
-import type { AuditHistoryEntry, AuditResult, Violation } from '@/types'
+import type {
+  AuditHistoryEntry,
+  AuditResult,
+  AuditScope,
+  PageAuditContext,
+  SessionReviewCandidate,
+  Violation,
+  WCAGLevel,
+} from '@/types'
+import { getAuditScoreData } from '@/utils/audit-score'
 import {
   compactAuditResultForStorage,
   dedupeAndSortAuditHistory,
@@ -15,6 +24,7 @@ import {
   inheritViolationStateFromHistory,
 } from '@/utils/audit-history'
 import { normalizeViolationFindingState } from '@/utils/audit-triage'
+import { recordJourneyAuditStep, recordSiteAuditPage } from '@/utils/audit-sessions'
 import {
   extensionStorageGet,
   extensionStorageGetBytesInUse,
@@ -36,6 +46,7 @@ interface RunAuditOptions {
   includeHumanReview?: boolean
   tabId?: number
   tabUrl?: string
+  auditScope?: AuditScope
 }
 
 export interface ManualFindingSelectorCandidate {
@@ -64,6 +75,121 @@ export interface AuditStorageDiagnostics {
 const STORAGE_WARNING_RATIO = 0.7
 const STORAGE_CRITICAL_RATIO = 0.85
 const FALLBACK_STORAGE_QUOTA_BYTES = 10 * 1024 * 1024
+
+const sessionRulePresentation: Record<string, { i18nPrefix: string; wcagLevel: WCAGLevel }> = {
+  'location-alternatives': {
+    i18nPrefix: 'rules.navigation.locationAlternatives',
+    wcagLevel: 'A',
+  },
+  'navigation-consistency': {
+    i18nPrefix: 'rules.structureNavigationControls.navigationConsistency',
+    wcagLevel: 'AA',
+  },
+  'help-consistency': {
+    i18nPrefix: 'rules.structureNavigationControls.helpConsistency',
+    wcagLevel: 'A',
+  },
+  'button-consistency': {
+    i18nPrefix: 'rules.structureNavigationControls.buttonConsistency',
+    wcagLevel: 'AA',
+  },
+  'critical-form-prevention': {
+    i18nPrefix: 'rules.contentFormsMedia.criticalFormPrevention',
+    wcagLevel: 'AA',
+  },
+  'data-reentry': {
+    i18nPrefix: 'rules.contentFormsMedia.dataReentry',
+    wcagLevel: 'A',
+  },
+}
+
+const emptyPageAuditContext: PageAuditContext = {
+  navigationSignatures: [],
+  helpSignatures: [],
+  locationMechanisms: [],
+  controlActions: [],
+  criticalActions: [],
+  formFieldKeys: [],
+  hasReviewCue: false,
+}
+
+async function capturePageAuditContext(tabId: number): Promise<PageAuditContext> {
+  try {
+    const response = await chrome.tabs.sendMessage(tabId, { action: 'CAPTURE_AUDIT_CONTEXT' })
+    return (response?.context as PageAuditContext | undefined) ?? emptyPageAuditContext
+  } catch (error) {
+    console.warn('[Guardião NBR 17225] Não foi possível registrar o contexto da sessão:', error)
+    return emptyPageAuditContext
+  }
+}
+
+function createSessionReviewViolation(
+  candidate: SessionReviewCandidate,
+  result: AuditResult,
+): Violation | null {
+  const presentation = sessionRulePresentation[candidate.ruleId]
+  if (!presentation) return null
+
+  const identity = `${candidate.ruleId}|${result.url}|${result.timestamp}`
+  const customId = `session-${identity.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}`
+
+  return {
+    id: customId,
+    ruleId: candidate.ruleId,
+    ruleName: t(`${presentation.i18nPrefix}.name`),
+    nbrReference: candidate.nbrReference,
+    description: t(`${presentation.i18nPrefix}.description`),
+    severity: 'warning',
+    wcagLevel: presentation.wcagLevel,
+    automationCategory: 'Semi-Automatizável',
+    verificationMode: 'assisted',
+    auditScope: result.auditScope,
+    confidence: 'medium',
+    evidence: [{ kind: 'session', summary: candidate.summary }],
+    reviewQuestion: candidate.reviewQuestion,
+    normativeType: getNormativeRuleType(candidate.nbrReference),
+    requiresHumanReview: true,
+    humanReviewStatus: 'pending',
+    findingOrigin: 'automatic',
+    findingStatus: 'open',
+    message: candidate.summary,
+    snippet: `<body data-audit-url="${result.url}">`,
+    suggestion: t(`${presentation.i18nPrefix}.suggestion`),
+    remediationAdvice: t(`${presentation.i18nPrefix}.remediation`),
+    elementSelector: 'body',
+    elementTagName: 'BODY',
+    elementAccessibleName: result.pageTitle,
+    customId,
+  }
+}
+
+function mergeSessionReviewCandidates(
+  result: AuditResult,
+  candidates: SessionReviewCandidate[],
+): AuditResult {
+  if (candidates.length === 0) return result
+
+  const violations = [...result.violations]
+  candidates.forEach((candidate) => {
+    const existingIndex = violations.findIndex((item) => item.ruleId === candidate.ruleId)
+    if (existingIndex >= 0) {
+      const existing = violations[existingIndex]
+      if (!existing.evidence.some((item) => item.summary === candidate.summary)) {
+        violations[existingIndex] = {
+          ...existing,
+          evidence: [...existing.evidence, { kind: 'session', summary: candidate.summary }],
+          reviewQuestion: candidate.reviewQuestion,
+        }
+      }
+      return
+    }
+
+    const violation = createSessionReviewViolation(candidate, result)
+    if (violation) violations.push(violation)
+  })
+
+  return hydrateAuditResult({ ...result, violations })
+}
 
 export async function getActiveTab(): Promise<chrome.tabs.Tab & { id: number }> {
   const tabs = await chrome.tabs.query({ active: true, currentWindow: true })
@@ -105,7 +231,7 @@ function normalizeAuditResult<T extends AuditResult>(result: T | null): T | null
   )
   const auditId = result.id || `${getAuditUrlStorageKey(result.url)}|${result.timestamp}`
 
-  return hydrateAuditResult({
+  const hydratedResult = hydrateAuditResult({
     ...result,
     id: auditId,
     includeRecommendations: result.includeRecommendations ?? true,
@@ -113,6 +239,15 @@ function normalizeAuditResult<T extends AuditResult>(result: T | null): T | null
     violations,
     pageTitle: result.pageTitle ?? '',
   })
+  const score = getAuditScoreData(hydratedResult)
+
+  return {
+    ...hydratedResult,
+    scoreRange: {
+      conservative: score.conservativeScore,
+      confirmed: score.confirmedScore,
+    },
+  }
 }
 
 /**
@@ -134,6 +269,7 @@ export async function runAccessibilityAudit(options: RunAuditOptions = {}): Prom
       action: 'RUN_AUDIT',
       includeRecommendations: options.includeRecommendations ?? false,
       includeHumanReview: options.includeHumanReview ?? true,
+      auditScope: options.auditScope ?? 'page',
     })
 
     if (response?.error) {
@@ -144,13 +280,24 @@ export async function runAccessibilityAudit(options: RunAuditOptions = {}): Prom
       throw new Error(t('engine.contentExecutionError'))
     }
 
-    const result: AuditResult = normalizeAuditResult(response.result)!
+    let result: AuditResult = normalizeAuditResult(response.result)!
     result.url = activeTab.url || result.url
     result.timestamp = Date.now()
     result.includeRecommendations = options.includeRecommendations ?? false
     result.includeHumanReview = options.includeHumanReview ?? true
+    result.auditScope = options.auditScope ?? 'page'
 
-    return result
+    if (result.auditScope === 'site') {
+      const pageContext = await capturePageAuditContext(activeTab.id)
+      result.siteSession = await recordSiteAuditPage(result, pageContext)
+      result = mergeSessionReviewCandidates(result, result.siteSession.reviewCandidates)
+    } else if (result.auditScope === 'journey') {
+      const pageContext = await capturePageAuditContext(activeTab.id)
+      result.journeySession = await recordJourneyAuditStep(result, pageContext)
+      result = mergeSessionReviewCandidates(result, result.journeySession.reviewCandidates)
+    }
+
+    return normalizeAuditResult(result)!
   } catch (error) {
     console.error('[Guardião NBR 17225] Erro ao executar auditoria:', error)
     throw error
